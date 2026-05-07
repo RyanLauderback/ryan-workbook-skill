@@ -1,0 +1,13 @@
+{
+  "extraKnownMarketplaces": {
+    "sigma-computing": {
+      "source": {
+        "source": "github",
+        "repo": "sigmacomputing/sigma-agent-skills"
+      }
+    }
+  },
+  "enabledPlugins": {
+    "sigma-computing@sigma-computing": true
+  }
+}

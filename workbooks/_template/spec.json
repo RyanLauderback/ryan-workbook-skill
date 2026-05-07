@@ -1,0 +1,4 @@
+{
+  "_comment": "Replace this placeholder with the latest authoritative spec for this workbook (typically the most recent successful iteration, or a fresh GET from Sigma after a CREATE/UPDATE).",
+  "_pattern": "Treat spec.json as the single source of truth for the current state. Snapshots of past attempts live in iterations/."
+}

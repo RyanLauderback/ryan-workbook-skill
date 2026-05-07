@@ -1,0 +1,22 @@
+# Secrets
+.env
+.env.*.local
+
+# Personal Claude Code settings (per-user)
+.claude/settings.local.json
+
+# Vendor mirror of upstream skills (refresh via scripts/refresh-vendor.sh)
+vendor/
+
+# Iteration scratch
+workbooks/*/iterations/*.tmp
+workbooks/*/iterations/*.draft.json
+
+# OS / editor noise
+.DS_Store
+.idea/
+.vscode/
+*.swp
+
+# Token cache (if anything writes one locally)
+.sigma-token
