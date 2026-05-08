@@ -1,0 +1,300 @@
+{
+  "workbookId": "d8fc91eb-6b79-4d6b-9b5c-a4b1d1adde37",
+  "name": "Plugs Revenue — Monthly",
+  "url": "https://staging.sigmacomputing.io/papercranestaging/workbook/Plugs-Revenue-Monthly-6BrLA2Gu9lBt40HTSZV66z",
+  "documentVersion": 2,
+  "latestDocumentVersion": 2,
+  "ownerId": "7d9y50O9V9qLDpdThAY5tdHncEaM2",
+  "folderId": "eb548e3b-81e4-46d9-adfd-488ae1dfb0bb",
+  "createdBy": "7d9y50O9V9qLDpdThAY5tdHncEaM2",
+  "updatedBy": "7d9y50O9V9qLDpdThAY5tdHncEaM2",
+  "createdAt": "2026-05-07T16:33:48.828Z",
+  "updatedAt": "2026-05-07T16:42:24.431Z",
+  "schemaVersion": 1,
+  "pages": [
+    {
+      "id": "page-overview",
+      "name": "Overview",
+      "elements": [
+        {
+          "kind": "control",
+          "controlId": "Date",
+          "id": "ctrl-date-range",
+          "filters": [
+            {
+              "source": {
+                "kind": "table",
+                "elementId": "tbl-plugs-tx"
+              },
+              "columnId": "zjXo8KcTRL"
+            }
+          ],
+          "controlType": "date-range",
+          "mode": "between",
+          "includeNulls": "when-no-value-is-selected"
+        },
+        {
+          "id": "chart-revenue-monthly",
+          "kind": "bar-chart",
+          "source": {
+            "elementId": "tbl-plugs-tx",
+            "kind": "table"
+          },
+          "columns": [
+            {
+              "id": "col-month",
+              "formula": "DateTrunc(\"month\", [Date])",
+              "name": "Month"
+            },
+            {
+              "id": "col-revenue-sum",
+              "formula": "[Metrics/Revenue]",
+              "name": "Revenue"
+            },
+            {
+              "id": "2c3f85095a1e87cec3218f4e78e6d303",
+              "formula": "[Plugs Transaction Details/Quantity]"
+            },
+            {
+              "id": "1f9f2d7816175d6f2f68f8b3052de08e",
+              "formula": "[Plugs Transaction Details/Price]"
+            },
+            {
+              "id": "c7f1f64f1131854189faf3b201d0cee1",
+              "formula": "[Plugs Transaction Details/Order Number]"
+            },
+            {
+              "id": "a6fed2f5bd97cbb81e9feeda8dc51444",
+              "formula": "[Plugs Transaction Details/Date]"
+            },
+            {
+              "id": "5a2bb562e1bdbbea0f642ed7ea16fdf2",
+              "formula": "[Plugs Transaction Details/Cost]"
+            },
+            {
+              "id": "82c77154c50e5058f94b402972a6c23f",
+              "formula": "[Plugs Transaction Details/Product Type]"
+            },
+            {
+              "id": "06e23f0e86013f79c9f40c8e69768e60",
+              "formula": "[Plugs Transaction Details/Product Family]"
+            },
+            {
+              "id": "3246a7b780ba8cb3c3b91f03d3a4230b",
+              "formula": "[Plugs Transaction Details/Product Line]"
+            },
+            {
+              "id": "8e98057535004018e89eb495ab468062",
+              "formula": "[Plugs Transaction Details/Brand]"
+            },
+            {
+              "id": "706d38757c858fe5e3e8a7efa16c3ea5",
+              "formula": "[Plugs Transaction Details/Sku Number]"
+            },
+            {
+              "id": "c6f4b7885903ccc03fcf15c134ee9084",
+              "formula": "[Plugs Transaction Details/Product Name]"
+            },
+            {
+              "id": "57a52e4aa623f29e0a7ead6af27ad30c",
+              "formula": "[Plugs Transaction Details/Calc]"
+            },
+            {
+              "id": "c8aa951491f027232871fb48ba539a79",
+              "formula": "[Plugs Transaction Details/Product Key]"
+            },
+            {
+              "id": "b1b92ba71a3c44ab3d6ebd33a8ac5f68",
+              "formula": "[Plugs Transaction Details/Store Name]"
+            },
+            {
+              "id": "db593d7b9950816bb226cb5b0e793907",
+              "formula": "[Plugs Transaction Details/Store Key]"
+            },
+            {
+              "id": "95605a6463bbee30e1de743c18042af2",
+              "formula": "[Plugs Transaction Details/Store Region]"
+            },
+            {
+              "id": "b136c9918cf907c11c140427375c6bd3",
+              "formula": "[Plugs Transaction Details/UA]"
+            },
+            {
+              "id": "b2d8eb5854963899070071ba64c899a6",
+              "formula": "[Plugs Transaction Details/RLS]"
+            },
+            {
+              "id": "17e71a7c5cbea7a39fbbad1fc75366b8",
+              "formula": "[Plugs Transaction Details/Store State]"
+            },
+            {
+              "id": "1b26f88c5f1a0a9abd050ad8aa818937",
+              "formula": "[Plugs Transaction Details/Store City]"
+            },
+            {
+              "id": "73046f4a3adbc86292744b777d418c2d",
+              "formula": "[Plugs Transaction Details/Store Zip Code]"
+            },
+            {
+              "id": "f5aee7d33a1f1fb909be010b3990798d",
+              "formula": "[Plugs Transaction Details/Store Latitude]"
+            },
+            {
+              "id": "88c72ac5bd2402491da6a999e3e757b5",
+              "formula": "[Plugs Transaction Details/Store Longitude]"
+            }
+          ],
+          "yAxis": [
+            {
+              "id": "col-revenue-sum"
+            }
+          ],
+          "xAxis": {
+            "id": "col-month",
+            "sort": {
+              "by": "col-month",
+              "direction": "ascending"
+            }
+          },
+          "name": "Revenue by Month"
+        },
+        {
+          "id": "tbl-plugs-tx",
+          "kind": "table",
+          "source": {
+            "dataModelId": "47d94152-6448-4cd2-9266-f3076d53cc59",
+            "elementId": "aFkvPq8xkX",
+            "kind": "data-model"
+          },
+          "columns": [
+            {
+              "id": "col-revenue",
+              "formula": "[Price] * [Quantity]",
+              "name": "Revenue"
+            },
+            {
+              "id": "-843A_GZb1",
+              "formula": "[Plugs Transaction Details - Relationships/Quantity]"
+            },
+            {
+              "id": "UXhMsm1Rss",
+              "formula": "[Plugs Transaction Details - Relationships/Price]"
+            },
+            {
+              "id": "d9fRF6ccMa",
+              "formula": "[Plugs Transaction Details - Relationships/Order Number]"
+            },
+            {
+              "id": "zjXo8KcTRL",
+              "formula": "[Plugs Transaction Details - Relationships/Date]"
+            },
+            {
+              "id": "R0JHJERzwD",
+              "formula": "[Plugs Transaction Details - Relationships/Cost]"
+            },
+            {
+              "id": "AfVK3Zhk_p",
+              "formula": "[Plugs Transaction Details - Relationships/Product Type]"
+            },
+            {
+              "id": "_TGqDi4pdj",
+              "formula": "[Plugs Transaction Details - Relationships/Product Family]"
+            },
+            {
+              "id": "iXycDE8V0k",
+              "formula": "[Plugs Transaction Details - Relationships/Product Line]"
+            },
+            {
+              "id": "ZCKbqDzSwZ",
+              "formula": "[Plugs Transaction Details - Relationships/Brand]"
+            },
+            {
+              "id": "RRe4s0hezh",
+              "formula": "[Plugs Transaction Details - Relationships/Sku Number]"
+            },
+            {
+              "id": "jCl_7Gpfsw",
+              "formula": "[Plugs Transaction Details - Relationships/Product Name]"
+            },
+            {
+              "id": "5YW6MQAgki",
+              "formula": "[Plugs Transaction Details - Relationships/Calc]"
+            },
+            {
+              "id": "fuKsWbkXVx",
+              "formula": "[Plugs Transaction Details - Relationships/Product Key]"
+            },
+            {
+              "id": "WcWRyzC7-f",
+              "formula": "[Plugs Transaction Details - Relationships/Store Name]"
+            },
+            {
+              "id": "ytg1wqi2DU",
+              "formula": "[Plugs Transaction Details - Relationships/Store Key]"
+            },
+            {
+              "id": "M5DyHi_ua0",
+              "formula": "[Plugs Transaction Details - Relationships/Store Region]"
+            },
+            {
+              "id": "0Z5BPU9Wzf",
+              "formula": "[Plugs Transaction Details - Relationships/UA]"
+            },
+            {
+              "id": "k2B2mwUkGS",
+              "formula": "[Plugs Transaction Details - Relationships/RLS]"
+            },
+            {
+              "id": "-e1phG6IdU",
+              "formula": "[Plugs Transaction Details - Relationships/Store State]"
+            },
+            {
+              "id": "Y8plwrq4VO",
+              "formula": "[Plugs Transaction Details - Relationships/Store City]"
+            },
+            {
+              "id": "EwhSZ2nMyT",
+              "formula": "[Plugs Transaction Details - Relationships/Store Zip Code]"
+            },
+            {
+              "id": "dqGdonuQ1d",
+              "formula": "[Plugs Transaction Details - Relationships/Store Latitude]"
+            },
+            {
+              "id": "i-MKmjTmMb",
+              "formula": "[Plugs Transaction Details - Relationships/Store Longitude]"
+            }
+          ],
+          "name": "Plugs Transaction Details",
+          "order": [
+            "col-revenue",
+            "-843A_GZb1",
+            "UXhMsm1Rss",
+            "d9fRF6ccMa",
+            "zjXo8KcTRL",
+            "R0JHJERzwD",
+            "AfVK3Zhk_p",
+            "_TGqDi4pdj",
+            "iXycDE8V0k",
+            "ZCKbqDzSwZ",
+            "RRe4s0hezh",
+            "jCl_7Gpfsw",
+            "5YW6MQAgki",
+            "fuKsWbkXVx",
+            "WcWRyzC7-f",
+            "ytg1wqi2DU",
+            "M5DyHi_ua0",
+            "0Z5BPU9Wzf",
+            "k2B2mwUkGS",
+            "-e1phG6IdU",
+            "Y8plwrq4VO",
+            "EwhSZ2nMyT",
+            "dqGdonuQ1d",
+            "i-MKmjTmMb"
+          ]
+        }
+      ]
+    }
+  ],
+  "layout": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<Page type=\"grid\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\" id=\"page-overview\">\n  <LayoutElement elementId=\"ctrl-date-range\" gridColumn=\"1 / 25\" gridRow=\"1 / 3\"/>\n  <LayoutElement elementId=\"chart-revenue-monthly\" gridColumn=\"1 / 25\" gridRow=\"3 / 15\"/>\n  <LayoutElement elementId=\"tbl-plugs-tx\" gridColumn=\"1 / 25\" gridRow=\"15 / 35\"/>\n</Page>\n"
+}
