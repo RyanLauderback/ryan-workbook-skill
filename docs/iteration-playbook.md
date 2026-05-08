@@ -1,89 +1,255 @@
 # Iteration Playbook
 
-Sigma workbook spec JSON is **net-new to LLMs** — not in pretraining data. The
-fastest path to one-shot quality is a tight feedback loop where every attempt
-becomes evidence and recurring fixes get promoted into skills.
+Sigma workbook spec JSON is **net-new to LLMs** — not in pretraining data, and
+the public help docs don't always match the API. The fastest path to one-shot
+quality is a tight feedback loop where every attempt becomes evidence and
+recurring fixes get promoted into skills.
 
 ## The loop
 
 ```
-prompt  ─►  generation  ─►  validate  ─►  diff vs exemplar  ─►  promote learnings
-   ▲                                                                  │
-   └──────────────────────  refine  ◄─────────────────────────────────┘
+recon  ─►  propose plan  ─►  draft  ─►  POST  ─►  GET back  ─►  visually verify  ─►  promote
+  ▲                                                                                    │
+  └────────────────────────────────  refine  ◄────────────────────────────────────────┘
 ```
+
+The **visual verification** step is non-negotiable. The CREATE endpoint
+returns HTTP 200 for specs whose cross-element column references can't be
+resolved at render time — the workbook still gets created, but elements
+silently fail to render. Trusting HTTP 200 alone produces broken dashboards.
 
 ## Per-attempt protocol
 
-For each attempt at generating or editing a workbook:
+### 1. Recon (do this BEFORE writing any spec)
 
-1. **Save the prompt verbatim.**
-   `workbooks/<name>/prompts/<YYYYMMDD-HHMM>.md`
-   Include the full natural-language prompt, plus any reference files you cited
-   (paths, not contents).
+Build a complete picture of the inputs before drafting. Save findings in the
+prompt file so future iterations don't re-discover them.
 
-2. **Save the generated spec.**
-   `workbooks/<name>/iterations/<YYYYMMDD-HHMM>.json`
-   This is the candidate. Don't overwrite `spec.json` until validation passes.
+```bash
+# Folder — workbook needs the internal UUID, not the urlId in the URL.
+curl -sf -H "Authorization: Bearer $SIGMA_API_TOKEN" \
+  "$SIGMA_BASE_URL/v2/files/<folder-urlId>" | jq '{name, id, urlId}'
 
-3. **Validate.**
-   - Local: `jq . iterations/<file>.json` to confirm valid JSON.
-   - Remote: `scripts/push-workbook.sh create <file>` (new) or
-     `update <id> <file>` (existing). Server validation catches schema issues
-     LLMs miss.
-   - If push succeeds, GET it back and compare — Sigma may have remapped IDs
-     (CREATE) or normalized fields. The GET response, not your input, is the
-     new source of truth.
+# Data model — get nodes, columns, AND metrics. Always check metrics first.
+curl -sf -H "Authorization: Bearer $SIGMA_API_TOKEN" \
+  "$SIGMA_BASE_URL/v2/dataModels/<dataModelId>/spec" \
+  | jq '(.pages // [])[].elements[]?
+        | {id, name, kind,
+           columns: ((.columns // []) | map({id, name, formula})),
+           metrics: ((.metrics // []) | map({id, name, formula, format}))}'
+```
 
-4. **Diff vs the closest exemplar.**
-   ```bash
-   diff <(jq -S . workbooks/_exemplars/<closest>.json) \
-        <(jq -S . workbooks/<name>/iterations/<file>.json)
-   ```
-   Sort keys (`jq -S`) so diffs are stable. Look for missing required elements
-   from the relevant skill's `reference/structure.md`.
+If the data model has `metrics`, plan to use `[Metrics/<Name>]` rather than
+hand-deriving aggregations — it preserves currency/percent formatting and
+keeps a single source of truth.
 
-5. **Record findings in `notes.md`.**
-   One row per attempt in the iteration log table. Be terse: what worked, what
-   broke, whether anything was promoted.
+### 2. Propose the plan; wait for approval
 
-6. **Commit.**
-   `git add workbooks/<name> && git commit -m "iter <name>: <one-line summary>"`
-   Each iteration is now in `git log` with diffable history.
+Workbook prompts often underspecify the dashboard — the user names the data
+and the question, not the visualizations or the filter set. Surface a
+written plan before writing JSON. The plan covers:
+
+- **Data inventory.** What columns *are* available, and which assumed
+  ones aren't (e.g. "no customer dimension; closest proxy is Order
+  Number"). Force the user to correct before you build on a wrong
+  premise.
+- **Inference rationale.** One line per visualization: *why this chart,
+  this dimension, this metric*. ("Quantity, not revenue, because
+  popularity is a unit-volume question.")
+- **Filter set with reasoning.** Filters in priority order with one-line
+  reasons; note what you considered and dropped.
+- **Layout sketch.** Block-diagram in text (header / KPI row / chart
+  grid / detail). No XML yet.
+- **Open decisions.** Anywhere you guessed (proxies, scope of joined
+  data, whether to modify a shared resource). Phrase as yes/no
+  questions.
+
+Wait for explicit approval. The 60 seconds spent here saves multiple
+iterations of rebuilding the wrong dashboard. If the user already gave
+you an explicit plan, skip this and go straight to drafting.
+
+### 3. Save the prompt verbatim
+
+`workbooks/<name>/prompts/<YYYYMMDD-HHMM>.md` — full natural-language prompt
+plus the recon findings (folder UUID, data-model element + columns + metrics
+you'll use, interpretive choices made when the prompt is ambiguous), and the
+approved plan from step 2.
+
+### 4. Draft the spec
+
+`workbooks/<name>/iterations/<YYYYMMDD-HHMM>.json`. Apply the rules in
+[`.claude/skills/sigma-workbook-conventions/reference/workbook-spec-api.md`](../.claude/skills/sigma-workbook-conventions/reference/workbook-spec-api.md):
+
+- Declare every column you'll reference downstream, with stable readable ids
+  (`col-date`, `col-store-region`) — no implicit inheritance.
+- Use `[Metrics/<Name>]` instead of redoing math.
+- Controls bind by column `id`, not column name.
+- Visualization clarity: titles + comparisons on every chart/KPI.
+- Verified element kinds: `kpi-chart` (NOT `kpi`), `bar-chart`, `table`,
+  `control`. See the kind-mismatch table.
+
+Don't overwrite `spec.json` yet — that comes after the GET-back.
+
+### 5. Validate locally and POST
+
+```bash
+jq . workbooks/<name>/iterations/<file>.json   # syntax sanity
+
+# Auth + POST in a single shell — env vars don't persist between Bash calls.
+# NOTE: scripts/push-workbook.sh is currently broken (uses /v2/data-models
+# kebab path, 404s; also misnamed — only operates on data models). Call the
+# API directly until that's fixed. See memory: project_helper_scripts_broken.
+eval "$(scripts/load-env.sh)"
+CREDENTIALS=$(printf '%s:%s' "$SIGMA_CLIENT_ID" "$SIGMA_CLIENT_SECRET" | base64 | tr -d '\n')
+SIGMA_API_TOKEN=$(curl -sf -X POST \
+  -H "Authorization: Basic ${CREDENTIALS}" \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  -d "grant_type=client_credentials" \
+  "$SIGMA_BASE_URL/v2/auth/token" | jq -r '.access_token')
+
+curl -sS -X POST "$SIGMA_BASE_URL/v2/workbooks/spec" \
+  -H "Authorization: Bearer $SIGMA_API_TOKEN" \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json" \
+  --data-binary "@workbooks/<name>/iterations/<file>.json"
+```
+
+**Never echo `$SIGMA_API_TOKEN` or `$SIGMA_CLIENT_SECRET`.** Chain auth + call
+in a single Bash invocation so the token never crosses a tool boundary.
+
+### 6. Read the response
+
+- **HTTP 400** → read the `message` and iterate the spec. The error usually
+  names the element + path (`pages[0].elements[1]: ...`). Save the new
+  attempt as a fresh `iterations/<NEW-TIMESTAMP>.json` — don't overwrite.
+- **HTTP 200** → response includes `workbookId`. Proceed to GET-back.
+
+### 7. GET back; that's the new source of truth
+
+```bash
+curl -sf -H "Authorization: Bearer $SIGMA_API_TOKEN" \
+  -H "Accept: application/json" \
+  "$SIGMA_BASE_URL/v2/workbooks/<workbookId>/spec" \
+  | jq . > workbooks/<name>/spec.json
+```
+
+The GET response defaults to YAML unless `Accept: application/json` is set.
+Sigma normalizes layout XML (adds prolog) and may auto-fill default fields.
+The GET, not your input, is the new baseline.
+
+### 8. Visually verify
+
+Open the workbook URL. Confirm every element actually renders with data:
+
+- KPIs show numbers (not blank, not NaN, format applied).
+- Charts have axes with values, sort order matches expectation.
+- Controls populate with values and filter every dependent element.
+- Table shows the columns and rows you expected.
+
+A spec is not "done" until visual verification passes. The CREATE endpoint
+will not catch broken cross-element column references, missing titles, or
+unreadable formats.
+
+### 9. Capture user feedback (when applicable)
+
+If the user UI-fixes something, GET the spec again and diff against your
+previous version:
+
+```bash
+TS=$(date +%Y%m%d-%H%M)
+curl -sf -H "Authorization: Bearer $SIGMA_API_TOKEN" -H "Accept: application/json" \
+  "$SIGMA_BASE_URL/v2/workbooks/<workbookId>/spec" \
+  | jq . > workbooks/<name>/iterations/${TS}-from-sigma.json
+
+diff <(jq -S 'del(.workbookId, .url, .documentVersion, .latestDocumentVersion, .ownerId, .createdBy, .updatedBy, .createdAt, .updatedAt)' workbooks/<name>/spec.json) \
+     <(jq -S 'del(.workbookId, .url, .documentVersion, .latestDocumentVersion, .ownerId, .createdBy, .updatedBy, .createdAt, .updatedAt)' workbooks/<name>/iterations/${TS}-from-sigma.json)
+```
+
+Read the diff like a code review. Each change the user made is a lesson —
+extract it, then update the skill / memory / exemplar accordingly.
+
+### 10. Diff vs the closest exemplar
+
+```bash
+diff <(jq -S . workbooks/_exemplars/<closest>.json) \
+     <(jq -S . workbooks/<name>/spec.json)
+```
+
+Look for shape divergence (missing elements, unusual source patterns) that
+suggests either a bug or a candidate new exemplar.
+
+### 11. Record findings + commit
+
+Append a row to `workbooks/<name>/notes.md` iteration log: what worked,
+what broke, what got promoted. Then commit:
+
+```bash
+git add workbooks/<name> && git commit -m "iter <name>: <one-line summary>"
+```
+
+Each iteration in `git log` is the diffable audit trail.
 
 ## Promotion rule
 
-When a fix recurs across **2+ iterations** in **any** workbook of the same
-pattern, promote it:
+Promote a fix into a skill when ANY of these is true:
 
-- Naming/layout fix → `.claude/skills/sigma-workbook-conventions/reference/naming.md`
-- Pattern-specific fix (e.g. variance metric formula tweak) →
-  `.claude/skills/<pattern-skill>/reference/<topic>.md`
-- A spec fragment that consistently produces correct output →
-  add it to that skill's `examples/` so future generations few-shot off it.
+- A fix **recurs across 2+ iterations** in any workbook (proven pattern).
+- A **single net-new working shape** is discovered that future workbooks of
+  this kind will need (e.g. KPI element shape, list-control wiring).
+- A **doc/API mismatch** is verified (e.g. `kpi` vs `kpi-chart`) — these are
+  high-value because they're invisible from public docs.
 
-The point of skills is that recurring knowledge stops being re-invented per
-session. If you find yourself re-explaining the same thing in prompts, that's
-the signal to promote.
+Where to put it:
+
+| Lesson type | Destination |
+|-------------|-------------|
+| Naming / layout / general workbook conventions | `.claude/skills/sigma-workbook-conventions/reference/naming.md` |
+| Workbook spec API mechanics, kinds, formula namespaces | `.claude/skills/sigma-workbook-conventions/reference/workbook-spec-api.md` |
+| Pattern-specific (e.g. financial recon variance formula) | `.claude/skills/<pattern-skill>/reference/<topic>.md` |
+| A whole spec that exemplifies a pattern | `workbooks/_exemplars/<pattern>-<shape>.json` |
+| Account-specific (folder IDs, broken helpers, staging quirks) | Memory only — these don't belong in a shareable skill |
+
+If you find yourself re-explaining the same thing in prompts, that's the
+signal to promote. The point of skills is that recurring knowledge stops
+being re-invented per session.
 
 ## When to start a new exemplar
 
-When you produce a workbook that would serve as a good reference for future
+When you produce a spec that would serve as a good reference for future
 generations of the same pattern:
 
 ```bash
-cp workbooks/<name>/spec.json workbooks/_exemplars/<pattern>-<descriptive-name>.json
-git add workbooks/_exemplars && git commit -m "exemplar: <pattern> <description>"
+cp workbooks/<name>/spec.json workbooks/_exemplars/<pattern>-<shape>.json
+git add workbooks/_exemplars && git commit -m "exemplar: <pattern> <shape>"
 ```
 
-Exemplars are treated as immutable. Prefer adding new ones over modifying old.
+Naming convention: `<source-pattern>-<element-shape>.json` (e.g.
+`data-model-sourced-simple-overview.json`,
+`data-model-sourced-kpi-chart-table-controls.json`). Exemplars are
+treated as immutable — prefer adding new ones over modifying old.
 
-## Anti-patterns to avoid
+## Anti-patterns
 
+- **Trusting HTTP 200 as "done."** It only validates structure, not
+  cross-element column resolution. Always visually verify.
 - **Editing `spec.json` directly without saving the iteration.** You lose the
   evidence of what worked.
 - **Letting prompts drift.** If you tweak a prompt across attempts, save each
   variant; a working prompt is reusable.
-- **Promoting too eagerly.** A one-time fix isn't a pattern. Wait for it to
-  show up twice before promoting.
-- **Hand-editing exemplars.** They are anchors. If an exemplar needs an edit,
+- **Promoting too eagerly on recurring "fixes" that were really one-time
+  account/data quirks.** Account specifics go to memory, not skills.
+- **Hand-editing exemplars.** They're anchors. If an exemplar needs an edit,
   it usually means it's wrong — replace it instead.
+- **Echoing tokens or secrets.** Auth + call in one shell, never let
+  `$SIGMA_API_TOKEN` cross a tool-call boundary.
+- **Skipping recon** because "the user told me what they want." Recon catches
+  metric reuse, column-name realities, and folder-ID mismatches before they
+  become an HTTP 400.
+- **Skipping the plan proposal** and jumping straight from recon to JSON.
+  The user often hasn't specified the visualizations or the filter set;
+  inferring silently and shipping is a recipe for tearing the dashboard
+  apart on first review. Surface the inference, get a yes, then build.
+- **Trusting that every column in `GET /v2/dataModels/{id}/spec` is
+  queryable.** Some are stale/orphaned and fail formula resolution at
+  POST. Probe unfamiliar columns with a one-table POST before building
+  on them.

@@ -1,0 +1,270 @@
+{
+  "name": "Plugs Customer Performance Analysis",
+  "schemaVersion": 1,
+  "folderId": "eb548e3b-81e4-46d9-adfd-488ae1dfb0bb",
+  "pages": [
+    {
+      "id": "page-overview",
+      "name": "Overview",
+      "elements": [
+        { "id": "container-header", "kind": "container" },
+        {
+          "id": "text-page-title",
+          "kind": "text",
+          "body": "## **Customer Performance Analysis**\nHow customers buy across stores, and which products drive the most revenue.",
+          "verticalAlign": "middle"
+        },
+        {
+          "kind": "control",
+          "controlId": "DateRange",
+          "id": "ctrl-date-range",
+          "filters": [
+            { "source": { "kind": "table", "elementId": "tbl-plugs-tx" }, "columnId": "col-date" }
+          ],
+          "controlType": "date-range",
+          "mode": "between",
+          "includeNulls": "when-no-value-is-selected"
+        },
+        {
+          "kind": "control",
+          "controlId": "StoreRegion",
+          "id": "ctrl-store-region",
+          "filters": [
+            { "source": { "kind": "table", "elementId": "tbl-plugs-tx" }, "columnId": "col-store-region" }
+          ],
+          "controlType": "list",
+          "mode": "include",
+          "selectionMode": "multiple",
+          "values": [],
+          "source": {
+            "kind": "source",
+            "source": { "kind": "table", "elementId": "tbl-plugs-tx" },
+            "columnId": "col-store-region"
+          }
+        },
+        {
+          "kind": "control",
+          "controlId": "ProductFamily",
+          "id": "ctrl-product-family",
+          "filters": [
+            { "source": { "kind": "table", "elementId": "tbl-plugs-tx" }, "columnId": "col-product-family" }
+          ],
+          "controlType": "list",
+          "mode": "include",
+          "selectionMode": "multiple",
+          "values": [],
+          "source": {
+            "kind": "source",
+            "source": { "kind": "table", "elementId": "tbl-plugs-tx" },
+            "columnId": "col-product-family"
+          }
+        },
+
+        { "id": "container-kpis", "kind": "container" },
+        {
+          "id": "kpi-revenue",
+          "kind": "kpi-chart",
+          "name": "Total Revenue",
+          "source": { "kind": "table", "elementId": "tbl-plugs-tx" },
+          "columns": [
+            { "id": "kpi-rev-month", "formula": "DateTrunc(\"month\", [Date])" },
+            { "id": "kpi-rev-value", "formula": "[Metrics/Revenue]", "name": "Revenue" },
+            { "id": "kpi-rev-date", "formula": "[Plugs Transaction Details/Date]" },
+            { "id": "kpi-rev-quantity", "formula": "[Plugs Transaction Details/Quantity]" },
+            { "id": "kpi-rev-price", "formula": "[Plugs Transaction Details/Price]" }
+          ],
+          "value": { "id": "kpi-rev-value" }
+        },
+        {
+          "id": "kpi-active-customers",
+          "kind": "kpi-chart",
+          "name": "Active Customers",
+          "source": { "kind": "table", "elementId": "tbl-plugs-tx" },
+          "columns": [
+            { "id": "kpi-cust-month", "formula": "DateTrunc(\"month\", [Date])" },
+            { "id": "kpi-cust-value", "formula": "CountDistinct([Cust Key])", "name": "Active Customers" },
+            { "id": "kpi-cust-date", "formula": "[Plugs Transaction Details/Date]" },
+            { "id": "kpi-cust-key", "formula": "[Plugs Transaction Details/Cust Key]" }
+          ],
+          "value": { "id": "kpi-cust-value" }
+        },
+        {
+          "id": "kpi-avg-order-value",
+          "kind": "kpi-chart",
+          "name": "Avg Order Value",
+          "source": { "kind": "table", "elementId": "tbl-plugs-tx" },
+          "columns": [
+            { "id": "kpi-aov-month", "formula": "DateTrunc(\"month\", [Date])" },
+            { "id": "kpi-aov-value", "formula": "Sum([Quantity] * [Price]) / CountDistinct([Order Number])", "name": "Avg Order Value", "format": { "type": "number", "format": "currency", "currency": "USD" } },
+            { "id": "kpi-aov-date", "formula": "[Plugs Transaction Details/Date]" },
+            { "id": "kpi-aov-quantity", "formula": "[Plugs Transaction Details/Quantity]" },
+            { "id": "kpi-aov-price", "formula": "[Plugs Transaction Details/Price]" },
+            { "id": "kpi-aov-order", "formula": "[Plugs Transaction Details/Order Number]" }
+          ],
+          "value": { "id": "kpi-aov-value" }
+        },
+        {
+          "id": "kpi-margin",
+          "kind": "kpi-chart",
+          "name": "Profit Margin",
+          "source": { "kind": "table", "elementId": "tbl-plugs-tx" },
+          "columns": [
+            { "id": "kpi-margin-month", "formula": "DateTrunc(\"month\", [Date])" },
+            { "id": "kpi-margin-value", "formula": "[Metrics/Profit Margin]", "name": "Profit Margin" },
+            { "id": "kpi-margin-date", "formula": "[Plugs Transaction Details/Date]" },
+            { "id": "kpi-margin-quantity", "formula": "[Plugs Transaction Details/Quantity]" },
+            { "id": "kpi-margin-price", "formula": "[Plugs Transaction Details/Price]" },
+            { "id": "kpi-margin-cost", "formula": "[Plugs Transaction Details/Cost]" }
+          ],
+          "value": { "id": "kpi-margin-value" }
+        },
+
+        { "id": "container-customers", "kind": "container" },
+        {
+          "id": "text-customer-section",
+          "kind": "text",
+          "body": "### Customer Performance",
+          "verticalAlign": "middle"
+        },
+        {
+          "id": "chart-top-customers",
+          "kind": "bar-chart",
+          "name": "Top 15 Customers by Revenue",
+          "source": { "kind": "table", "elementId": "tbl-plugs-tx" },
+          "columns": [
+            { "id": "tc-customer-name", "formula": "[Plugs Transaction Details/Customer Name]", "name": "Customer" },
+            { "id": "tc-revenue", "formula": "[Metrics/Revenue]", "name": "Revenue" },
+            { "id": "tc-date", "formula": "[Plugs Transaction Details/Date]" },
+            { "id": "tc-quantity", "formula": "[Plugs Transaction Details/Quantity]" },
+            { "id": "tc-price", "formula": "[Plugs Transaction Details/Price]" }
+          ],
+          "yAxis": [ { "id": "tc-customer-name" } ],
+          "xAxis": {
+            "id": "tc-revenue",
+            "sort": { "by": "tc-revenue", "direction": "descending" }
+          },
+          "limit": { "count": 15 }
+        },
+        {
+          "id": "chart-revenue-by-region",
+          "kind": "bar-chart",
+          "name": "Revenue by Store Region",
+          "source": { "kind": "table", "elementId": "tbl-plugs-tx" },
+          "columns": [
+            { "id": "rbr-region", "formula": "[Plugs Transaction Details/Store Region]", "name": "Store Region" },
+            { "id": "rbr-revenue", "formula": "[Metrics/Revenue]", "name": "Revenue" },
+            { "id": "rbr-customers", "formula": "CountDistinct([Cust Key])", "name": "Active Customers" },
+            { "id": "rbr-date", "formula": "[Plugs Transaction Details/Date]" },
+            { "id": "rbr-quantity", "formula": "[Plugs Transaction Details/Quantity]" },
+            { "id": "rbr-price", "formula": "[Plugs Transaction Details/Price]" },
+            { "id": "rbr-cust-key", "formula": "[Plugs Transaction Details/Cust Key]" }
+          ],
+          "xAxis": {
+            "id": "rbr-region",
+            "sort": { "by": "rbr-revenue", "direction": "descending" }
+          },
+          "yAxis": [ { "id": "rbr-revenue" }, { "id": "rbr-customers" } ]
+        },
+
+        { "id": "container-products", "kind": "container" },
+        {
+          "id": "text-product-section",
+          "kind": "text",
+          "body": "### Product Popularity",
+          "verticalAlign": "middle"
+        },
+        {
+          "id": "chart-top-products",
+          "kind": "bar-chart",
+          "name": "Top 15 Products by Revenue",
+          "source": { "kind": "table", "elementId": "tbl-plugs-tx" },
+          "columns": [
+            { "id": "tp-product", "formula": "[Plugs Transaction Details/Product Name]", "name": "Product" },
+            { "id": "tp-revenue", "formula": "[Metrics/Revenue]", "name": "Revenue" },
+            { "id": "tp-quantity-sold", "formula": "Sum([Quantity])", "name": "Units Sold" },
+            { "id": "tp-date", "formula": "[Plugs Transaction Details/Date]" },
+            { "id": "tp-quantity", "formula": "[Plugs Transaction Details/Quantity]" },
+            { "id": "tp-price", "formula": "[Plugs Transaction Details/Price]" }
+          ],
+          "yAxis": [ { "id": "tp-product" } ],
+          "xAxis": {
+            "id": "tp-revenue",
+            "sort": { "by": "tp-revenue", "direction": "descending" }
+          },
+          "limit": { "count": 15 }
+        },
+        {
+          "id": "chart-product-family",
+          "kind": "bar-chart",
+          "name": "Revenue by Product Family",
+          "source": { "kind": "table", "elementId": "tbl-plugs-tx" },
+          "columns": [
+            { "id": "pf-family", "formula": "[Plugs Transaction Details/Product Family]", "name": "Product Family" },
+            { "id": "pf-revenue", "formula": "[Metrics/Revenue]", "name": "Revenue" },
+            { "id": "pf-units", "formula": "Sum([Quantity])", "name": "Units Sold" },
+            { "id": "pf-date", "formula": "[Plugs Transaction Details/Date]" },
+            { "id": "pf-quantity", "formula": "[Plugs Transaction Details/Quantity]" },
+            { "id": "pf-price", "formula": "[Plugs Transaction Details/Price]" }
+          ],
+          "xAxis": {
+            "id": "pf-family",
+            "sort": { "by": "pf-revenue", "direction": "descending" }
+          },
+          "yAxis": [ { "id": "pf-revenue" }, { "id": "pf-units" } ]
+        },
+
+        {
+          "id": "tbl-plugs-tx",
+          "kind": "table",
+          "name": "Plugs Transaction Details",
+          "source": {
+            "kind": "data-model",
+            "dataModelId": "47d94152-6448-4cd2-9266-f3076d53cc59",
+            "elementId": "aFkvPq8xkX"
+          },
+          "columns": [
+            { "id": "col-date", "formula": "[Plugs Transaction Details - Relationships/Date]" },
+            { "id": "col-order-number", "formula": "[Plugs Transaction Details - Relationships/Order Number]" },
+            { "id": "col-customer-name", "formula": "[Plugs Transaction Details - Relationships/Customer Name]" },
+            { "id": "col-cust-key", "formula": "[Plugs Transaction Details - Relationships/Cust Key]" },
+            { "id": "col-product-name", "formula": "[Plugs Transaction Details - Relationships/Product Name]" },
+            { "id": "col-product-family", "formula": "[Plugs Transaction Details - Relationships/Product Family]" },
+            { "id": "col-product-line", "formula": "[Plugs Transaction Details - Relationships/Product Line]" },
+            { "id": "col-product-type", "formula": "[Plugs Transaction Details - Relationships/Product Type]" },
+            { "id": "col-brand", "formula": "[Plugs Transaction Details - Relationships/Brand]" },
+            { "id": "col-sku-number", "formula": "[Plugs Transaction Details - Relationships/Sku Number]" },
+            { "id": "col-store-name", "formula": "[Plugs Transaction Details - Relationships/Store Name]" },
+            { "id": "col-store-region", "formula": "[Plugs Transaction Details - Relationships/Store Region]" },
+            { "id": "col-store-state", "formula": "[Plugs Transaction Details - Relationships/Store State]" },
+            { "id": "col-store-city", "formula": "[Plugs Transaction Details - Relationships/Store City]" },
+            { "id": "col-quantity", "formula": "[Plugs Transaction Details - Relationships/Quantity]" },
+            { "id": "col-price", "formula": "[Plugs Transaction Details - Relationships/Price]" },
+            { "id": "col-cost", "formula": "[Plugs Transaction Details - Relationships/Cost]" },
+            { "id": "col-revenue", "formula": "[Price] * [Quantity]", "name": "Revenue" }
+          ],
+          "order": [
+            "col-date",
+            "col-order-number",
+            "col-customer-name",
+            "col-cust-key",
+            "col-store-region",
+            "col-store-state",
+            "col-store-city",
+            "col-store-name",
+            "col-product-family",
+            "col-product-line",
+            "col-product-type",
+            "col-brand",
+            "col-product-name",
+            "col-sku-number",
+            "col-quantity",
+            "col-price",
+            "col-cost",
+            "col-revenue"
+          ]
+        }
+      ]
+    }
+  ],
+  "layout": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<Page type=\"grid\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\" id=\"page-overview\">\n  <GridContainer elementId=\"container-header\" type=\"grid\" gridColumn=\"1 / 25\" gridRow=\"1 / 4\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n    <LayoutElement elementId=\"text-page-title\" gridColumn=\"1 / 10\" gridRow=\"1 / 4\"/>\n    <LayoutElement elementId=\"ctrl-date-range\" gridColumn=\"10 / 15\" gridRow=\"1 / 4\"/>\n    <LayoutElement elementId=\"ctrl-store-region\" gridColumn=\"15 / 20\" gridRow=\"1 / 4\"/>\n    <LayoutElement elementId=\"ctrl-product-family\" gridColumn=\"20 / 25\" gridRow=\"1 / 4\"/>\n  </GridContainer>\n  <GridContainer elementId=\"container-kpis\" type=\"grid\" gridColumn=\"1 / 25\" gridRow=\"4 / 14\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n    <LayoutElement elementId=\"kpi-revenue\" gridColumn=\"1 / 7\" gridRow=\"1 / 10\"/>\n    <LayoutElement elementId=\"kpi-active-customers\" gridColumn=\"7 / 13\" gridRow=\"1 / 10\"/>\n    <LayoutElement elementId=\"kpi-avg-order-value\" gridColumn=\"13 / 19\" gridRow=\"1 / 10\"/>\n    <LayoutElement elementId=\"kpi-margin\" gridColumn=\"19 / 25\" gridRow=\"1 / 10\"/>\n  </GridContainer>\n  <GridContainer elementId=\"container-customers\" type=\"grid\" gridColumn=\"1 / 25\" gridRow=\"14 / 28\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n    <LayoutElement elementId=\"text-customer-section\" gridColumn=\"1 / 25\" gridRow=\"1 / 2\"/>\n    <LayoutElement elementId=\"chart-top-customers\" gridColumn=\"1 / 13\" gridRow=\"2 / 14\"/>\n    <LayoutElement elementId=\"chart-revenue-by-region\" gridColumn=\"13 / 25\" gridRow=\"2 / 14\"/>\n  </GridContainer>\n  <GridContainer elementId=\"container-products\" type=\"grid\" gridColumn=\"1 / 25\" gridRow=\"28 / 42\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n    <LayoutElement elementId=\"text-product-section\" gridColumn=\"1 / 25\" gridRow=\"1 / 2\"/>\n    <LayoutElement elementId=\"chart-top-products\" gridColumn=\"1 / 13\" gridRow=\"2 / 14\"/>\n    <LayoutElement elementId=\"chart-product-family\" gridColumn=\"13 / 25\" gridRow=\"2 / 14\"/>\n  </GridContainer>\n  <LayoutElement elementId=\"tbl-plugs-tx\" gridColumn=\"1 / 25\" gridRow=\"42 / 62\"/>\n</Page>\n"
+}
