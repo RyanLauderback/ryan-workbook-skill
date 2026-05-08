@@ -75,8 +75,9 @@ at least these:
 ## Exemplar
 
 `examples/exemplar-spec.json` is the anchor. **It is currently a stub** — replace
-it with a real exported recon workbook from the user's Sigma org via
-`scripts/export-workbook.sh`, then refresh `reference/structure.md` and
+it with a real exported recon workbook from the user's Sigma org by calling
+`GET /v2/workbooks/{workbookId}/spec` (with `Accept: application/json`) on a
+known-good recon dashboard, then refresh `reference/structure.md` and
 `reference/kpis.md` to match the real exemplar. Skill stays valuable even
 without the exemplar but is much sharper with it.
 

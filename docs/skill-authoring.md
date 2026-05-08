@@ -50,9 +50,10 @@ the same scaffolding ("standard pages: overview / trend / detail / exceptions",
 4. **Document canonical KPIs** in `reference/kpis.md` as a table: ID, formula,
    format, dependencies. Use Sigma function syntax for formulas.
 
-5. **Drop a real exemplar** into `examples/exemplar-spec.json`. Use
-   `scripts/export-workbook.sh <data-model-id> .claude/skills/<your-skill>/examples/exemplar-spec.json`.
-   The skill works without one but is much sharper with it.
+5. **Drop a real exemplar** into `examples/exemplar-spec.json`. GET it from
+   the Sigma REST API: `GET /v2/workbooks/{workbookId}/spec` with header
+   `Accept: application/json`, then save the response body. The skill works
+   without one but is much sharper with it.
 
 6. **Test activation.** In a fresh Claude Code session, ask for a workbook of
    that pattern and verify the skill activates. If it doesn't, the

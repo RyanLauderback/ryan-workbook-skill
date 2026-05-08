@@ -96,9 +96,7 @@ Don't overwrite `spec.json` yet — that comes after the GET-back.
 jq . workbooks/<name>/iterations/<file>.json   # syntax sanity
 
 # Auth + POST in a single shell — env vars don't persist between Bash calls.
-# NOTE: scripts/push-workbook.sh is currently broken (uses /v2/data-models
-# kebab path, 404s; also misnamed — only operates on data models). Call the
-# API directly until that's fixed. See memory: project_helper_scripts_broken.
+# Workbook CRUD is done by calling the Sigma REST API directly via curl.
 eval "$(scripts/load-env.sh)"
 CREDENTIALS=$(printf '%s:%s' "$SIGMA_CLIENT_ID" "$SIGMA_CLIENT_SECRET" | base64 | tr -d '\n')
 SIGMA_API_TOKEN=$(curl -sf -X POST \

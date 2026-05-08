@@ -1,5 +1,5 @@
 {
   "_comment": "PLACEHOLDER. Replace with a real exported recon workbook spec from your Sigma org.",
-  "_how_to_replace": "1) Identify a known-good recon workbook in your Sigma org. 2) Find its data-model id. 3) Run: scripts/export-workbook.sh <data-model-id> .claude/skills/sigma-fin-recon/examples/exemplar-spec.json 4) Update reference/structure.md and reference/kpis.md if the real exemplar differs from the canonical pattern. 5) Commit.",
+  "_how_to_replace": "1) Identify a known-good recon workbook in your Sigma org. 2) Find its workbookId. 3) GET /v2/workbooks/{workbookId}/spec with header 'Accept: application/json' and save the response body to this file. 4) Update reference/structure.md and reference/kpis.md if the real exemplar differs from the canonical pattern. 5) Commit.",
   "_until_then": "The skill remains useful via reference/structure.md and reference/kpis.md, but accuracy improves substantially once a real exemplar is in place."
 }
