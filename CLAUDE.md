@@ -43,7 +43,7 @@ A read-only mirror of the upstream skills lives at `vendor/sigma-agent-skills/` 
 
 - `workbooks/<name>/` — one folder per dashboard. Each contains `spec.json`, `prompts/<timestamp>.md`, `iterations/<timestamp>.json`, `notes.md`. Start a new dashboard by copying `workbooks/_template/`.
 - `workbooks/_exemplars/` — golden specs harvested from Sigma. Read-only references; never edit.
-- `scripts/export-workbook.sh` / `push-workbook.sh` — pull/push specs via the Sigma API.
+- `scripts/load-env.sh` — eval'd to load `.env` into the shell. `scripts/refresh-vendor.sh` clones the upstream skill repo into `vendor/` for inspection only. Workbook CRUD goes through the Sigma REST API directly via `curl` — there are no helper scripts for export/push.
 - `prompts/library/` — reusable prompt fragments (guardrails, framing, etc.).
 - `docs/` — `conventions.md`, `iteration-playbook.md`, `skill-authoring.md`.
 

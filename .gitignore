@@ -12,6 +12,9 @@ vendor/
 workbooks/*/iterations/*.tmp
 workbooks/*/iterations/*.draft.json
 
+# Per-user session walkthroughs (not part of the skill itself)
+docs/sessions/
+
 # OS / editor noise
 .DS_Store
 .idea/
