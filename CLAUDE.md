@@ -2,6 +2,24 @@
 
 This workspace builds Sigma Computing dashboards/workbooks via Claude Code using Sigma's official agent skills plus project-local workbook-pattern skills.
 
+## Session modes
+
+The user initializes each session in one of two modes:
+
+- **"initialize training mode session"** — default. Full agentic loop:
+  propose plans for approval, ask clarifying questions, surface
+  inference choices, and after the build promote recurring findings
+  into skills / docs / memory. Co-developing the skill is part of the
+  work.
+- **"initialize test mode session"** — build-only, for recording demo
+  videos. Focus purely on producing the workbook with the skills as
+  they currently exist. Do NOT propose skill modifications, do NOT
+  offer to promote findings, do NOT editorialize about iteration
+  process. Solve blockers quietly within the build. Skill is treated
+  as fixed reference material.
+
+If neither phrase is used at init, default to training mode.
+
 ## Skills loaded here
 
 **Upstream (via plugin marketplace, see `.claude/settings.json`):**

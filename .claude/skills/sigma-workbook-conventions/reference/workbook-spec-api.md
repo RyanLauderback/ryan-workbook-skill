@@ -419,6 +419,47 @@ name. When you author the target element, give the column a stable, readable id
 (e.g. `col-date`) so the control binding is legible. Auto-generated IDs
 (`zjXo8KcTRL`) work but make the spec harder to read and diff.
 
+**`controlId` is workbook-wide unique, not page-scoped.** Reusing
+`controlId: "Date"` on a control on a second page is rejected at POST:
+
+```
+pages[1].elements[N].controlId: Duplicate id: 'Date'
+```
+
+When the same logical filter (Date Range, Customer Region, etc.) appears on
+multiple pages, give each page's control a distinct `controlId`
+(`Date` / `DateP2`, or namespace by page: `p1-date` / `p2-date`). The
+element `id` is already required to be unique; `controlId` adds a second
+uniqueness axis on top. If you genuinely want both pages' controls to drive
+the same filter state, that's a workbook-level shared control — not modeled
+by giving them the same `controlId`, but by wiring one control's `filters[]`
+to elements on multiple pages.
+
+## Table groupings
+
+A table element renders as a grouped/aggregated view when you populate
+`groupings[]`. The shape is **two fields per grouping**, not one:
+
+```json
+"groupings": [
+  { "id": "grp-customer", "columnId": "rc-customer" },
+  { "id": "grp-region",   "columnId": "rc-region" }
+]
+```
+
+Two failure modes seen at POST time:
+
+- `[{"columnId": "rc-customer"}]` (no `id`) → 400
+  `groupings[0].id: Invalid string: undefined`. The grouping itself
+  needs its own id.
+- `[{"id": "rc-customer"}]` (id reused as the column reference) → 400
+  `groupings[0].id: Duplicate id: 'rc-customer'`. The grouping's `id`
+  collides with the column's `id` on the same element — both live in
+  the same id namespace.
+
+Convention: prefix grouping ids (`grp-` or `<page>-grp-`) so they don't
+collide with column ids on the same table.
+
 ## Layout
 
 Layout is XML embedded as a string in the JSON `layout` field. 24-column grid.

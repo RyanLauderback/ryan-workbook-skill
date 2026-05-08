@@ -23,6 +23,29 @@ This skill is reference-only — no scripts. It assumes:
 - The local mirror at `vendor/sigma-agent-skills/` is available to consult when a
   field-level question isn't answered here.
 
+## Session modes
+
+Sessions in this workspace run in one of two modes, signaled by an
+explicit phrase in the user's first message:
+
+| Mode | Trigger | Behavior |
+|---|---|---|
+| **Training** (default) | `initialize training mode session` | Full agentic co-development. Propose plans, ask clarifying questions, surface inference choices, and after the build promote recurring findings into skills / reference / memory. Recommend skill modifications when a pattern recurs. |
+| **Test** | `initialize test mode session` | Build-only. Focus exclusively on producing the requested workbook using this skill as it currently exists. Do NOT propose skill modifications. Do NOT offer to promote findings. Do NOT editorialize about the iteration process. Solve blockers quietly within the build. The skill is treated as fixed reference material. |
+
+If neither phrase is used at init, default to training mode.
+
+**Why two modes:** test mode supports recording demo videos for
+customers. The spotlight in those demos is on what Sigma + Claude can
+deliver right now, not on the meta-process of co-developing the skill.
+Skill-promotion chatter (even when valuable) pollutes the demo
+narrative.
+
+The rest of this skill — the plan-first workflow, naming, gotchas, and
+reference material — applies in both modes. The only thing test mode
+suppresses is the meta-layer where you'd normally surface findings for
+future skill improvement.
+
 ## Workflow: propose a plan before building
 
 Workbook prompts often underspecify the dashboard — the user names the data
