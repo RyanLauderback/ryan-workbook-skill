@@ -191,11 +191,48 @@ resolution or visualization quality.
 ## Reference and examples
 
 - `reference/naming.md` — naming rubric.
-- `reference/workbook-spec-api.md` — endpoints, source kinds, column rule,
-  formula namespaces, control wiring, KPI shape, kind mismatches,
-  visualization clarity. **Read this before authoring any workbook spec.**
+- `reference/workbook-spec-api.md` — **the load-bearing reference.** Read
+  before authoring any workbook spec. Contents:
+  - **Element kinds — verified table** (top of file) — maps every viz
+    intent (bar / line / area / combo / scatter / pie / donut / KPI /
+    pivot / table / control / container / text) to its `kind` value and
+    encoding fields.
+  - **Per-kind shape sections** with required fields, optional encodings,
+    and a minimal example for each kind. Bar/line/area/combo share one
+    section; pie/donut share another; scatter, pivot, KPI, table-with-
+    groupings each have their own.
+  - **Control catalog** — `controlType` values (`date-range`, `list`,
+    `text`, `number-range`, `segmented`) and the controls-as-formula-
+    values pattern (`[ControlId]` referenced inside formulas).
+  - **Aggregation patterns** — multi-level table `groupings` (with
+    `groupBy` + `calculations`), aggregated-sibling-plus-Lookup as the
+    legible default, `Rollup` as the inline alternative, and the
+    materialize-then-window rule.
+  - **Cross-element formulas** — `Lookup`, formula namespaces, data-model
+    metric references.
+  - **Spec correctness checks** — column-declaration rule, explicit-`name`
+    rule, two-tier sourcing pattern, verifying via generated SQL.
+  - **Edge cases** — misleading `Invalid kind` errors, GET-spec 500 when
+    UI features aren't representable, unsupported kinds (maps, box plot,
+    sankey, etc.), the `format` field, `controlId` workbook-uniqueness.
+  - **Layout** — `<Page>` / `<GridContainer>` / `<LayoutElement>` 24-col
+    grid; page-structure pattern (header → body → detail).
+  - **Looking up Sigma functions** — convention for using
+    `https://help.sigmacomputing.com/llms.txt` to fetch function docs
+    when the formula you need isn't already documented here.
 - `examples/` — known-good specs to seed generation. Treat as immutable
   references; clone-and-modify rather than editing in place.
+  - `data-model-sourced-overview.json` — minimal data-model-fed dashboard.
+  - `data-model-sourced-kpi-overview-with-containers.json` — KPI row +
+    bar chart + detail table, wrapped in containers (the canonical
+    page-structure exemplar).
+  - `data-model-sourced-multi-level-aggregated-table.json` — multi-level
+    `groupings` with `groupBy` + `calculations`; hierarchical
+    aggregations + `DateLookback` lag.
+  - `additional-workbook-features-chart-and-control-catalog.json` — one
+    of every supported chart kind (combo, donut, pie, area × 3, scatter)
+    and the newer control types (text, number-range, segmented). Source
+    when you need a verified shape for a kind not previously authored.
 
 For data-model field-level mechanics (columns, metrics, relationships,
 filters, controls, formatting, folders, column-level security, workflows)

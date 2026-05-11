@@ -12,6 +12,12 @@ vendor/
 workbooks/*/iterations/*.tmp
 workbooks/*/iterations/*.draft.json
 
+# Local workbook iteration folders — only _template/ and _exemplars/ are
+# repo-tracked; every other workbooks/<name>/ is per-author scratch.
+workbooks/*/
+!workbooks/_template/
+!workbooks/_exemplars/
+
 # Per-user session walkthroughs (not part of the skill itself)
 docs/sessions/
 
