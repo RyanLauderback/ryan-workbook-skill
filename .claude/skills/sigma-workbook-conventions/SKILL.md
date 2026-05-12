@@ -46,6 +46,60 @@ reference material — applies in both modes. The only thing test mode
 suppresses is the meta-layer where you'd normally surface findings for
 future skill improvement.
 
+## Workflow: resolve user input before planning
+
+User prompts for workbook builds come in three rough shapes:
+
+1. Sigma URLs — `…/workbook/<id>`, `…/b/<id>`, `…/t/<id>`, `…/s/<id>`, or bare-slug
+   folder URLs like `…/<org>/Claude-Testing-7a3Q0z79Bx1H42pxjd0qWn`.
+2. URL-slug fragments — `BIKES-2jPgY5cxsfNZeeMcD2WLgi`, `Claude-Testing-7a3Q…`.
+3. Prose — `"use the sigma sample connection, FUN.BIKES schema, place in
+   claude testing folder"`.
+
+Often a mix. **Run `scripts/sigma-resolve.py "<user-prompt-verbatim>"` as the
+first action** — before drafting the plan, before any other API call. The
+resolver returns structured JSON:
+
+```json
+{
+  "sources":   [ {"kind": "warehouse-schema|warehouse-table|workbook|datamodel|folder|...", ...} ],
+  "folder":    { "id": "<uuid>", "urlId": "...", "name": "...", "path": "..." } | null,
+  "candidates": { "folder": [...], "sources": [...] },
+  "unresolved": [ ... ],
+  "hints":     { "db": "...", "schema": "...", "connection": "...", "folder_name": "..." }
+}
+```
+
+Rules:
+
+- Use the resolved `connectionId`, `path`, `inodeId`, `folderId`, etc. directly
+  in the plan. Do NOT re-derive them with raw curl.
+- If `candidates` is populated, ask the user to choose using the **names**
+  surfaced there (e.g. "I see two folders named 'Claude Testing' — Org-wide
+  Shared vs My Documents/Claude Testing. Which one?"). Never expose
+  endpoint-level errors or HTTP codes to the user — sigma-resolve buries those.
+- If `unresolved` contains schema/table URLs (`/s/<id>` or `/t/<id>`) with no
+  matching path hints, ask the user for "<DB>.<SCHEMA>" (and connection name
+  if ambiguous). Schema/table page URL slugs are *not* reversible via Sigma's
+  public API.
+- For warehouse-schema sources, the resolver also returns the table inventory
+  it found via the probe pattern (`probe-schema-tables.sh`). If the user's
+  intended tables aren't in the probe-list, ask them to name the missing
+  tables; the resolver re-probes with explicit names.
+- Composable primitives live under `scripts/api/`
+  (`list-connections.sh`, `lookup-path.sh`, `list-table-columns.sh`,
+  `find-file-by-urlid.sh`, `list-folders.sh`, `probe-schema-tables.sh`) —
+  reach for these when sigma-resolve's auto-routing isn't enough, not when
+  filling in plan values.
+
+Prerequisites the resolver assumes already done by the agent:
+
+1. `eval "$(scripts/load-env.sh)"`
+2. Token fetched via the `sigma-api` skill → exported as `SIGMA_API_TOKEN`.
+
+Skip this step only if the user has already supplied fully-resolved IDs
+inline (UUIDs in the prompt) — rare. Otherwise: resolver first, plan second.
+
 ## Workflow: propose a plan before building
 
 Workbook prompts often underspecify the dashboard — the user names the data
@@ -187,6 +241,31 @@ GridContainer layout XML, and the page-structure pattern live in
 `reference/workbook-spec-api.md`. Always visually verify the workbook in
 the UI after a CREATE — the API doesn't validate cross-element column
 resolution or visualization quality.
+
+## Always run `validate-spec.py` before POST/PUT
+
+`scripts/validate-spec.py <spec.json>` runs the structural checks Sigma's
+API does NOT enforce:
+
+- `pages[].layout` present (silently dropped by the API — promoted to error)
+- every `pages[].elements[].id` placed in the top-level layout XML
+- every `container` element has a matching `<GridContainer>` with nested children
+- no `format` field on columns (rejected with a misleading "Missing 'kind' field")
+- `controlId` workbook-wide uniqueness
+
+Exits non-zero on any issue. Workflow:
+
+```bash
+python3 scripts/validate-spec.py workbooks/<name>/spec.json && \
+  curl -X POST -H "Authorization: Bearer $SIGMA_API_TOKEN" \
+       -H "Content-Type: application/json" \
+       --data-binary @workbooks/<name>/spec.json \
+       "$SIGMA_BASE_URL/v2/workbooks/spec"
+```
+
+The validator catches the silent-rewrite failure mode from
+2026-05-11 (per-page `layout` fields ignored; charts stacked in a 1/13-wide
+single column). Don't skip it.
 
 ## Reference and examples
 

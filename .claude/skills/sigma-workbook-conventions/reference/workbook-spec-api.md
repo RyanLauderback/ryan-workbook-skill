@@ -4,6 +4,50 @@ Canonical patterns for `POST/GET/PUT /v2/workbooks/spec`. These rules are the
 result of iteration loops where the create endpoint accepted broken specs that
 failed at render time. Read this before authoring any workbook spec.
 
+## Layout rules — read before authoring multi-page
+
+Three rules that the POST validator does not enforce. Sigma silently rewrites
+the layout when any of them is broken, producing a workbook that opens but
+looks wrong:
+
+1. **`layout` is a top-level workbook field.** A `layout` placed under
+   `pages[i]` is **silently discarded** by the API (verified 2026-05-11).
+   The agent's expected output is one top-level `layout` string for the whole
+   workbook.
+2. **Multi-page = one `<?xml>` declaration + multiple `<Page>` siblings.** No
+   outer wrapper element. Sigma's XML parser tolerates the multi-root form;
+   the GET-back preserves it.
+3. **Container children must be nested inside `<GridContainer>` in the XML.**
+   The order of entries in `pages[].elements` does NOT define visual
+   structure. A `<GridContainer>` with no nested `<LayoutElement>` /
+   `<GridContainer>` children renders as an empty box, and all the elements
+   you *thought* were inside it stack flat at the bottom of the page in a
+   1/13-wide single column.
+
+Run `scripts/validate-spec.py <spec.json>` before every POST/PUT — it checks
+all three.
+
+Example of the correct shape:
+
+```xml
+<?xml version="1.0" encoding="utf-8"?>
+<Page type="grid" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto" id="page-overview">
+  <GridContainer elementId="container-hdr" type="grid"
+                 gridColumn="1 / 25" gridRow="1 / 4"
+                 gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
+    <LayoutElement elementId="text-title" gridColumn="1 / 9" gridRow="1 / 4"/>
+    <LayoutElement elementId="ctrl-date"  gridColumn="9 / 25" gridRow="1 / 4"/>
+  </GridContainer>
+  <LayoutElement elementId="chart-bar" gridColumn="1 / 25" gridRow="4 / 18"/>
+</Page>
+<Page type="grid" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto" id="page-detail">
+  ...
+</Page>
+```
+
+Note: the layout XML at the bottom of this file (under "Layout") shows the
+single-page case. Promote what's above when authoring multi-page workbooks.
+
 ## Scope of the code representation
 
 The workbooks-as-code feature is **not a fully scoped definition of a Sigma
