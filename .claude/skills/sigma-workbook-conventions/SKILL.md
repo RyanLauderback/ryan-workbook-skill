@@ -5,8 +5,8 @@ description: >-
   in this repo. Encodes project conventions on element naming, page/folder
   layout, ID semantics on create-vs-update, secret handling, and common
   pitfalls when generating Sigma JSON specs. Pair with sigma-data-models for
-  field-level reference and with a domain-specific skill (e.g. sigma-fin-recon)
-  when one is available.
+  field-level reference, and with a domain-specific workbook-pattern skill
+  when one is available for the dashboard type being built.
 ---
 
 # Sigma Workbook Conventions

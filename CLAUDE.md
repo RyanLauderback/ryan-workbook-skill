@@ -27,8 +27,9 @@ If neither phrase is used at init, default to training mode.
 - `sigma-data-models` — Round-trips data model specs (sources, columns, metrics, relationships, filters, controls, folder groupings, column-level security).
 
 **Project-local (`.claude/skills/`):**
-- `sigma-workbook-conventions` — naming, layout, common pitfalls when generating workbook specs.
-- `sigma-fin-recon` — financial reconciliation workbook pattern (structure, KPIs, exemplar spec).
+- `sigma-workbook-conventions` — input resolution, naming, layout, control catalog, and POST-time gotchas when generating workbook specs. Pair with `scripts/sigma-resolve.py` (resolver) and `scripts/validate-spec.py` (pre-POST validator).
+
+Domain-specific workbook-pattern skills (revenue, ops, fin-recon, etc.) get added under `.claude/skills/` as separate folders once we have 2–3 working exemplars to anchor a pattern on. See `docs/skill-authoring.md`.
 
 A read-only mirror of the upstream skills lives at `vendor/sigma-agent-skills/` for inspection while authoring new project skills. Refresh with `scripts/refresh-vendor.sh`.
 

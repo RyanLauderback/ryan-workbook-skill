@@ -39,8 +39,9 @@ conventions, see `.claude/skills/sigma-workbook-conventions/`.
 cp -R workbooks/_template workbooks/<dashboard-name>
 ```
 
-Then describe the dashboard to Claude. The relevant skill (e.g. `sigma-fin-recon`)
-should activate automatically based on its `description:` frontmatter.
+Then describe the dashboard to Claude. The `sigma-workbook-conventions` skill
+activates automatically; any domain-pattern skill you've authored (see
+`skill-authoring.md`) also activates based on its `description:` frontmatter.
 
 ## Adding a new workbook-pattern skill
 

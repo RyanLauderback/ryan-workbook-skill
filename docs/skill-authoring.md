@@ -1,7 +1,7 @@
 # Authoring a Workbook-Pattern Skill
 
-A workbook-pattern skill encodes "what does a {financial reconciliation,
-revenue dashboard, ops control tower, …} workbook look like in Sigma." It is
+A workbook-pattern skill encodes "what does a {revenue dashboard, ops
+control tower, financial reconciliation, …} workbook look like in Sigma." It is
 the single most leveraged thing you can build in this repo — domain skills are
 how we get one-shot quality on dashboards Sigma's generic skills can't predict.
 
@@ -27,10 +27,12 @@ the same scaffolding ("standard pages: overview / trend / detail / exceptions",
 
 ## Step-by-step
 
-1. **Copy the seed.**
+1. **Scaffold the directory.**
    ```bash
-   cp -R .claude/skills/sigma-fin-recon .claude/skills/<your-skill>
+   mkdir -p .claude/skills/<your-skill>/reference .claude/skills/<your-skill>/examples
    ```
+   Then create the `SKILL.md`, `reference/structure.md`, `reference/kpis.md`,
+   and `examples/exemplar-spec.json` files following the tree above.
 
 2. **Write a sharp `description:` in the frontmatter.** This is what Claude
    uses to decide whether to activate the skill. The description should:

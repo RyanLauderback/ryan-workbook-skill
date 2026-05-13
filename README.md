@@ -1,6 +1,6 @@
 # Sigma Computing Workbook Skill
 
-Project-local Claude Code skills + a working sandbox for building Sigma Computing workbooks/dashboards via Claude Code. Pairs Sigma's official `sigma-api` and `sigma-data-models` plugins with two project-local skills that encode workbook-spec conventions and a financial-reconciliation dashboard pattern, plus helper scripts that resolve user prompts ("the FUN.BIKES schema, Claude Testing folder") into Sigma API identifiers and validate workbook specs before POST.
+Project-local Claude Code skills + a working sandbox for building Sigma Computing workbooks/dashboards via Claude Code. Pairs Sigma's official `sigma-api` and `sigma-data-models` plugins with a project-local skill that encodes workbook-spec conventions (naming, layout, control catalog, POST-time gotchas), plus helper scripts that resolve user prompts ("the FUN.BIKES schema, Claude Testing folder") into Sigma API identifiers and validate workbook specs before POST.
 
 ## Quick start (for colleagues)
 
@@ -45,7 +45,6 @@ You shouldn't have to look up internal UUIDs, schema paths, or connection IDs by
 |---|---|
 | `.claude/settings.json` | Auto-installs upstream `sigma-agent-skills` plugin on first open. |
 | `.claude/skills/sigma-workbook-conventions/` | Naming, layout, POST-time gotchas, and the **input-resolution** + **layout** rules for the workbook spec API. The main draw of this repo. |
-| `.claude/skills/sigma-fin-recon/` | Financial reconciliation workbook pattern (KPIs, page structure, exemplar spec). |
 | `scripts/sigma-resolve.py` | Takes a freeform prompt (URLs, slugs, or prose) and returns structured `{sources, folder, candidates, unresolved}` JSON — connection IDs, paths, inodes, folder UUIDs. The first thing Claude runs at the start of a workbook build. |
 | `scripts/validate-spec.py` | Pre-POST static check for the silent-rewrite failure modes (per-page `layout`, unplaced elements, empty containers, column `format`, duplicate `controlId`). Run before every POST/PUT. |
 | `scripts/api/` | Thin one-purpose Bash wrappers around the Sigma REST endpoints used most often: `list-connections.sh`, `list-folders.sh`, `lookup-path.sh`, `list-table-columns.sh`, `find-file-by-urlid.sh`, `probe-schema-tables.sh`. The resolver composes these; reach for them directly only when the resolver's auto-routing isn't enough. |
@@ -79,4 +78,4 @@ Then describe what you want; Claude uses the loaded skills to resolve sources, a
 
 ## Authoring a new workbook-pattern skill
 
-See [`docs/skill-authoring.md`](docs/skill-authoring.md). Copy `.claude/skills/sigma-fin-recon/` as a starting point. The pattern: a `SKILL.md` with a sharp frontmatter description, `reference/` split by functional domain, and `examples/` with at least one known-good spec.
+See [`docs/skill-authoring.md`](docs/skill-authoring.md). Look at `.claude/skills/sigma-workbook-conventions/` as a working example of skill shape. The pattern: a `SKILL.md` with a sharp frontmatter description, `reference/` split by functional domain, and `examples/` with at least one known-good spec.
