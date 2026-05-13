@@ -75,17 +75,29 @@ def _api(path: str, method: str = "GET", body: Any = None) -> Any:
 # ---------- parsing ----------
 
 URL_RE = re.compile(r"https?://[\w./\-_:%~?=&+#]+")
-# Sigma URL path patterns (in order of specificity).
+# Sigma URL path patterns. Each captures the slug segment that follows the
+# kind-prefix; the slug is "<Name>-<urlId>" for most kinds (Sigma includes the
+# human-readable name as a URL-safe prefix) or a bare "<urlId>" for workbooks
+# with no friendly slug. _split_slug() below splits at the last hyphen.
 URL_PATTERNS = [
-    ("workbook",  re.compile(r"/workbook/([A-Za-z0-9_-]{18,28})")),
-    ("datamodel", re.compile(r"/b/([A-Za-z0-9_-]{18,28})")),
-    ("table",     re.compile(r"/t/([A-Za-z0-9_-]{18,28})")),
-    ("schema",    re.compile(r"/s/([A-Za-z0-9_-]{18,28})")),
-    # Bare slug after the org segment, e.g. /<org>/Claude-Testing-7a3Q0z79Bx1H42pxjd0qWn
+    ("workbook",  re.compile(r"/workbook/([A-Za-z0-9_][\w-]*)")),
+    ("datamodel", re.compile(r"/b/([A-Za-z0-9_][\w-]*)")),
+    ("table",     re.compile(r"/t/([A-Za-z0-9_][\w-]*)")),
+    ("schema",    re.compile(r"/s/([A-Za-z0-9_][\w-]*)")),
+    ("folder",    re.compile(r"/f/([A-Za-z0-9_][\w-]*)")),
+    # Bare slug after the org segment (older folder URL style with no /f/).
     ("slug",      re.compile(r"/[\w-]+/([A-Za-z][\w]*(?:-[A-Za-z0-9_]+)+)$")),
 ]
 # Bare slug not embedded in a URL: BIKES-2jPgY5cxsfNZeeMcD2WLgi
 SLUG_RE = re.compile(r"\b([A-Za-z][A-Za-z0-9_]*(?:[-_][A-Za-z0-9_]+)*)-([A-Za-z0-9_-]{18,28})\b")
+
+
+def _split_slug(slug: str) -> tuple[str, str]:
+    """Split '<Name>-<urlId>' at the last hyphen. If no hyphen, the slug IS the urlId."""
+    if "-" in slug:
+        name, _, url_id = slug.rpartition("-")
+        return name, url_id
+    return "", slug
 
 
 def parse_input(text: str) -> tuple[list[tuple[str, str, str]], str]:
@@ -98,14 +110,17 @@ def parse_input(text: str) -> tuple[list[tuple[str, str, str]], str]:
         for kind, rx in URL_PATTERNS:
             m = rx.search(url)
             if m:
+                slug = m.group(1)
+                name_part, url_id = _split_slug(slug)
                 if kind == "slug":
-                    # group(1) is "<Name>-<urlId>"; split at last hyphen.
-                    full = m.group(1)
-                    if "-" in full:
-                        name_part, _, url_id = full.rpartition("-")
-                        entries.append(("bare-slug", f"{name_part}|{url_id}", url))
+                    # Older folder URL style — treat as bare-slug for lookup.
+                    entries.append(("bare-slug", f"{name_part}|{url_id}", url))
+                elif kind == "folder":
+                    entries.append(("folder-url", f"{name_part}|{url_id}", url))
                 else:
-                    entries.append((kind, m.group(1), url))
+                    # workbook / datamodel / schema / table — store the urlId and
+                    # the name part (if any) for use as a schema/table name hint.
+                    entries.append((kind, f"{name_part}|{url_id}", url))
                 matched = True
                 break
         rest = rest.replace(url, " ")
@@ -163,6 +178,26 @@ def list_connections() -> list[dict]:
         {"connectionId": c.get("connectionId"), "name": c.get("name"), "type": c.get("type")}
         for c in r.get("entries", [])
     ]
+
+
+def find_path_by_urlid(url_id: str) -> dict | None:
+    """Reverse-lookup a connection path entry (schema/table/db scope) by its urlId.
+    Paginates /v2/connections/paths. Returns {connectionId, path} or None.
+    Slow on first call; the OK pattern is to call it once per /s/ or /t/ URL."""
+    page = None
+    while True:
+        qs = {"limit": "1000"}
+        if page:
+            qs["page"] = page
+        r = _api("/v2/connections/paths?" + urllib.parse.urlencode(qs))
+        if r.get("_error"):
+            return None
+        for e in r.get("entries", []):
+            if e.get("urlId") == url_id:
+                return {"connectionId": e.get("connectionId"), "path": e.get("path")}
+        page = r.get("nextPage")
+        if not page:
+            return None
 
 
 def find_file_by_urlid(url_id: str) -> dict | None:
@@ -307,56 +342,78 @@ def main() -> None:
     # ----- URL / slug entries first -----
     for kind, value, src in entries:
         if kind == "workbook":
-            out["sources"].append({"kind": "workbook", "urlId": value, "url": src})
+            _, url_id = value.split("|", 1) if "|" in value else ("", value)
+            out["sources"].append({"kind": "workbook", "urlId": url_id, "url": src})
         elif kind == "datamodel":
-            out["sources"].append({"kind": "datamodel", "urlId": value, "url": src})
+            _, url_id = value.split("|", 1) if "|" in value else ("", value)
+            out["sources"].append({"kind": "datamodel", "urlId": url_id, "url": src})
+        elif kind == "folder-url":
+            name_part, url_id = value.split("|", 1) if "|" in value else ("", value)
+            f = find_file_by_urlid(url_id)
+            if f:
+                if f.get("type") == "folder" and out["folder"] is None:
+                    out["folder"] = f
+                else:
+                    out["sources"].append({"kind": f.get("type") or "file", **f})
+            else:
+                out["unresolved"].append({"kind": "folder-url", "urlId": url_id,
+                                          "namePart": name_part, "url": src})
         elif kind in ("schema", "table"):
-            # Schema/table page urlIds are not reversible via public API.
-            # If prose tells us db + schema (+ table for /t/), try lookup.
+            name_part, url_id = value.split("|", 1) if "|" in value else ("", value)
+            # First try the reverse lookup via /v2/connections/paths — works for
+            # both /s/ (schema scope) and /t/ (table) URLs when the urlId is
+            # the connection-path urlId.
+            found = find_path_by_urlid(url_id)
+            if found and found.get("path"):
+                conn_id = found["connectionId"]
+                path = found["path"]
+                conn_name = next((c["name"] for c in conns()
+                                  if c["connectionId"] == conn_id), None)
+                if kind == "schema" and len(path) >= 2:
+                    s = resolve_warehouse_schema(conn_id, path[0], path[1])
+                    if not s.get("_error"):
+                        s["connectionName"] = conn_name
+                        s["source_url"] = src
+                        out["sources"].append(s)
+                        continue
+                elif kind == "table" and len(path) == 3:
+                    r = lookup_path(conn_id, *path)
+                    if not r.get("_error") and r.get("kind") == "table":
+                        out["sources"].append({
+                            "kind": "warehouse-table",
+                            "connectionId": conn_id,
+                            "connectionName": conn_name,
+                            "path": path,
+                            "inodeId": r.get("inodeId"),
+                            "columns": list_table_columns(r.get("inodeId")),
+                            "source_url": src,
+                        })
+                        continue
+            # Fallback: prose hints
             if hints.get("db") and hints.get("schema"):
-                hits = []
                 conn_hint = hints.get("connection", "")
                 candidate_conns = fuzzy_match_connection(conns(), conn_hint) or conns()
+                hits = []
                 for c in candidate_conns:
-                    if kind == "table":
-                        # Need a table name — extract from any bare-slug entry's name part.
-                        table_name = next(
-                            (v.split("|")[0] for k, v, _ in entries if k == "bare-slug"),
-                            None,
-                        )
-                        if not table_name:
-                            continue
-                        r = lookup_path(c["connectionId"], hints["db"], hints["schema"], table_name)
-                        if not r.get("_error") and r.get("kind") == "table":
-                            hits.append({
-                                "kind": "warehouse-table",
-                                "connectionId": c["connectionId"],
-                                "connectionName": c["name"],
-                                "path": [hints["db"], hints["schema"], table_name],
-                                "inodeId": r.get("inodeId"),
-                                "columns": list_table_columns(r.get("inodeId")),
-                                "source_url": src,
-                            })
-                    else:  # schema
-                        s = resolve_warehouse_schema(c["connectionId"], hints["db"], hints["schema"])
-                        if not s.get("_error"):
-                            s["connectionName"] = c["name"]
-                            s["source_url"] = src
-                            hits.append(s)
+                    s = resolve_warehouse_schema(c["connectionId"], hints["db"], hints["schema"])
+                    if not s.get("_error"):
+                        s["connectionName"] = c["name"]
+                        s["source_url"] = src
+                        hits.append(s)
                 if len(hits) == 1:
                     out["sources"].append(hits[0])
                 elif hits:
                     out["candidates"].setdefault("sources", []).extend(hits)
                 else:
                     out["unresolved"].append({
-                        "kind": kind, "urlId": value, "url": src,
-                        "note": "URL alone is not reversible; could not resolve with the given hints",
+                        "kind": kind, "urlId": url_id, "url": src,
+                        "note": "Could not reverse-lookup; provide DB+schema (and connection) names.",
                     })
             else:
                 out["unresolved"].append({
-                    "kind": kind, "urlId": value, "url": src,
-                    "note": "Schema/table page URLs are not reversible via Sigma's public API. "
-                            "Add 'in <DB> db, <SCHEMA> schema' (and connection name) to the prompt.",
+                    "kind": kind, "urlId": url_id, "url": src,
+                    "namePart": name_part,
+                    "note": "Reverse lookup found no match. Add 'in <DB> db' (and connection) to the prompt.",
                 })
         elif kind == "bare-slug":
             name_part, url_id = value.split("|", 1)
