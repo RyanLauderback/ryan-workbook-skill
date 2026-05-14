@@ -555,6 +555,27 @@ Practical pattern when authoring from scratch: declare ALL columns of the
 data-model element on the table (passthrough), even if the table will display
 them. Then chart/control references downstream resolve correctly.
 
+### Drill-down corollary: passthrough on visualizations, not just tables
+
+The rule above keeps the formula resolver happy. There's a second reason
+to declare every source column on every visualization: **right-click
+drill-down in Sigma only exposes columns that element declares**. A bar
+chart of `Revenue by Region` that only declares `region`, `revenue`,
+and the metric's material columns gives the reader no path from
+region → state → city → store, even though those columns exist on the
+source table.
+
+Default rule when generating a chart, KPI, or pivot: copy the parent
+table's full passthrough column set onto the viz element (each as a
+sibling-namespaced formula like `[Transactions/Store State]`), then
+add the chart-specific derived columns (axis-derived dates, buckets,
+etc.) on top. Only the encoding-bound columns appear in `xAxis`/`yAxis`/
+`color`/`size`, but the others are present and drillable.
+
+Exceptions are rare: skip passthrough only when the source table has
+many columns (50+) and most are conceptually irrelevant to the page's
+question. Almost everywhere else, default to passthrough-all.
+
 ## The explicit-`name` rule (also load-bearing at POST time)
 
 **Set an explicit `name` on every column referenced by display name from a
@@ -1288,6 +1309,126 @@ Contrast with `Lookup` — `Lookup` does NOT aggregate; it picks a single
 matching value. When the target has multiple matches for a given key
 and they aren't all identical, Lookup returns `NULL`. Reach for `Rollup`
 whenever the right answer requires aggregation across the matched rows.
+
+## Summary bar and aggregate-then-categorize pattern
+
+When a visualization needs to color/threshold/bucket rows against a
+scalar derived from the data itself (median, mean, percentile, target
+delta, etc.), do NOT put the categorization formula directly on the
+chart. A formula like
+
+```
+If([Margin] >= Median([Margin]), "Above median", "Below median")
+```
+
+placed on a chart where `[Margin]` is already an aggregated metric
+(`[Metrics/Total Profit Margin]`) creates a recursive aggregate. Sigma
+rejects it with "Column has a recursive formula."
+
+The correct shape is a **three-piece composition on a single parent
+table**:
+
+1. **Aggregated parent table** with `groupings` at the relevant grain
+   (per-store, per-customer, per-cohort).
+2. **`summary: [<col-id>, ...]`** on that table — a top-level field on
+   the table element (singular `summary`, NOT `summaries`). Each entry
+   is a column id whose formula is evaluated at the summary-bar grain
+   (across all rows of the table). The summary value is broadcast to
+   every row.
+3. **Categorization column inside the grouping's `calculations`** that
+   references both the per-row metric and the summary value by their
+   local display names.
+
+Example — per-store table with median-margin summary plus an
+"above/below median" bucket column:
+
+```json
+{
+  "id": "tbl-store-agg",
+  "kind": "table",
+  "name": "Store Aggregates",
+  "source": { "kind": "table", "elementId": "tbl-tx" },
+  "columns": [
+    { "id": "col-sa-store",  "formula": "[Transactions/Store Name]" },
+    { "id": "col-sa-margin", "formula": "[Metrics/Total Profit Margin]" },
+    { "id": "col-sa-median-margin", "name": "median margin",
+      "formula": "Median([Total Profit Margin])" },
+    { "id": "col-sa-cat", "name": "cat margin",
+      "formula": "If([Total Profit Margin] >= [median margin], \"above median\", \"below median\")" }
+  ],
+  "groupings": [
+    {
+      "id": "grp-store",
+      "groupBy": ["col-sa-store"],
+      "calculations": ["col-sa-margin", "col-sa-cat"]
+    }
+  ],
+  "summary": ["col-sa-median-margin"]
+}
+```
+
+Grain by grain:
+
+- `col-sa-margin` is in the grouping's `calculations` → per-store grain.
+  Display name auto-derives from the formula path:
+  `[Metrics/Total Profit Margin]` → `"Total Profit Margin"`.
+- `col-sa-median-margin` is in `summary` → summary-bar grain. Sigma
+  evaluates `Median([Total Profit Margin])` across all per-store rows,
+  yielding one scalar that's broadcast to every row.
+- `col-sa-cat` is in the grouping's `calculations` → per-store grain.
+  `[Total Profit Margin]` is the per-store value at this grain;
+  `[median margin]` is the summary scalar. For each store the `If`
+  returns the bucket label.
+
+Charts source from this parent and reference the bucket via the
+sibling namespace:
+
+```json
+{
+  "id": "chart-margin-by-store",
+  "kind": "bar-chart",
+  "source": { "kind": "table", "elementId": "tbl-store-agg" },
+  "columns": [
+    { "id": "cm-store",  "formula": "[Store Aggregates/Store Name]" },
+    { "id": "cm-margin", "formula": "[Store Aggregates/Total Profit Margin]" },
+    { "id": "cm-cat",    "formula": "[Store Aggregates/cat margin]" }
+  ],
+  "xAxis": { "id": "cm-store", "sort": { "by": "cm-margin", "direction": "descending" } },
+  "yAxis": [ { "id": "cm-margin" } ],
+  "color": { "by": "category", "column": "cm-cat" }
+}
+```
+
+**Optional `source.groupingId`.** Charts can pin themselves to a
+specific grouping level via `source: { ..., groupingId: "<grouping-id>" }`.
+This makes the grouping's columns directly accessible as local
+references (`[Total Profit Margin]` without the sibling prefix). Sigma's
+GET round-trip sometimes strips `groupingId`; charts still render at the
+grouping's grain when every referenced column is itself grain-anchored
+(groupBy or grouping calc), so omitting the explicit `groupingId` is
+not fatal — but include it when the chart needs local-name access to
+the grouping's columns.
+
+### Why parent-table, not inline-on-chart
+
+- **No recursion.** The chart references already-aggregated columns,
+  not aggregates-of-aggregates.
+- **Inspectable.** The parent table renders on the page; readers see
+  the per-row values and the summary scalar side by side.
+- **Composable.** Adding percentile-rank, quartile bucket, or
+  delta-vs-target follows the same shape — new summary entry plus new
+  grouping calc, no chart changes.
+- **Reusable.** Many charts can source from one parent table — the
+  scalar is computed once.
+
+### When the scalar isn't a summary
+
+`summary` works when the scalar is one of Sigma's aggregate functions
+(`Median`, `Mean`, `Sum`, `Min`, `Max`, `Percentile`, `Count`, etc.)
+applied across the parent table's rows. When the scalar comes from
+somewhere else — a control value, a cross-element Lookup, a fixed
+threshold — declare it as a regular column (not in `summary`) and
+reference it the same way from the grouping's bucket column.
 
 ## Two-tier sourcing pattern (warehouse → derived)
 

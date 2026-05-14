@@ -229,7 +229,7 @@ authoritative spec and use it as the new baseline.
 
 ## Workbook spec gotchas (load `reference/workbook-spec-api.md` BEFORE authoring)
 
-For workbook specs specifically (not data models), eight rules from past
+For workbook specs specifically (not data models), ten rules from past
 iteration failures:
 
 1. **No implicit column inheritance.** A chart sourced from a sibling table
@@ -265,6 +265,27 @@ iteration failures:
    `kind` field whose exact shape is undocumented; specs that include
    `format` are rejected with `Missing "kind" field`. Configure currency
    /percent formatting in the UI and rely on GET-back to learn the shape.
+9. **Derive complex per-row calcs on a parent table, not on the
+   viz.** Putting `If([Margin] >= Median([Margin]), …)` directly on a
+   chart where `[Margin]` is already an aggregated metric creates a
+   recursive aggregate ("Column has a recursive formula"). The
+   pattern: aggregate to the right grain in a parent table via
+   `groupings`, hold the scalar (median/mean/percentile) in that
+   table's `summary` array (**singular `summary`**, not `summaries`),
+   put the bucket/label column inside the grouping's `calculations`
+   referencing both the per-row metric and the summary value by local
+   name, and let the chart source from the parent and pass the bucket
+   column through. See `reference/workbook-spec-api.md` →
+   "Summary bar and aggregate-then-categorize pattern."
+10. **Pass through every source-table column on each visualization.**
+    Sigma's right-click drill-down on a chart only exposes columns
+    that chart declares. If a Revenue-by-Region bar only declares
+    `region` + `revenue` + the metric's material columns, the user
+    can't drill region → state → city → store even though those
+    columns exist on the source. Default: every chart/KPI/pivot
+    declares the full passthrough column set from its source (plus
+    any chart-specific derived columns). Exceptions only when the
+    source has 50+ columns and most are irrelevant to the page.
 
 Full patterns, source kinds, formula namespaces, KPI/text/container shapes,
 GridContainer layout XML, and the page-structure pattern live in
@@ -315,12 +336,17 @@ single column). Don't skip it.
     values pattern (`[ControlId]` referenced inside formulas).
   - **Aggregation patterns** — multi-level table `groupings` (with
     `groupBy` + `calculations`), aggregated-sibling-plus-Lookup as the
-    legible default, `Rollup` as the inline alternative, and the
-    materialize-then-window rule.
+    legible default, `Rollup` as the inline alternative, the
+    materialize-then-window rule, and the **summary-bar pattern**
+    (`summary: [...]` on a parent table for scalars like median, used
+    by an in-grouping bucket column to label per-row data — see
+    "Summary bar and aggregate-then-categorize pattern").
   - **Cross-element formulas** — `Lookup`, formula namespaces, data-model
     metric references.
   - **Spec correctness checks** — column-declaration rule, explicit-`name`
-    rule, two-tier sourcing pattern, verifying via generated SQL.
+    rule, **drill-down passthrough rule** (every chart/KPI/pivot
+    declares the full source-table passthrough column set so right-click
+    drill works), two-tier sourcing pattern, verifying via generated SQL.
   - **Edge cases** — misleading `Invalid kind` errors, GET-spec 500 when
     UI features aren't representable, unsupported kinds (maps, box plot,
     sankey, etc.), the `format` field, `controlId` workbook-uniqueness.
