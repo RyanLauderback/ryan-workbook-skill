@@ -9,5 +9,40 @@
   },
   "enabledPlugins": {
     "sigma-computing@sigma-computing": true
+  },
+  "permissions": {
+    "allow": [
+      "Bash(eval \"$(scripts/load-env.sh)\")",
+      "Bash(eval \"$(*get-token.sh)\")",
+      "Bash(python3 scripts/sigma-resolve.py:*)",
+      "Bash(python3 scripts/validate-spec.py:*)",
+      "Bash(bash scripts/api/find-file-by-urlid.sh:*)",
+      "Bash(bash scripts/api/lookup-path.sh:*)",
+      "Bash(bash scripts/api/list-connections.sh:*)",
+      "Bash(bash scripts/api/list-folders.sh:*)",
+      "Bash(bash scripts/api/list-table-columns.sh:*)",
+      "Bash(bash scripts/api/probe-schema-tables.sh:*)",
+      "Bash(bash scripts/refresh-vendor.sh:*)",
+      "Bash(curl -sS -H Authorization:* $SIGMA_BASE_URL/v2/dataModels/*)",
+      "Bash(curl -sS -H Authorization:* $SIGMA_BASE_URL/v2/workbooks/*)",
+      "Bash(curl -sS -H Authorization:* $SIGMA_BASE_URL/v2/files*)",
+      "Bash(curl -sS -H Authorization:* $SIGMA_BASE_URL/v2/connections*)",
+      "Bash(curl -sS -H Authorization:* $SIGMA_BASE_URL/v2/members*)",
+      "Bash(curl -sS * -X POST * $SIGMA_BASE_URL/v2/workbooks/spec*)",
+      "Bash(curl -sS * -X PUT * $SIGMA_BASE_URL/v2/workbooks/*)",
+      "Bash(curl -sS * -X PUT * $SIGMA_BASE_URL/v2/dataModels/*/spec*)",
+      "Bash(ls:*)",
+      "Bash(mkdir:*)",
+      "Bash(cat:*)",
+      "Bash(cp:*)",
+      "Bash(git clone:*)",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(python3 -c:*)"
+    ],
+    "ask": [
+      "Bash(curl * -X DELETE *)"
+    ]
   }
 }

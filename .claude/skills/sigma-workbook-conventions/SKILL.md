@@ -109,24 +109,34 @@ wait for explicit approval.
 
 The plan must include:
 
-1. **Data inventory.** What table(s) and which columns are actually
+1. **Destination.** Where the workbook (or data-model update) will be
+   published — folder `name` + `path` + `urlId`, resolved from the
+   user's prompt via `sigma-resolve.py`. If the user named a folder
+   inline, restate it back so they can correct it. If the user did NOT
+   name a folder, this becomes an Open Decision (item 6) the plan must
+   ask, not a default the agent picks. **Plan approval IS the
+   authorization to POST/PUT** — there is no separate "are you sure?"
+   prompt at publish time. The destination must therefore be named
+   explicitly in the plan, never implied.
+2. **Data inventory.** What table(s) and which columns are actually
    available — pulled from `GET /v2/dataModels/{id}/spec`, not assumed.
    Name any column that's missing from your assumed schema (e.g. there
    *is* a customer dimension; there *isn't* a margin field) so the user
    can correct before you build on a wrong premise.
-2. **Inference rationale.** For each visualization you propose, one line
+3. **Inference rationale.** For each visualization you propose, one line
    on *why this chart, this dimension, this metric* answers the user's
    question. "Quantity, not revenue, because popularity is a unit-volume
    question" beats "bar chart of products."
-3. **Filter set with reasoning.** Filters aren't free — each one earns
+4. **Filter set with reasoning.** Filters aren't free — each one earns
    its place by mapping to an axis the user is likely to interrogate.
    List the filters in priority order with a one-line reason, and note
    what you considered and dropped.
-4. **Layout sketch.** A textual block-diagram of the page is enough
+5. **Layout sketch.** A textual block-diagram of the page is enough
    (header / KPI row / chart grid / detail). Don't draw the XML yet.
-5. **Open decisions.** Anywhere you had to guess (proxy for a missing
+6. **Open decisions.** Anywhere you had to guess (proxy for a missing
    dimension, scope of demographic data to bring in, whether to modify a
-   shared data model). Phrase as questions the user can yes/no.
+   shared data model, **missing/ambiguous destination folder**). Phrase
+   as questions the user can yes/no.
 
 Only after the user approves should you write spec JSON. This convention
 exists because rebuilding a wrong dashboard costs more iterations than
@@ -135,6 +145,26 @@ data-model assumptions you'd otherwise discover at POST time.
 
 If the user has already given you an explicit plan, skip to building —
 don't re-propose.
+
+### Approval model — plan is the only gate
+
+The project's `.claude/settings.json` allows POST/PUT against
+`/v2/workbooks/*` and `/v2/dataModels/*/spec` without per-call prompts,
+because the plan-approval step is treated as the user's authorization
+for any state-changing API call covered by the plan. This makes the UX
+clean: the user reviews one plan, approves, and the build + publish
+proceed without further interruption.
+
+That contract puts the burden on the agent:
+
+- The plan MUST name the destination folder (item 1 above) and any
+  shared object it intends to mutate (data models, exemplars). If a
+  state-changing call wasn't covered in the plan, do not make it — go
+  back and amend the plan first.
+- POST/PUT calls outside the workbook/data-model namespace are not
+  pre-authorized — surface them to the user.
+- DELETE is never pre-authorized, even when the plan mentions it.
+  Always confirm explicitly before deleting.
 
 ## Conventions
 
