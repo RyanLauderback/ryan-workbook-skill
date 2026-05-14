@@ -2,11 +2,9 @@
 # Look up a fully-qualified path under a connection.
 # Usage:  scripts/api/lookup-path.sh <connectionId> <path1> <path2> [<path3>]
 # Output: JSON {kind, inodeId, url, path} on success, {error, code, message} on 4xx.
-# Env:    SIGMA_BASE_URL, SIGMA_API_TOKEN
+# Env:    self-bootstrapped via _env.sh (loads .env, caches OAuth token)
 set -euo pipefail
-
-: "${SIGMA_BASE_URL:?run scripts/load-env.sh first}"
-: "${SIGMA_API_TOKEN:?run get-token.sh from the sigma-api skill first}"
+source "$(dirname "$0")/_env.sh"
 
 if [ "$#" -lt 3 ] || [ "$#" -gt 4 ]; then
   echo "usage: lookup-path.sh <connectionId> <path1> <path2> [<path3>]" >&2

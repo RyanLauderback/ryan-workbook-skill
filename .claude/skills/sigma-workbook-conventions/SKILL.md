@@ -48,57 +48,122 @@ future skill improvement.
 
 ## Workflow: resolve user input before planning
 
-User prompts for workbook builds come in three rough shapes:
+**Default to MCP for any read-only discovery against the existing Sigma
+workspace** — search, lookup, inspect. The MCP wrappers
+(`scripts/api/mcp-search.sh`, `scripts/api/mcp-describe.sh`) call Sigma's
+MCP server (`/mcp/v2`) using the same OAuth token as the REST API and
+return richer output than the REST endpoints with less bash plumbing.
 
-1. Sigma URLs — `…/workbook/<id>`, `…/b/<id>`, `…/t/<id>`, `…/s/<id>`, or bare-slug
-   folder URLs like `…/<org>/Claude-Testing-7a3Q0z79Bx1H42pxjd0qWn`.
-2. URL-slug fragments — `BIKES-2jPgY5cxsfNZeeMcD2WLgi`, `Claude-Testing-7a3Q…`.
-3. Prose — `"use the sigma sample connection, FUN.BIKES schema, place in
-   claude testing folder"`.
+Route by what the prompt actually contains:
 
-Often a mix. **Run `scripts/sigma-resolve.py "<user-prompt-verbatim>"` as the
-first action** — before drafting the plan, before any other API call. The
-resolver returns structured JSON:
+| Prompt contains | Use first |
+|---|---|
+| Names or topics ("the PLUGS data model", "find the sales workbook") | `scripts/api/mcp-search.sh "<query>" [--types workbook,dataModel,dataModelElement,table] [--limit N]` |
+| URL slugs (`/b/<id>`, `…-<urlId>`) | `scripts/api/find-file-by-urlid.sh <urlId>` |
+| Warehouse paths (`<DB>.<SCHEMA>.<table>`), `/s/<id>` or `/t/<id>` schema URLs, or mixed prose | `scripts/sigma-resolve.py "<prompt-verbatim>"` |
 
-```json
-{
-  "sources":   [ {"kind": "warehouse-schema|warehouse-table|workbook|datamodel|folder|...", ...} ],
-  "folder":    { "id": "<uuid>", "urlId": "...", "name": "...", "path": "..." } | null,
-  "candidates": { "folder": [...], "sources": [...] },
-  "unresolved": [ ... ],
-  "hints":     { "db": "...", "schema": "...", "connection": "...", "folder_name": "..." }
-}
-```
+After resolution, use `scripts/api/mcp-describe.sh` against the resolved
+id (`table`, `datamodel`, `datamodel-element`, `workbook`,
+`workbook-element`) to inspect — returns SQL DDL with column types,
+descriptions, formulas, and the metrics catalog. Replaces hand-walking
+`GET /v2/dataModels/{id}/spec` JSON.
+
+The REST primitives in `scripts/api/` (`list-connections.sh`,
+`lookup-path.sh`, `list-table-columns.sh`, `list-folders.sh`,
+`probe-schema-tables.sh`) are fallbacks for cases MCP doesn't cover —
+raw connection enumeration, folder browsing by name pattern, warehouse-
+schema probing. Reach for them only when MCP + resolver don't.
 
 Rules:
 
-- Use the resolved `connectionId`, `path`, `inodeId`, `folderId`, etc. directly
-  in the plan. Do NOT re-derive them with raw curl.
-- If `candidates` is populated, ask the user to choose using the **names**
-  surfaced there (e.g. "I see two folders named 'Claude Testing' — Org-wide
-  Shared vs My Documents/Claude Testing. Which one?"). Never expose
-  endpoint-level errors or HTTP codes to the user — sigma-resolve buries those.
-- If `unresolved` contains schema/table URLs (`/s/<id>` or `/t/<id>`) with no
-  matching path hints, ask the user for "<DB>.<SCHEMA>" (and connection name
-  if ambiguous). Schema/table page URL slugs are *not* reversible via Sigma's
-  public API.
-- For warehouse-schema sources, the resolver also returns the table inventory
-  it found via the probe pattern (`probe-schema-tables.sh`). If the user's
-  intended tables aren't in the probe-list, ask them to name the missing
-  tables; the resolver re-probes with explicit names.
-- Composable primitives live under `scripts/api/`
-  (`list-connections.sh`, `lookup-path.sh`, `list-table-columns.sh`,
-  `find-file-by-urlid.sh`, `list-folders.sh`, `probe-schema-tables.sh`) —
-  reach for these when sigma-resolve's auto-routing isn't enough, not when
-  filling in plan values.
+- Use resolved IDs directly in the plan. Don't re-derive with raw curl.
+- MCP `search` is **semantic / fuzzy** — it returns the top matches even
+  when relevance is low. Always confirm a match against the user's
+  stated name/intent before building on it. Surface "I found two named
+  'Sales Performance' — A in `My Documents/Demo`, B in `Org Shared/Q4`.
+  Which?" — never expose endpoint errors or HTTP codes.
+- Schema/table URL slugs (`/s/<id>`, `/t/<id>`) are not reversible via
+  Sigma's public API. If unresolved, ask the user for "<DB>.<SCHEMA>"
+  and the connection name.
+- Known gap: `mcp-search.sh` results of type `dataModelElement` don't
+  always carry the parent `dataModelId`. If you need to chain into
+  `mcp-describe.sh datamodel-element`, resolve the data-model first via
+  search or `find-file-by-urlid.sh` against the URL's slug.
 
-Prerequisites the resolver assumes already done by the agent:
+Auth is handled inside the scripts — each `scripts/api/*.sh` sources
+`scripts/api/_env.sh` on first call, which loads `.env`, fetches an
+OAuth token via the `sigma-api` skill, and caches it at
+`/tmp/.sigma_token` (mode 0600, 55-min TTL). No env-prelude or token
+chaining needed from the caller. Override the token-fetcher path via
+`SIGMA_TOKEN_FETCHER` if your install differs from the marketplace
+plugin default.
 
-1. `eval "$(scripts/load-env.sh)"`
-2. Token fetched via the `sigma-api` skill → exported as `SIGMA_API_TOKEN`.
+### Installing this skill in a new project
 
-Skip this step only if the user has already supplied fully-resolved IDs
-inline (UUIDs in the prompt) — rare. Otherwise: resolver first, plan second.
+When dropping this skill into another project, merge the rules in
+`recommended-permissions.json` (alongside this `SKILL.md`) into that
+project's `.claude/settings.json` under `permissions`. With those rules
+in place, every script in `scripts/api/*` runs without an approval
+prompt; `curl` calls for workbook authoring/publishing still prompt
+(by design — they're state-changing). Without them, every discovery
+call surfaces a prompt because no allow pattern matches.
+
+### Bash invocation hygiene — invoke scripts bare after CWD is set
+
+Claude Code's permission patterns match the **start** of the command
+string. So:
+
+```bash
+# ✓ matches Bash(scripts/api/*) — silent
+scripts/api/mcp-describe.sh datamodel <id>
+
+# ✓ matches Bash(cd * && scripts/api/*) defensive pattern — silent
+cd <repo> && scripts/api/mcp-describe.sh datamodel <id>
+
+# ✗ matches no pattern — chains break the prefix match
+cd <repo> && eval "$(scripts/load-env.sh)" && scripts/api/mcp-describe.sh datamodel <id>
+```
+
+**Working-directory reality.** If the repo IS the CC primary working
+directory, invoke bare from the start. If the repo is nested under a
+wrapper directory (a common layout in this workspace), one
+`cd <repo>` at session start is unavoidable; CWD then persists for
+subsequent calls, which should be bare. The anti-pattern is
+**re-prepending `cd <repo> &&` on every command** — once it's set,
+it's set.
+
+Same rule for `python3 scripts/validate-spec.py …` and
+`python3 scripts/sigma-resolve.py …` — call bare after CWD is set.
+
+If you need to compose multiple operations (e.g. `mkdir -p … &&
+python3 -c …`), split them into separate Bash tool calls rather than
+`&&`-chaining. Two short calls that each match a pattern beat one
+long chain that matches none.
+
+The publish path (`POST /v2/workbooks/spec` → `GET` for URL → `GET`
+for iteration) is the one place this rule is hard to honor — it
+requires the env-prelude (`eval "$(scripts/load-env.sh)" && export
+SIGMA_API_TOKEN=…`) for the curl. Each of those three calls will
+prompt once until a `publish-workbook.sh` wrapper exists.
+
+`sigma-resolve.py` (for the messy-input case) returns structured JSON:
+
+```json
+{
+  "sources":    [ {"kind": "warehouse-schema|warehouse-table|workbook|datamodel|folder|...", ...} ],
+  "folder":     { "id", "urlId", "name", "path" } | null,
+  "candidates": { "folder": [...], "sources": [...] },
+  "unresolved": [ ... ],
+  "hints":      { "db", "schema", "connection", "folder_name" }
+}
+```
+
+When `candidates` is populated, surface names to the user; when
+`unresolved` has warehouse-path entries, ask for the missing
+`<DB>.<SCHEMA>` and connection name. For warehouse-schema sources, the
+resolver also returns the table inventory it found via
+`probe-schema-tables.sh`; if the intended tables aren't there, ask the
+user to name the missing ones so the resolver can re-probe.
 
 ## Workflow: propose a plan before building
 
@@ -119,10 +184,12 @@ The plan must include:
    prompt at publish time. The destination must therefore be named
    explicitly in the plan, never implied.
 2. **Data inventory.** What table(s) and which columns are actually
-   available — pulled from `GET /v2/dataModels/{id}/spec`, not assumed.
-   Name any column that's missing from your assumed schema (e.g. there
-   *is* a customer dimension; there *isn't* a margin field) so the user
-   can correct before you build on a wrong premise.
+   available — pulled via `scripts/api/mcp-describe.sh datamodel-element
+   <dm-id> <el-id>` (returns column types, descriptions, formulas, and
+   the data model's metrics catalog), not assumed. Name any column
+   that's missing from your assumed schema (e.g. there *is* a customer
+   dimension; there *isn't* a margin field) so the user can correct
+   before you build on a wrong premise.
 3. **Inference rationale.** For each visualization you propose, one line
    on *why this chart, this dimension, this metric* answers the user's
    question. "Quantity, not revenue, because popularity is a unit-volume

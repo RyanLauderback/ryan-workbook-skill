@@ -26,17 +26,14 @@ Build a complete picture of the inputs before drafting. Save findings in the
 prompt file so future iterations don't re-discover them.
 
 ```bash
-# Folder — workbook needs the internal UUID, not the urlId in the URL.
-curl -sf -H "Authorization: Bearer $SIGMA_API_TOKEN" \
-  "$SIGMA_BASE_URL/v2/files/<folder-urlId>" | jq '{name, id, urlId}'
+# Folder — resolve url-id slug to the internal UUID.
+scripts/api/find-file-by-urlid.sh <folder-urlId>
 
-# Data model — get nodes, columns, AND metrics. Always check metrics first.
-curl -sf -H "Authorization: Bearer $SIGMA_API_TOKEN" \
-  "$SIGMA_BASE_URL/v2/dataModels/<dataModelId>/spec" \
-  | jq '(.pages // [])[].elements[]?
-        | {id, name, kind,
-           columns: ((.columns // []) | map({id, name, formula})),
-           metrics: ((.metrics // []) | map({id, name, formula, format}))}'
+# Data model — list elements, then describe the one you'll source from.
+# Returns SQL DDL with column names, types, descriptions, formulas, AND the
+# metrics catalog with usage examples. Replaces hand-walking the JSON spec.
+scripts/api/mcp-describe.sh datamodel <dataModelId>
+scripts/api/mcp-describe.sh datamodel-element <dataModelId> <elementId>
 ```
 
 If the data model has `metrics`, plan to use `[Metrics/<Name>]` rather than
@@ -93,27 +90,23 @@ Don't overwrite `spec.json` yet — that comes after the GET-back.
 ### 5. Validate locally and POST
 
 ```bash
-jq . workbooks/<name>/iterations/<file>.json   # syntax sanity
+python3 scripts/validate-spec.py workbooks/<name>/iterations/<file>.json
+# Fail-fast on per-page layout, unplaced elements, empty containers,
+# column `format`, duplicate `controlId`. Don't POST a spec that fails.
 
-# Auth + POST in a single shell — env vars don't persist between Bash calls.
-# Workbook CRUD is done by calling the Sigma REST API directly via curl.
-eval "$(scripts/load-env.sh)"
-CREDENTIALS=$(printf '%s:%s' "$SIGMA_CLIENT_ID" "$SIGMA_CLIENT_SECRET" | base64 | tr -d '\n')
-SIGMA_API_TOKEN=$(curl -sf -X POST \
-  -H "Authorization: Basic ${CREDENTIALS}" \
-  -H "Content-Type: application/x-www-form-urlencoded" \
-  -d "grant_type=client_credentials" \
-  "$SIGMA_BASE_URL/v2/auth/token" | jq -r '.access_token')
-
-curl -sS -X POST "$SIGMA_BASE_URL/v2/workbooks/spec" \
-  -H "Authorization: Bearer $SIGMA_API_TOKEN" \
-  -H "Content-Type: application/json" \
-  -H "Accept: application/json" \
-  --data-binary "@workbooks/<name>/iterations/<file>.json"
+# POST. The token cache populated by any prior scripts/api/*.sh call lives
+# at /tmp/.sigma_token; reuse it inline. Workbook CRUD is done by calling
+# the Sigma REST API directly via curl — no helper script yet.
+eval "$(scripts/load-env.sh)" && export SIGMA_API_TOKEN=$(cat /tmp/.sigma_token) && \
+  curl -sS -X POST "$SIGMA_BASE_URL/v2/workbooks/spec" \
+    -H "Authorization: Bearer $SIGMA_API_TOKEN" \
+    -H "Content-Type: application/json" \
+    -H "Accept: application/json" \
+    --data-binary "@workbooks/<name>/iterations/<file>.json"
 ```
 
-**Never echo `$SIGMA_API_TOKEN` or `$SIGMA_CLIENT_SECRET`.** Chain auth + call
-in a single Bash invocation so the token never crosses a tool boundary.
+**Never echo `$SIGMA_API_TOKEN` or `$SIGMA_CLIENT_SECRET`.** The token cache is
+mode 0600 and gitignored; tokens never cross a tool boundary.
 
 ### 6. Read the response
 
@@ -125,10 +118,11 @@ in a single Bash invocation so the token never crosses a tool boundary.
 ### 7. GET back; that's the new source of truth
 
 ```bash
-curl -sf -H "Authorization: Bearer $SIGMA_API_TOKEN" \
-  -H "Accept: application/json" \
-  "$SIGMA_BASE_URL/v2/workbooks/<workbookId>/spec" \
-  | jq . > workbooks/<name>/spec.json
+eval "$(scripts/load-env.sh)" && export SIGMA_API_TOKEN=$(cat /tmp/.sigma_token) && \
+  curl -sf -H "Authorization: Bearer $SIGMA_API_TOKEN" \
+    -H "Accept: application/json" \
+    "$SIGMA_BASE_URL/v2/workbooks/<workbookId>/spec" \
+    | jq . > workbooks/<name>/spec.json
 ```
 
 The GET response defaults to YAML unless `Accept: application/json` is set.
@@ -155,9 +149,10 @@ previous version:
 
 ```bash
 TS=$(date +%Y%m%d-%H%M)
-curl -sf -H "Authorization: Bearer $SIGMA_API_TOKEN" -H "Accept: application/json" \
-  "$SIGMA_BASE_URL/v2/workbooks/<workbookId>/spec" \
-  | jq . > workbooks/<name>/iterations/${TS}-from-sigma.json
+eval "$(scripts/load-env.sh)" && export SIGMA_API_TOKEN=$(cat /tmp/.sigma_token) && \
+  curl -sf -H "Authorization: Bearer $SIGMA_API_TOKEN" -H "Accept: application/json" \
+    "$SIGMA_BASE_URL/v2/workbooks/<workbookId>/spec" \
+    | jq . > workbooks/<name>/iterations/${TS}-from-sigma.json
 
 diff <(jq -S 'del(.workbookId, .url, .documentVersion, .latestDocumentVersion, .ownerId, .createdBy, .updatedBy, .createdAt, .updatedAt)' workbooks/<name>/spec.json) \
      <(jq -S 'del(.workbookId, .url, .documentVersion, .latestDocumentVersion, .ownerId, .createdBy, .updatedBy, .createdAt, .updatedAt)' workbooks/<name>/iterations/${TS}-from-sigma.json)
@@ -238,8 +233,9 @@ treated as immutable — prefer adding new ones over modifying old.
   account/data quirks.** Account specifics go to memory, not skills.
 - **Hand-editing exemplars.** They're anchors. If an exemplar needs an edit,
   it usually means it's wrong — replace it instead.
-- **Echoing tokens or secrets.** Auth + call in one shell, never let
-  `$SIGMA_API_TOKEN` cross a tool-call boundary.
+- **Echoing tokens or secrets.** The cached token at `/tmp/.sigma_token` is
+  mode 0600 and never logged. Never `echo $SIGMA_API_TOKEN` or paste it into a
+  prompt/file/commit.
 - **Skipping recon** because "the user told me what they want." Recon catches
   metric reuse, column-name realities, and folder-ID mismatches before they
   become an HTTP 400.

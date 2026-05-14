@@ -2,11 +2,9 @@
 # Look up a file (folder, workbook, dataset, datamodel) by its url-id slug.
 # Usage:  scripts/api/find-file-by-urlid.sh <urlId>
 # Output: JSON metadata for the match, or "null" if not found.
-# Env:    SIGMA_BASE_URL, SIGMA_API_TOKEN
+# Env:    self-bootstrapped via _env.sh (loads .env, caches OAuth token)
 set -euo pipefail
-
-: "${SIGMA_BASE_URL:?run scripts/load-env.sh first}"
-: "${SIGMA_API_TOKEN:?run get-token.sh from the sigma-api skill first}"
+source "$(dirname "$0")/_env.sh"
 
 if [ "$#" -ne 1 ]; then
   echo "usage: find-file-by-urlid.sh <urlId>" >&2

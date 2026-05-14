@@ -2,11 +2,9 @@
 # List folders in the org, optionally filtered by case-insensitive substring of name.
 # Usage:  scripts/api/list-folders.sh [name-substring]
 # Output: JSON array [{id, urlId, name, path}]
-# Env:    SIGMA_BASE_URL, SIGMA_API_TOKEN
+# Env:    self-bootstrapped via _env.sh (loads .env, caches OAuth token)
 set -euo pipefail
-
-: "${SIGMA_BASE_URL:?run scripts/load-env.sh first}"
-: "${SIGMA_API_TOKEN:?run get-token.sh from the sigma-api skill first}"
+source "$(dirname "$0")/_env.sh"
 
 NAME_FILTER="${1:-}"
 

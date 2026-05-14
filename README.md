@@ -29,7 +29,7 @@ Once Claude Code is open, kick off a session with one of these phrases:
 
 If you don't say either, training mode is the default.
 
-Then describe the dashboard. You can mix URLs and prose freely — Claude runs `scripts/sigma-resolve.py` against the prompt first and turns each reference into the API identifiers it needs. Examples:
+Then describe the dashboard. You can mix URLs and prose freely. Claude routes the prompt through the right discovery tool — Sigma's MCP server for name/topic searches, `scripts/api/find-file-by-urlid.sh` for URL slugs, and `scripts/api/mcp-describe.sh` to inspect data-model columns/metrics — then resolves each reference to the API identifiers it needs. Examples:
 
 > Use the `Plugs Example Data Model` and the transaction details table to build a customer performance dashboard showing how customers buy across stores and which products are most popular. Save it in my Claude Testing folder.
 
@@ -44,24 +44,28 @@ You shouldn't have to look up internal UUIDs, schema paths, or connection IDs by
 | Path | What it does |
 |---|---|
 | `.claude/settings.json` | Auto-installs upstream `sigma-agent-skills` plugin on first open. |
-| `.claude/skills/sigma-workbook-conventions/` | Naming, layout, POST-time gotchas, and the **input-resolution** + **layout** rules for the workbook spec API. The main draw of this repo. |
-| `scripts/sigma-resolve.py` | Takes a freeform prompt (URLs, slugs, or prose) and returns structured `{sources, folder, candidates, unresolved}` JSON — connection IDs, paths, inodes, folder UUIDs. The first thing Claude runs at the start of a workbook build. |
+| `.claude/skills/sigma-workbook-conventions/` | Naming, layout, POST-time gotchas, the discovery routing rules (MCP-first for search/inspect, REST fallbacks for the rest), and the workbook-spec API reference. The main draw of this repo. |
+| `scripts/api/mcp-search.sh` | Query Sigma's MCP server to find workbooks / data models / data-model elements / tables by name or topic. The first call for any name- or topic-based prompt. |
+| `scripts/api/mcp-describe.sh` | Query the MCP server's `describe` tool for any `table` / `datamodel` / `datamodel-element` / `workbook` / `workbook-element` — returns SQL DDL with column names, types, descriptions, formulas, and the metrics catalog. Replaces hand-walking `GET /v2/dataModels/{id}/spec`. |
+| `scripts/api/find-file-by-urlid.sh` | Resolve any URL slug (`/b/<id>`, `…-<urlId>`) to its file metadata via `/v2/files`. The URL-slug path of the discovery router. |
+| `scripts/api/_env.sh` | Sourced internally by every `scripts/api/*.sh`. Loads `.env`, fetches an OAuth token via the `sigma-api` skill, and caches it at `/tmp/.sigma_token` (mode 0600, 55-min TTL). Self-bootstrap — callers do not set env vars. |
+| `scripts/api/` (rest) | Thin REST wrappers used as MCP fallbacks: `list-connections.sh`, `list-folders.sh`, `lookup-path.sh`, `list-table-columns.sh`, `probe-schema-tables.sh`. Reach for these when MCP doesn't cover the case (raw connection enumeration, folder browsing by name pattern, warehouse-schema probing). |
+| `scripts/sigma-resolve.py` | Handles the messy-input case — prose mixed with URL slugs and warehouse paths (`<DB>.<SCHEMA>.<table>`). Returns structured `{sources, folder, candidates, unresolved}` JSON. Use when the simpler MCP/URL-slug paths don't fit. |
 | `scripts/validate-spec.py` | Pre-POST static check for the silent-rewrite failure modes (per-page `layout`, unplaced elements, empty containers, column `format`, duplicate `controlId`). Run before every POST/PUT. |
-| `scripts/api/` | Thin one-purpose Bash wrappers around the Sigma REST endpoints used most often: `list-connections.sh`, `list-folders.sh`, `lookup-path.sh`, `list-table-columns.sh`, `find-file-by-urlid.sh`, `probe-schema-tables.sh`. The resolver composes these; reach for them directly only when the resolver's auto-routing isn't enough. |
-| `scripts/load-env.sh` | `eval "$(scripts/load-env.sh)"` to load `.env` into the shell. |
+| `scripts/load-env.sh` | `eval "$(scripts/load-env.sh)"` to load `.env` into the shell. Used internally by `_env.sh`; callers rarely invoke it directly. |
 | `scripts/refresh-vendor.sh` | Optional: clone a read-only mirror of upstream skills into `vendor/` for inspection while authoring new project skills. |
 | `workbooks/_template/` | Starter folder — `cp -R` to seed a new dashboard. |
 | `workbooks/_exemplars/` | Golden specs harvested from Sigma. Read-only references. |
 | `prompts/library/` | Reusable prompt fragments (currently empty; grow as patterns recur). |
-| `docs/` | `conventions.md`, `iteration-playbook.md`, `skill-authoring.md`, and `proposal-input-resolution-and-validation.md`. |
+| `docs/` | `conventions.md`, `iteration-playbook.md`, `skill-authoring.md`. |
 | `CLAUDE.md` | Project context auto-loaded by Claude Code on every session. |
 
 Per-user workbook iterations (`workbooks/<name>/`) are gitignored; only `workbooks/_template/` and `workbooks/_exemplars/` are repo-tracked. See `.gitignore`.
 
 ## The build loop, end to end
 
-1. **Authenticate.** `eval "$(scripts/load-env.sh)"`, then fetch a bearer token via the `sigma-api` skill → exported as `SIGMA_API_TOKEN`.
-2. **Resolve.** Claude runs `scripts/sigma-resolve.py "<your-prompt>"`. Output is structured: connection IDs, warehouse paths, table inodes with column lists, folder UUID. Ambiguity surfaces as named candidates to disambiguate, not endpoint errors.
+1. **Authenticate.** Just `cp .env.example .env` and fill in credentials. `scripts/api/*.sh` scripts self-bootstrap on first call (load `.env`, fetch token via `sigma-api` skill, cache at `/tmp/.sigma_token`). No env-prelude needed from the caller.
+2. **Discover & inspect.** Claude routes by prompt shape: name/topic → `scripts/api/mcp-search.sh`; URL slug → `scripts/api/find-file-by-urlid.sh`; messy prose → `scripts/sigma-resolve.py`. Then `scripts/api/mcp-describe.sh datamodel-element <dm> <el>` pulls the column types, descriptions, and metrics catalog for the data inventory. Ambiguity surfaces as named candidates to disambiguate, not endpoint errors.
 3. **Plan.** Claude drafts the data inventory, chart inference, controls, and layout sketch (per the plan-first workflow in the conventions skill) and waits for explicit approval.
 4. **Author.** `workbooks/<name>/spec.json` with two-tier sourcing (raw → derived → viz), `name`-on-every-cross-referenced-column, the documented control shapes, and one **top-level** `layout` XML with all `<Page>` siblings nested under it.
 5. **Validate.** `python3 scripts/validate-spec.py workbooks/<name>/spec.json` — fail-fast on per-page layout, unplaced elements, empty containers, column `format`, duplicate `controlId`. Don't POST a spec that fails validation.
@@ -74,7 +78,7 @@ Per-user workbook iterations (`workbooks/<name>/`) are gitignored; only `workboo
 cp -R workbooks/_template workbooks/my-new-dashboard
 ```
 
-Then describe what you want; Claude uses the loaded skills to resolve sources, author a `spec.json`, validate it, and POST it to your Sigma org. See [`docs/iteration-playbook.md`](docs/iteration-playbook.md) for the full iteration loop and [`docs/proposal-input-resolution-and-validation.md`](docs/proposal-input-resolution-and-validation.md) for the design behind the resolver + validator.
+Then describe what you want; Claude uses the loaded skills to resolve sources, author a `spec.json`, validate it, and POST it to your Sigma org. See [`docs/iteration-playbook.md`](docs/iteration-playbook.md) for the full iteration loop.
 
 ## Authoring a new workbook-pattern skill
 

@@ -1,15 +1,18 @@
 {
-  "extraKnownMarketplaces": {
-    "sigma-computing": {
-      "source": {
-        "source": "github",
-        "repo": "sigmacomputing/sigma-agent-skills"
-      }
-    }
-  },
-  "enabledPlugins": {
-    "sigma-computing@sigma-computing": true
-  },
+  "_comment": [
+    "Recommended permissions for a project hosting the sigma-workbook-conventions skill.",
+    "Merge the `allow` and `ask` arrays below into your project's `.claude/settings.json`",
+    "under `permissions`. With these rules, discovery and inspection operations",
+    "(scripts/api/*, mcp-search.sh, mcp-describe.sh, find-file-by-urlid.sh, ...) run",
+    "without approval prompts. Authoring/publishing (curl POST/PUT to /v2/workbooks)",
+    "still prompts — by design — since those are state-changing.",
+    "",
+    "Companion rule the skill documents in its 'Bash invocation hygiene' section:",
+    "  invoke scripts BARE (no `cd <repo> &&` prefix). The `Bash(cd * && ...)`",
+    "  entries below are a safety net in case an agent ignores that rule.",
+    "",
+    "Anything in `ask` MUST stay prompting — destructive ops with no undo."
+  ],
   "permissions": {
     "allow": [
       "Bash(scripts/api/*)",

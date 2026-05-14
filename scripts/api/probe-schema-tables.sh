@@ -3,11 +3,9 @@
 # Used when the API has no "list children of a schema scope" endpoint.
 # Usage:  scripts/api/probe-schema-tables.sh <connectionId> <db> <schema> [names...]
 # Output: JSON array [{name, inodeId}] for hits.
-# Env:    SIGMA_BASE_URL, SIGMA_API_TOKEN
+# Env:    self-bootstrapped via _env.sh (loads .env, caches OAuth token)
 set -euo pipefail
-
-: "${SIGMA_BASE_URL:?run scripts/load-env.sh first}"
-: "${SIGMA_API_TOKEN:?run get-token.sh from the sigma-api skill first}"
+source "$(dirname "$0")/_env.sh"
 
 if [ "$#" -lt 3 ]; then
   echo "usage: probe-schema-tables.sh <connectionId> <db> <schema> [names...]" >&2

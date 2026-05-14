@@ -36,15 +36,34 @@ A read-only mirror of the upstream skills lives at `vendor/sigma-agent-skills/` 
 ## Authentication
 
 1. `cp .env.example .env` and fill in `SIGMA_BASE_URL`, `SIGMA_CLIENT_ID`, `SIGMA_CLIENT_SECRET`.
-2. Load env vars: `eval "$(scripts/load-env.sh)"`
-3. Get a token via the `sigma-api` skill (which invokes its bundled `get-token.sh`).
+2. Done — scripts in `scripts/api/*.sh` self-bootstrap on first call (load
+   `.env`, fetch token via the `sigma-api` skill, cache at `/tmp/.sigma_token`
+   with a 55-min TTL). No env-prelude or token chaining needed from the caller.
+3. If your `get-token.sh` lives somewhere other than `~/.claude/plugins/marketplaces/sigma-computing/...`, set `SIGMA_TOKEN_FETCHER` to its path.
 4. **Never echo `$SIGMA_API_TOKEN`, `$SIGMA_CLIENT_SECRET`, or any other secret.** Don't write secrets to files inside the workspace. Pass tokens only via `Authorization` headers.
+
+## Bash invocation hygiene
+
+Claude Code's permission patterns (e.g. `Bash(scripts/api/*)`) match the
+**start** of the command string. A `cd "<repo>" && script` prefix breaks the
+match against the bare pattern and falls back to a defensive `Bash(cd * &&
+scripts/api/*)` pattern instead.
+
+Working-directory reality: if the repo is the project CWD, invoke bare from
+the start (`scripts/api/foo.sh ...`). If the repo is nested under the CC
+working directory (as in this checkout — `Run 5.13.2026 10.45AM/ryan-
+workbook-skill`), one `cd ryan-workbook-skill` per session is unavoidable;
+after that, CWD persists and subsequent calls should be bare. The
+anti-pattern is **re-prepending `cd <repo> &&` on every command** — that
+defeats both pattern matching and readability. Full rule and rationale in
+`sigma-workbook-conventions/SKILL.md` → "Bash invocation hygiene."
 
 ## Layout
 
 - `workbooks/<name>/` — one folder per dashboard. Each contains `spec.json`, `prompts/<timestamp>.md`, `iterations/<timestamp>.json`, `notes.md`. Start a new dashboard by copying `workbooks/_template/`.
 - `workbooks/_exemplars/` — golden specs harvested from Sigma. Read-only references; never edit.
-- `scripts/load-env.sh` — eval'd to load `.env` into the shell. `scripts/refresh-vendor.sh` clones the upstream skill repo into `vendor/` for inspection only. Workbook CRUD goes through the Sigma REST API directly via `curl` — there are no helper scripts for export/push.
+- `scripts/api/` — auth-bootstrapped wrappers around Sigma's MCP server (`mcp-search.sh`, `mcp-describe.sh`) and REST endpoints (`find-file-by-urlid.sh`, `list-folders.sh`, etc.). Each sources `_env.sh` on first call to load `.env` and cache an OAuth token. Workbook CRUD (POST/PUT to `/v2/workbooks/*`) still goes through direct `curl` — no helper script yet.
+- `scripts/load-env.sh` — used internally by `_env.sh`. Direct callers rarely need it. `scripts/refresh-vendor.sh` clones the upstream skill repo into `vendor/` for inspection only.
 - `prompts/library/` — reusable prompt fragments (guardrails, framing, etc.).
 - `docs/` — `conventions.md`, `iteration-playbook.md`, `skill-authoring.md`.
 
