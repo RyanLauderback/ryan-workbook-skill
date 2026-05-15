@@ -1,0 +1,187 @@
+{
+  "name": "Customer Revenue Cohort by Weeks Since First Purchase",
+  "schemaVersion": 1,
+  "folderId": "<DESTINATION_FOLDER_ID>",
+  "pages": [
+    {
+      "id": "page-cohort",
+      "name": "Customer Cohort",
+      "elements": [
+        {
+          "id": "text-title",
+          "kind": "text",
+          "body": "## **Customer Revenue Cohort — Weeks Since First Purchase**",
+          "verticalAlign": "middle"
+        },
+        { "id": "container-header", "kind": "container" },
+        { "id": "container-kpis", "kind": "container" },
+        {
+          "id": "tbl-tx-raw",
+          "kind": "table",
+          "name": "Plugs Transactions Raw",
+          "source": {
+            "kind": "data-model",
+            "dataModelId": "<DATA_MODEL_ID>",
+            "elementId": "<DATA_MODEL_ELEMENT_ID>"
+          },
+          "columns": [
+            { "id": "col-raw-order-number", "name": "Order Number", "formula": "[<DATA_MODEL_ELEMENT_NAME>/Order Number]" },
+            { "id": "col-raw-date", "name": "Date", "formula": "[<DATA_MODEL_ELEMENT_NAME>/Date]" },
+            { "id": "col-raw-quantity", "name": "Quantity", "formula": "[<DATA_MODEL_ELEMENT_NAME>/Quantity]" },
+            { "id": "col-raw-price", "name": "Price", "formula": "[<DATA_MODEL_ELEMENT_NAME>/Price]" },
+            { "id": "col-raw-unit-cost", "name": "Unit Cost", "formula": "[<DATA_MODEL_ELEMENT_NAME>/Unit Cost]" },
+            { "id": "col-raw-store-key", "name": "Store Key", "formula": "[<DATA_MODEL_ELEMENT_NAME>/Store Key]" },
+            { "id": "col-raw-store-name", "name": "Store Name", "formula": "[<DATA_MODEL_ELEMENT_NAME>/Store Name]" },
+            { "id": "col-raw-store-region", "name": "Store Region", "formula": "[<DATA_MODEL_ELEMENT_NAME>/Store Region]" },
+            { "id": "col-raw-cust-key", "name": "Cust Key", "formula": "[<DATA_MODEL_ELEMENT_NAME>/Cust Key]" },
+            { "id": "col-raw-cust-name", "name": "Cust Name", "formula": "[<DATA_MODEL_ELEMENT_NAME>/Cust Name]" },
+            { "id": "col-raw-product-name", "name": "Product Name", "formula": "[<DATA_MODEL_ELEMENT_NAME>/Product Name]" },
+            { "id": "col-raw-product-type", "name": "Product Type", "formula": "[<DATA_MODEL_ELEMENT_NAME>/Product Type]" },
+            { "id": "col-raw-product-key", "name": "Product Key", "formula": "[<DATA_MODEL_ELEMENT_NAME>/Product Key]" },
+            { "id": "col-raw-sales-amount", "name": "Sales Amount", "formula": "[<DATA_MODEL_ELEMENT_NAME>/Sales Amount]" }
+          ],
+          "visibleAsSource": false
+        },
+        {
+          "id": "tbl-tx-cohort",
+          "kind": "table",
+          "name": "Customer Cohort Base",
+          "source": { "kind": "table", "elementId": "tbl-tx-raw" },
+          "columns": [
+            { "id": "col-coh-date", "name": "Date", "formula": "[Plugs Transactions Raw/Date]" },
+            { "id": "col-coh-cust-key", "name": "Cust Key", "formula": "[Plugs Transactions Raw/Cust Key]" },
+            { "id": "col-coh-cust-name", "name": "Cust Name", "formula": "[Plugs Transactions Raw/Cust Name]" },
+            { "id": "col-coh-quantity", "name": "Quantity", "formula": "[Plugs Transactions Raw/Quantity]" },
+            { "id": "col-coh-price", "name": "Price", "formula": "[Plugs Transactions Raw/Price]" },
+            { "id": "col-coh-revenue", "name": "Revenue", "formula": "[Quantity] * [Price]" },
+            { "id": "col-coh-first-date", "name": "First Purchase Date", "formula": "Rollup(Min([Plugs Transactions Raw/Date]), [Cust Key], [Plugs Transactions Raw/Cust Key])" },
+            { "id": "col-coh-weeks-since", "name": "Weeks Since First Purchase", "formula": "Greatest(DateDiff(\"week\", [First Purchase Date], [Date]), 0)" },
+            { "id": "col-coh-week-of-date", "name": "Week of Date", "formula": "DateTrunc(\"week\", [Date])" },
+            { "id": "col-coh-order-number", "name": "Order Number", "formula": "[Plugs Transactions Raw/Order Number]" },
+            { "id": "col-coh-store-region", "name": "Store Region", "formula": "[Plugs Transactions Raw/Store Region]" },
+            { "id": "col-coh-store-name", "name": "Store Name", "formula": "[Plugs Transactions Raw/Store Name]" },
+            { "id": "col-coh-store-key", "name": "Store Key", "formula": "[Plugs Transactions Raw/Store Key]" },
+            { "id": "col-coh-product-name", "name": "Product Name", "formula": "[Plugs Transactions Raw/Product Name]" },
+            { "id": "col-coh-product-type", "name": "Product Type", "formula": "[Plugs Transactions Raw/Product Type]" },
+            { "id": "col-coh-product-key", "name": "Product Key", "formula": "[Plugs Transactions Raw/Product Key]" },
+            { "id": "col-coh-unit-cost", "name": "Unit Cost", "formula": "[Plugs Transactions Raw/Unit Cost]" }
+          ]
+        },
+        {
+          "kind": "control",
+          "id": "ctrl-date",
+          "controlId": "DateRange",
+          "controlType": "date-range",
+          "mode": "between",
+          "includeNulls": "when-no-value-is-selected",
+          "filters": [
+            { "source": { "kind": "table", "elementId": "tbl-tx-cohort" }, "columnId": "col-coh-date" }
+          ]
+        },
+        {
+          "kind": "control",
+          "id": "ctrl-region",
+          "controlId": "StoreRegion",
+          "controlType": "list",
+          "mode": "include",
+          "selectionMode": "multiple",
+          "values": [],
+          "source": {
+            "kind": "source",
+            "source": { "kind": "table", "elementId": "tbl-tx-cohort" },
+            "columnId": "col-coh-store-region"
+          },
+          "filters": [
+            { "source": { "kind": "table", "elementId": "tbl-tx-cohort" }, "columnId": "col-coh-store-region" }
+          ]
+        },
+        {
+          "id": "kpi-revenue",
+          "kind": "kpi-chart",
+          "name": "Total Revenue",
+          "source": { "kind": "table", "elementId": "tbl-tx-cohort" },
+          "columns": [
+            { "id": "kpi-rev-week", "name": "Week of Date", "formula": "DateTrunc(\"week\", [Customer Cohort Base/Date])" },
+            { "id": "kpi-rev-value", "name": "Total Revenue", "formula": "[Metrics/Total Revenue]" }
+          ],
+          "value": { "id": "kpi-rev-value" }
+        },
+        {
+          "id": "kpi-customers",
+          "kind": "kpi-chart",
+          "name": "Distinct Customers",
+          "source": { "kind": "table", "elementId": "tbl-tx-cohort" },
+          "columns": [
+            { "id": "kpi-cust-week", "name": "Week of Date", "formula": "DateTrunc(\"week\", [Customer Cohort Base/Date])" },
+            { "id": "kpi-cust-value", "name": "Distinct Customers", "formula": "[Metrics/Distinct Customers]" }
+          ],
+          "value": { "id": "kpi-cust-value" }
+        },
+        {
+          "id": "kpi-aov",
+          "kind": "kpi-chart",
+          "name": "AOV",
+          "source": { "kind": "table", "elementId": "tbl-tx-cohort" },
+          "columns": [
+            { "id": "kpi-aov-week", "name": "Week of Date", "formula": "DateTrunc(\"week\", [Customer Cohort Base/Date])" },
+            { "id": "kpi-aov-value", "name": "AOV", "formula": "[Metrics/AOV]" }
+          ],
+          "value": { "id": "kpi-aov-value" }
+        },
+        {
+          "id": "pivot-cohort",
+          "kind": "pivot-table",
+          "name": "Revenue by Week × Weeks Since First Purchase",
+          "source": { "kind": "table", "elementId": "tbl-tx-cohort" },
+          "columns": [
+            { "id": "pvt-week", "name": "Week of Date", "formula": "[Customer Cohort Base/Week of Date]" },
+            { "id": "pvt-weeks-since", "name": "Weeks Since First Purchase", "formula": "[Customer Cohort Base/Weeks Since First Purchase]" },
+            { "id": "pvt-revenue", "name": "Revenue", "formula": "Sum([Customer Cohort Base/Revenue])" }
+          ],
+          "rowsBy": [ { "id": "pvt-week" } ],
+          "columnsBy": [ { "id": "pvt-weeks-since" } ],
+          "values": [ "pvt-revenue" ]
+        },
+        {
+          "id": "chart-revenue-trend",
+          "kind": "line-chart",
+          "name": "Weekly Revenue Trend",
+          "source": { "kind": "table", "elementId": "tbl-tx-cohort" },
+          "columns": [
+            { "id": "ln-week", "name": "Week of Date", "formula": "[Customer Cohort Base/Week of Date]" },
+            { "id": "ln-revenue", "name": "Total Revenue", "formula": "[Metrics/Total Revenue]" },
+            { "id": "ln-date", "name": "Date", "formula": "[Customer Cohort Base/Date]" },
+            { "id": "ln-cust-key", "name": "Cust Key", "formula": "[Customer Cohort Base/Cust Key]" },
+            { "id": "ln-cust-name", "name": "Cust Name", "formula": "[Customer Cohort Base/Cust Name]" },
+            { "id": "ln-store-region", "name": "Store Region", "formula": "[Customer Cohort Base/Store Region]" },
+            { "id": "ln-store-name", "name": "Store Name", "formula": "[Customer Cohort Base/Store Name]" },
+            { "id": "ln-product-type", "name": "Product Type", "formula": "[Customer Cohort Base/Product Type]" },
+            { "id": "ln-product-name", "name": "Product Name", "formula": "[Customer Cohort Base/Product Name]" }
+          ],
+          "xAxis": { "id": "ln-week", "sort": { "direction": "ascending" } },
+          "yAxis": [ { "id": "ln-revenue" } ]
+        },
+        {
+          "id": "chart-revenue-by-cohort",
+          "kind": "bar-chart",
+          "name": "Revenue by Weeks Since First Purchase",
+          "source": { "kind": "table", "elementId": "tbl-tx-cohort" },
+          "columns": [
+            { "id": "br-weeks-since", "name": "Weeks Since First Purchase", "formula": "[Customer Cohort Base/Weeks Since First Purchase]" },
+            { "id": "br-revenue", "name": "Total Revenue", "formula": "[Metrics/Total Revenue]" },
+            { "id": "br-date", "name": "Date", "formula": "[Customer Cohort Base/Date]" },
+            { "id": "br-cust-key", "name": "Cust Key", "formula": "[Customer Cohort Base/Cust Key]" },
+            { "id": "br-cust-name", "name": "Cust Name", "formula": "[Customer Cohort Base/Cust Name]" },
+            { "id": "br-store-region", "name": "Store Region", "formula": "[Customer Cohort Base/Store Region]" },
+            { "id": "br-store-name", "name": "Store Name", "formula": "[Customer Cohort Base/Store Name]" },
+            { "id": "br-product-type", "name": "Product Type", "formula": "[Customer Cohort Base/Product Type]" },
+            { "id": "br-product-name", "name": "Product Name", "formula": "[Customer Cohort Base/Product Name]" }
+          ],
+          "xAxis": { "id": "br-weeks-since", "sort": { "direction": "ascending" } },
+          "yAxis": [ { "id": "br-revenue" } ]
+        }
+      ]
+    }
+  ],
+  "layout": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<Page type=\"grid\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\" id=\"page-cohort\">\n  <GridContainer elementId=\"container-header\" type=\"grid\" gridColumn=\"1 / 25\" gridRow=\"1 / 4\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n    <LayoutElement elementId=\"text-title\" gridColumn=\"1 / 11\" gridRow=\"1 / 4\"/>\n    <LayoutElement elementId=\"ctrl-date\" gridColumn=\"11 / 18\" gridRow=\"1 / 4\"/>\n    <LayoutElement elementId=\"ctrl-region\" gridColumn=\"18 / 25\" gridRow=\"1 / 4\"/>\n  </GridContainer>\n  <GridContainer elementId=\"container-kpis\" type=\"grid\" gridColumn=\"1 / 25\" gridRow=\"4 / 13\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n    <LayoutElement elementId=\"kpi-revenue\" gridColumn=\"1 / 9\" gridRow=\"1 / 10\"/>\n    <LayoutElement elementId=\"kpi-customers\" gridColumn=\"9 / 17\" gridRow=\"1 / 10\"/>\n    <LayoutElement elementId=\"kpi-aov\" gridColumn=\"17 / 25\" gridRow=\"1 / 10\"/>\n  </GridContainer>\n  <LayoutElement elementId=\"pivot-cohort\" gridColumn=\"1 / 25\" gridRow=\"13 / 29\"/>\n  <LayoutElement elementId=\"chart-revenue-trend\" gridColumn=\"1 / 13\" gridRow=\"29 / 45\"/>\n  <LayoutElement elementId=\"chart-revenue-by-cohort\" gridColumn=\"13 / 25\" gridRow=\"29 / 45\"/>\n  <LayoutElement elementId=\"tbl-tx-cohort\" gridColumn=\"1 / 25\" gridRow=\"45 / 61\"/>\n  <LayoutElement elementId=\"tbl-tx-raw\" gridColumn=\"1 / 25\" gridRow=\"61 / 77\"/>\n</Page>\n"
+}

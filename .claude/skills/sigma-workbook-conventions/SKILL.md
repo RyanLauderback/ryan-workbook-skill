@@ -74,6 +74,15 @@ id (`table`, `datamodel`, `datamodel-element`, `workbook`,
 descriptions, formulas, and the metrics catalog. Replaces hand-walking
 `GET /v2/dataModels/{id}/spec` JSON.
 
+**Batch `mcp-describe.sh` calls in parallel after the first datamodel
+overview.** The flow is: one `mcp-describe.sh datamodel <id>` to list
+elements (sequential — you need its output to know which element IDs
+exist), then **all subsequent `mcp-describe.sh datamodel-element <dm>
+<el>` calls in a single Bash batch** (parallel tool calls). Each
+element describe is independent and Sigma's MCP server handles
+concurrent reads fine. Don't interleave reasoning between describes —
+batch them, then reason once over the combined output.
+
 The REST primitives in `scripts/api/` (`list-connections.sh`,
 `lookup-path.sh`, `list-table-columns.sh`, `list-folders.sh`,
 `probe-schema-tables.sh`) are fallbacks for cases MCP doesn't cover —
@@ -427,6 +436,14 @@ column). Run it via the wrapper; never skip.
     of every supported chart kind (combo, donut, pie, area × 3, scatter)
     and the newer control types (text, number-range, segmented). Source
     when you need a verified shape for a kind not previously authored.
+  - `data-model-sourced-cohort-pivot.json` — **the canonical cohort
+    pattern.** Two-tier sourcing (raw passthrough → derived cohort
+    sibling); `Rollup(Min([Date]), [Cust Key], ...)` for first-purchase-
+    per-customer; `Greatest(DateDiff(...), 0)` non-negative guard; pivot
+    with weekly rows × weeks-since-first columns; KPI row using data-
+    model metrics; supporting line + bar charts. Clone-and-modify for
+    any "cohort / retention / weeks-since-first-action" prompt — only
+    the data-model IDs and folder ID need replacement.
 
 For data-model field-level mechanics (columns, metrics, relationships,
 filters, controls, formatting, folders, column-level security, workflows)

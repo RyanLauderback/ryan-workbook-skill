@@ -4,6 +4,90 @@ Canonical patterns for `POST/GET/PUT /v2/workbooks/spec`. These rules are the
 result of iteration loops where the create endpoint accepted broken specs that
 failed at render time. Read this before authoring any workbook spec.
 
+## Function quick reference
+
+Verified signatures for the formulas that show up in nearly every workbook
+spec. **Use this table first** — only fall back to `mcp__claude_ai_Sigma_Docs__*`
+when the function you need isn't listed here.
+
+### Date / time
+
+| Signature | Returns | Example |
+|---|---|---|
+| `DateTrunc("<unit>", <date>)` | date | `DateTrunc("week", [Date])` |
+| `DateDiff("<unit>", <start>, <end>)` | integer | `DateDiff("week", [First Date], [Date])` |
+| `DateAdd("<unit>", <n>, <date>)` | date | `DateAdd("day", -30, Today())` |
+| `DateLookback("<unit>", <n>, <date>, <metric>)` | scalar | `DateLookback("week", 1, [Date], Sum([Revenue]))` |
+| `Today()` / `Now()` | date / datetime | — |
+
+`<unit>` is one of `"year"`, `"quarter"`, `"month"`, `"week"`, `"day"`, `"hour"`, `"minute"`. **Always quote** the unit literal.
+
+### Aggregates (use inside a formula or as a column expression)
+
+| Signature | Notes |
+|---|---|
+| `Sum(<expr>)` / `Min(<expr>)` / `Max(<expr>)` / `Avg(<expr>)` | Standard. |
+| `Count(<expr>)` / `CountDistinct(<expr>)` | Count non-null rows / distinct values. |
+| `Median(<expr>)` / `Percentile(<expr>, <p>)` | `<p>` in 0..1. |
+
+**Aggregate-of-aggregate rule:** you cannot wrap an already-aggregated metric in another aggregate inline. Materialize the inner aggregate as a column first, then aggregate. See "Window functions require pre-materialized columns."
+
+### Cross-element / per-row windowed aggregates
+
+| Signature | What it does |
+|---|---|
+| `Lookup(<lookup-table.col>, <local-key>, <lookup-table-key>)` | Pull a value from a **sibling workbook element**, joined on a key. The lookup target must be a workbook element on the same page — `[D_DATAMODEL_ELEMENT/...]` raw refs are not allowed. |
+| `Rollup(<aggregate-expr>, <local-group-col>, <source-group-col>)` | Pre-aggregate a metric over a grouping defined by a sibling element. The canonical "first purchase date per customer" pattern: `Rollup(Min([Source/Date]), [Cust Key], [Source/Cust Key])`. |
+
+### Scalar conditionals
+
+| Signature | Notes |
+|---|---|
+| `If(<cond>, <then>, <else>)` | Single conditional. |
+| `Switch(<expr>, <v1>, <r1>, <v2>, <r2>, ..., <default>)` | Multi-branch. |
+| `Coalesce(<a>, <b>, ...)` | First non-null. |
+| `IsNull(<expr>)` / `IsNotNull(<expr>)` | Boolean. |
+
+### Numeric guards
+
+| Signature | Notes |
+|---|---|
+| `Greatest(<a>, <b>, ...)` | Returns max of arguments. Use to clamp `>= 0`: `Greatest(DateDiff(...), 0)`. |
+| `Least(<a>, <b>, ...)` | Returns min. |
+| `Abs(<n>)` | Absolute value. |
+| `Round(<n>, <digits>)` / `Ceiling(<n>)` / `Floor(<n>)` | Rounding. |
+| `DivideSafe(<num>, <denom>)` | Returns null instead of error on `0` denominator. **Prefer over `/`** for ratios. |
+
+### Strings
+
+| Signature | Notes |
+|---|---|
+| `Concat(<a>, <b>, ...)` | String concatenation. |
+| `Contains(<haystack>, <needle>)` | Boolean. |
+| `Left(<s>, <n>)` / `Right(<s>, <n>)` / `Substring(<s>, <start>, <len>)` | Slicing. |
+| `Lower(<s>)` / `Upper(<s>)` / `Trim(<s>)` | Case + whitespace. |
+| `Replace(<s>, <find>, <repl>)` | String replace. |
+
+### Type / casting
+
+| Signature | Notes |
+|---|---|
+| `Number(<s>)` / `Text(<n>)` / `Date(<s>)` | Type coercion. |
+| `Boolean(<expr>)` | Cast to truthy/falsy. |
+
+### Column-reference syntax (not functions, but reference)
+
+| Form | Meaning |
+|---|---|
+| `[Column Name]` | Bare reference within the same element's namespace. |
+| `[Source Element Display Name/Column Name]` | Cross-element reference to a sibling on the same page. |
+| `[Metrics/Metric Name]` | Reference a data-model metric (only available on data-model-sourced elements). |
+| `[ControlId]` | Reference a control's current value (see "Controls as formula values"). |
+
+**Argument order traps that are easy to misremember:** `DateDiff` is `(unit, start, end)` not `(start, end, unit)`; `Rollup` is `(aggregate, local-key, source-key)` not `(aggregate, source-key, local-key)`; `Lookup` is `(target.col, local-key, target-key)` not `(target.col, target-key, local-key)`. The skill enforces these — if you can't remember, copy from this table.
+
+For functions not listed here (statistical, trig, advanced string, JSON, etc.), use `mcp__claude_ai_Sigma_Docs__search` → `mcp__claude_ai_Sigma_Docs__fetch`.
+
 ## Layout rules — read before authoring multi-page
 
 Three rules that the POST validator does not enforce. Sigma silently rewrites
