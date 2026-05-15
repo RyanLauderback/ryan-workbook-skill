@@ -29,7 +29,7 @@ Once Claude Code is open, kick off a session with one of these phrases:
 
 If you don't say either, training mode is the default.
 
-Then describe the dashboard. You can mix URLs and prose freely. Claude routes the prompt through the right discovery tool — Sigma's MCP server for name/topic searches, `scripts/api/find-file-by-urlid.sh` for URL slugs, and `scripts/api/mcp-describe.sh` to inspect data-model columns/metrics — then resolves each reference to the API identifiers it needs. Examples:
+Then describe the dashboard. You can mix URLs and prose freely. Claude routes the prompt through the right discovery tool — Sigma's MCP server (the `/mcp/v2` REST endpoint, reached via `scripts/api/mcp-search.sh` and `scripts/api/mcp-describe.sh` — *not* the Claude.ai Sigma_MCP connector) for name/topic searches, `scripts/api/find-file-by-urlid.sh` for URL slugs, and `scripts/api/mcp-describe.sh` to inspect data-model columns/metrics — then resolves each reference to the API identifiers it needs. Examples:
 
 > Use the `Plugs Example Data Model` and the transaction details table to build a customer performance dashboard showing how customers buy across stores and which products are most popular. Save it in my Claude Testing folder.
 
@@ -68,8 +68,8 @@ Per-user workbook iterations (`workbooks/<name>/`) are gitignored; only `workboo
 2. **Discover & inspect.** Claude routes by prompt shape: name/topic → `scripts/api/mcp-search.sh`; URL slug → `scripts/api/find-file-by-urlid.sh`; messy prose → `scripts/sigma-resolve.py`. Then `scripts/api/mcp-describe.sh datamodel-element <dm> <el>` pulls the column types, descriptions, and metrics catalog for the data inventory. Ambiguity surfaces as named candidates to disambiguate, not endpoint errors.
 3. **Plan.** Claude drafts the data inventory, chart inference, controls, and layout sketch (per the plan-first workflow in the conventions skill) and waits for explicit approval.
 4. **Author.** `workbooks/<name>/spec.json` with two-tier sourcing (raw → derived → viz), `name`-on-every-cross-referenced-column, the documented control shapes, and one **top-level** `layout` XML with all `<Page>` siblings nested under it.
-5. **Validate.** `python3 scripts/validate-spec.py workbooks/<name>/spec.json` — fail-fast on per-page layout, unplaced elements, empty containers, column `format`, duplicate `controlId`. Don't POST a spec that fails validation.
-6. **POST.** `curl -X POST … /v2/workbooks/spec` → if HTTP 200, GET it back as the new source of truth (Sigma normalizes IDs and layout XML).
+5. **Publish.** `scripts/api/publish-workbook.sh post workbooks/<name>/spec.json` — the wrapper auto-runs `validate-spec.py` first (fail-fast on per-page layout, unplaced elements, empty containers, column `format`, duplicate `controlId`), then POSTs to `/v2/workbooks/spec` with `Authorization` + `Accept: application/json` injected and a 401 auto-retry. Prints `{ workbookId, url, path }` on success.
+6. **GET back.** `scripts/api/publish-workbook.sh get-spec <workbookId> | jq . > workbooks/<name>/spec.json` — the GET-back spec is the new source of truth (Sigma normalizes IDs and layout XML).
 7. **Verify.** Open in the UI — the API doesn't validate cross-element column resolution or visualization quality.
 
 ## Adding a new dashboard

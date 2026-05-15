@@ -48,11 +48,17 @@ future skill improvement.
 
 ## Workflow: resolve user input before planning
 
-**Default to MCP for any read-only discovery against the existing Sigma
-workspace** — search, lookup, inspect. The MCP wrappers
-(`scripts/api/mcp-search.sh`, `scripts/api/mcp-describe.sh`) call Sigma's
-MCP server (`/mcp/v2`) using the same OAuth token as the REST API and
-return richer output than the REST endpoints with less bash plumbing.
+**Use the bash helpers in `scripts/api/` for any read-only discovery
+against the existing Sigma workspace** — search, lookup, inspect. The
+MCP wrappers (`scripts/api/mcp-search.sh`, `scripts/api/mcp-describe.sh`)
+call Sigma's MCP server (`/mcp/v2`) using the same OAuth token as the
+REST API and return richer output than the REST endpoints with less
+bash plumbing.
+
+For Sigma **function references** and **REST API endpoint shapes**
+(not workspace discovery), use the native `mcp__claude_ai_Sigma_Docs__*`
+tools — no bash, no auth, no `WebFetch`. See `reference/workbook-spec-api.md`
+→ "Looking up Sigma functions."
 
 Route by what the prompt actually contains:
 
@@ -108,43 +114,15 @@ prompt; `curl` calls for workbook authoring/publishing still prompt
 (by design — they're state-changing). Without them, every discovery
 call surfaces a prompt because no allow pattern matches.
 
-### Bash invocation hygiene — invoke scripts bare after CWD is set
+### Invoking scripts
 
-Claude Code's permission patterns match the **start** of the command
-string. So:
-
-```bash
-# ✓ matches Bash(scripts/api/*) — silent
-scripts/api/mcp-describe.sh datamodel <id>
-
-# ✓ matches Bash(cd * && scripts/api/*) defensive pattern — silent
-cd <repo> && scripts/api/mcp-describe.sh datamodel <id>
-
-# ✗ matches no pattern — chains break the prefix match
-cd <repo> && eval "$(scripts/load-env.sh)" && scripts/api/mcp-describe.sh datamodel <id>
-```
-
-**Working-directory reality.** If the repo IS the CC primary working
-directory, invoke bare from the start. If the repo is nested under a
-wrapper directory (a common layout in this workspace), one
-`cd <repo>` at session start is unavoidable; CWD then persists for
-subsequent calls, which should be bare. The anti-pattern is
-**re-prepending `cd <repo> &&` on every command** — once it's set,
-it's set.
-
-Same rule for `python3 scripts/validate-spec.py …` and
-`python3 scripts/sigma-resolve.py …` — call bare after CWD is set.
-
-If you need to compose multiple operations (e.g. `mkdir -p … &&
-python3 -c …`), split them into separate Bash tool calls rather than
-`&&`-chaining. Two short calls that each match a pattern beat one
-long chain that matches none.
-
-The publish path (`POST /v2/workbooks/spec` → `GET` for URL → `GET`
-for iteration) is the one place this rule is hard to honor — it
-requires the env-prelude (`eval "$(scripts/load-env.sh)" && export
-SIGMA_API_TOKEN=…`) for the curl. Each of those three calls will
-prompt once until a `publish-workbook.sh` wrapper exists.
+The deployment expectation is that `ryan-workbook-skill/` is the
+Claude Code primary working directory. Invoke `scripts/api/*.sh` and
+`python3 scripts/*.py` **bare** — no `cd <repo> &&` prefix needed. The
+`Bash(scripts/api/*)` allowlist pattern matches bare invocations and
+runs silent. Prepending an absolute or relative `cd` defeats the
+pattern match, adds verbosity, and creates no functional benefit when
+CWD is already the repo root.
 
 `sigma-resolve.py` (for the messy-input case) returns structured JSON:
 
@@ -215,12 +193,24 @@ don't re-propose.
 
 ### Approval model — plan is the only gate
 
-The project's `.claude/settings.json` allows POST/PUT against
-`/v2/workbooks/*` and `/v2/dataModels/*/spec` without per-call prompts,
-because the plan-approval step is treated as the user's authorization
-for any state-changing API call covered by the plan. This makes the UX
-clean: the user reviews one plan, approves, and the build + publish
-proceed without further interruption.
+Plan approval authorizes **every state-changing API call covered by the
+plan, except DELETE**. POST/PUT to `/v2/workbooks/spec` and
+`/v2/dataModels/*/spec` run silently — `.claude/settings.json` allowlists
+both `Bash(scripts/api/*)` (which covers `publish-workbook.sh`) and the
+direct curl patterns. The user reviews one plan, approves, and the
+build + publish proceed without further interruption.
+
+The rules:
+
+- **POST/PUT inside the workbook/data-model namespace:** silent. Plan
+  approval is the authorization.
+- **POST/PUT outside that namespace** (e.g. `/v2/connections`,
+  `/v2/files` mutations): not pre-authorized — surface to the user.
+- **DELETE on any endpoint:** always asks. The `ask` patterns in
+  `.claude/settings.json` (`Bash(curl * -X DELETE *)` and
+  `Bash(scripts/api/delete-*)`) override the broad `Bash(scripts/api/*)`
+  allow. Even when the plan mentions deletion, every DELETE call is
+  surfaced for explicit confirmation.
 
 That contract puts the burden on the agent:
 
@@ -228,10 +218,8 @@ That contract puts the burden on the agent:
   shared object it intends to mutate (data models, exemplars). If a
   state-changing call wasn't covered in the plan, do not make it — go
   back and amend the plan first.
-- POST/PUT calls outside the workbook/data-model namespace are not
-  pre-authorized — surface them to the user.
-- DELETE is never pre-authorized, even when the plan mentions it.
-  Always confirm explicitly before deleting.
+- Any future deletion-wrapper script must be named `scripts/api/delete-*`
+  so the ask pattern catches it. Do not bypass via a different name.
 
 ## Conventions
 
@@ -360,30 +348,34 @@ GridContainer layout XML, and the page-structure pattern live in
 the UI after a CREATE — the API doesn't validate cross-element column
 resolution or visualization quality.
 
-## Always run `validate-spec.py` before POST/PUT
+## Publishing — use `publish-workbook.sh`
 
-`scripts/validate-spec.py <spec.json>` runs the structural checks Sigma's
-API does NOT enforce:
-
-- `pages[].layout` present (silently dropped by the API — promoted to error)
-- every `pages[].elements[].id` placed in the top-level layout XML
-- every `container` element has a matching `<GridContainer>` with nested children
-- no `format` field on columns (rejected with a misleading "Missing 'kind' field")
-- `controlId` workbook-wide uniqueness
-
-Exits non-zero on any issue. Workflow:
+Workbook POST/GET goes through the wrapper:
 
 ```bash
-python3 scripts/validate-spec.py workbooks/<name>/spec.json && \
-  curl -X POST -H "Authorization: Bearer $SIGMA_API_TOKEN" \
-       -H "Content-Type: application/json" \
-       --data-binary @workbooks/<name>/spec.json \
-       "$SIGMA_BASE_URL/v2/workbooks/spec"
+# POST (creates a new workbook). Auto-runs validate-spec.py first.
+scripts/api/publish-workbook.sh post workbooks/<name>/spec.json
+
+# GET the spec back as JSON — that's the new source of truth.
+scripts/api/publish-workbook.sh get-spec <workbookId> | jq . > workbooks/<name>/spec.json
+
+# GET workbook metadata (url, name, path, folderId).
+scripts/api/publish-workbook.sh get-meta <workbookId>
 ```
 
-The validator catches the silent-rewrite failure mode from
-2026-05-11 (per-page `layout` fields ignored; charts stacked in a 1/13-wide
-single column). Don't skip it.
+The wrapper:
+- Runs `validate-spec.py` before POST (fail-fast on the silent-rewrite
+  gotchas: missing `pages[].layout`, unplaced elements, empty containers,
+  column `format`, duplicate `controlId`).
+- Uses `sigma_curl` from `_env.sh`, which auto-injects
+  `Authorization: Bearer ...` and `Accept: application/json` headers and
+  retries once on HTTP 401 (cache eviction + refetch).
+- Doesn't have a `delete` subcommand. DELETE stays on the direct-curl
+  path so it always hits the DELETE ask pattern in `.claude/settings.json`.
+
+The validator catches the silent-rewrite failure mode from 2026-05-11
+(per-page `layout` fields ignored; charts stacked in a 1/13-wide single
+column). Run it via the wrapper; never skip.
 
 ## Reference and examples
 
@@ -419,9 +411,9 @@ single column). Don't skip it.
     sankey, etc.), the `format` field, `controlId` workbook-uniqueness.
   - **Layout** — `<Page>` / `<GridContainer>` / `<LayoutElement>` 24-col
     grid; page-structure pattern (header → body → detail).
-  - **Looking up Sigma functions** — convention for using
-    `https://help.sigmacomputing.com/llms.txt` to fetch function docs
-    when the formula you need isn't already documented here.
+  - **Looking up Sigma functions** — convention for using the native
+    `mcp__claude_ai_Sigma_Docs__*` MCP tools (`search` + `fetch`) when
+    the formula you need isn't already documented here.
 - `examples/` — known-good specs to seed generation. Treat as immutable
   references; clone-and-modify rather than editing in place.
   - `data-model-sourced-overview.json` — minimal data-model-fed dashboard.

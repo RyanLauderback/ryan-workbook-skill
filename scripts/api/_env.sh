@@ -62,4 +62,39 @@ fi
 
 export SIGMA_BASE_URL SIGMA_API_TOKEN
 
+# sigma_curl — wrap curl with auth header, Accept: application/json, and 401
+# auto-retry. Use this from scripts/api/*.sh instead of raw curl for any call
+# to the Sigma REST API.
+#
+# Usage:  sigma_curl [curl args...] <url>
+# Output: response body to stdout (HTTP status suffix stripped).
+# Exit:   0 if HTTP < 400, 1 otherwise.
+#
+# On HTTP 401, evicts the cached token, re-bootstraps _env.sh to fetch fresh,
+# and retries the call once. Eliminates the stale-cache footgun where a
+# revoked or wrong-base-URL token in /tmp/.sigma_token would silently fail.
+sigma_curl() {
+  local _resp _body _status _retries=0
+  while :; do
+    _resp=$(curl -sS \
+      -H "Authorization: Bearer $SIGMA_API_TOKEN" \
+      -H "Accept: application/json" \
+      -w '\nHTTP_STATUS:%{http_code}' \
+      "$@")
+    _status="${_resp##*HTTP_STATUS:}"
+    _body="${_resp%HTTP_STATUS:*}"
+    _body="${_body%$'\n'}"
+    if [ "$_status" = "401" ] && [ "$_retries" -eq 0 ]; then
+      rm -f /tmp/.sigma_token
+      unset SIGMA_API_TOKEN
+      source "${BASH_SOURCE[0]}"
+      _retries=1
+      continue
+    fi
+    printf '%s' "$_body"
+    [ "$_status" -lt 400 ] && return 0 || return 1
+  done
+}
+export -f sigma_curl
+
 unset _sigma_repo_root _sigma_token_cache _sigma_token_ttl _fresh _mtime _age _gettoken

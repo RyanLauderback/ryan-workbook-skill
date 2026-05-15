@@ -777,42 +777,41 @@ discovered (configure currency in the UI → `GET /v2/workbooks/{id}/spec`
 currency/percent formatting in the UI after CREATE. Replace this section
 with the discovered shape once known.
 
-## Looking up Sigma functions — `llms.txt`
+## Looking up Sigma functions
 
 This skill documents **patterns** (Lookup, Rollup, multi-level
 groupings, materialize-then-window) and verified spec shapes. It does
 NOT enumerate every Sigma formula function — that lives in Sigma's
 official docs.
 
-The fastest way to retrieve current function documentation from inside
-a Claude session is via Sigma's LLM-friendly index:
+Retrieve current function documentation via the native
+`mcp__claude_ai_Sigma_Docs__*` MCP integration (no auth, no bash, no
+`WebFetch`):
 
-```
-https://help.sigmacomputing.com/llms.txt
-```
+- `mcp__claude_ai_Sigma_Docs__search` — keyword search for a function
+  by name or topic ("is there a function that does X"). Returns
+  `{id, title, url}` for top matches.
+- `mcp__claude_ai_Sigma_Docs__fetch` — pull the full docs page for a
+  specific function by id (returned by `search`).
 
-This is a categorized index of every published Sigma docs page,
-including dedicated pages per function (e.g.
-`https://help.sigmacomputing.com/docs/sum.md`,
-`/docs/datediff.md`, `/docs/datelookback.md`, `/docs/rollup.md`).
-Sections include "Aggregate functions," "Date functions," "Window
-functions," "Lookup functions," and more.
+Schemas load via `ToolSearch` on first use
+(`select:mcp__claude_ai_Sigma_Docs__search,mcp__claude_ai_Sigma_Docs__fetch`).
+Allowlisted in `.claude/settings.json` so calls run silent.
 
-When to fetch the index vs. a specific function page:
+For Sigma's REST API endpoint reference (request/response shapes,
+parameters, paths), the same MCP server exposes:
 
-| Situation | Fetch |
-|---|---|
-| Looking for a function whose signature you already know the name of | `https://help.sigmacomputing.com/docs/<function-name>.md` directly. |
-| Looking for "is there a function that does X" / not sure of the name | `llms.txt` first, then drill into the matching `*.md`. |
-| Building a recipe (e.g. "rolling 4-week average") and need to pick the right function | `llms.txt` to browse the relevant category. |
+- `mcp__claude_ai_Sigma_Docs__list-endpoints` — full path/method index
+- `mcp__claude_ai_Sigma_Docs__search-endpoints` — keyword search
+- `mcp__claude_ai_Sigma_Docs__get-endpoint` — fetch a specific endpoint
 
 Practical convention: when authoring a spec and you need a function
-beyond the ones already documented in this skill, fetch the function's
-docs page over `WebFetch` rather than guessing the signature from
-training data. Sigma's function semantics (e.g. argument order on
-`Rollup`, `DateLookback`, `DateAdd`) are too easy to misremember, and
-the cost of a malformed formula is a silent NULL or an `iff(equal_null,
-…)` defensive wrap in the SQL, not a POST error.
+beyond the ones already documented in this skill, do a `search` →
+`fetch` round-trip rather than guessing the signature from training
+data. Sigma's function semantics (e.g. argument order on `Rollup`,
+`DateLookback`, `DateAdd`) are too easy to misremember, and the cost
+of a malformed formula is a silent NULL or an `iff(equal_null, …)`
+defensive wrap in the SQL, not a POST error.
 
 What this skill does cover natively (no need to look up):
 
@@ -824,7 +823,7 @@ What this skill does cover natively (no need to look up):
   `Rank` etc. directly on top of an unmaterialized expression).
 
 Everything else — date math, string ops, conditional, statistical,
-trig, type conversion — defer to `llms.txt`.
+trig, type conversion — defer to `Sigma_Docs` MCP lookups.
 
 ## Formula namespaces
 

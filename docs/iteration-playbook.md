@@ -87,23 +87,21 @@ approved plan from step 2.
 
 Don't overwrite `spec.json` yet — that comes after the GET-back.
 
-### 5. Validate locally and POST
+### 5. POST via the wrapper
 
 ```bash
-python3 scripts/validate-spec.py workbooks/<name>/iterations/<file>.json
-# Fail-fast on per-page layout, unplaced elements, empty containers,
-# column `format`, duplicate `controlId`. Don't POST a spec that fails.
-
-# POST. The token cache populated by any prior scripts/api/*.sh call lives
-# at /tmp/.sigma_token; reuse it inline. Workbook CRUD is done by calling
-# the Sigma REST API directly via curl — no helper script yet.
-eval "$(scripts/load-env.sh)" && export SIGMA_API_TOKEN=$(cat /tmp/.sigma_token) && \
-  curl -sS -X POST "$SIGMA_BASE_URL/v2/workbooks/spec" \
-    -H "Authorization: Bearer $SIGMA_API_TOKEN" \
-    -H "Content-Type: application/json" \
-    -H "Accept: application/json" \
-    --data-binary "@workbooks/<name>/iterations/<file>.json"
+scripts/api/publish-workbook.sh post workbooks/<name>/iterations/<file>.json
 ```
+
+The wrapper:
+- Runs `validate-spec.py` first (fail-fast on per-page layout, unplaced
+  elements, empty containers, column `format`, duplicate `controlId`).
+- POSTs to `/v2/workbooks/spec` via the `sigma_curl` helper, which auto-
+  injects `Authorization` and `Accept: application/json` headers and
+  retries once on HTTP 401 (cache eviction + refetch). No env-prelude,
+  no manual token chaining.
+- Prints `{ workbookId, url, path }` on success, or the Sigma error
+  body on failure.
 
 **Never echo `$SIGMA_API_TOKEN` or `$SIGMA_CLIENT_SECRET`.** The token cache is
 mode 0600 and gitignored; tokens never cross a tool boundary.
@@ -118,16 +116,13 @@ mode 0600 and gitignored; tokens never cross a tool boundary.
 ### 7. GET back; that's the new source of truth
 
 ```bash
-eval "$(scripts/load-env.sh)" && export SIGMA_API_TOKEN=$(cat /tmp/.sigma_token) && \
-  curl -sf -H "Authorization: Bearer $SIGMA_API_TOKEN" \
-    -H "Accept: application/json" \
-    "$SIGMA_BASE_URL/v2/workbooks/<workbookId>/spec" \
-    | jq . > workbooks/<name>/spec.json
+scripts/api/publish-workbook.sh get-spec <workbookId> \
+  | jq . > workbooks/<name>/spec.json
 ```
 
-The GET response defaults to YAML unless `Accept: application/json` is set.
-Sigma normalizes layout XML (adds prolog) and may auto-fill default fields.
-The GET, not your input, is the new baseline.
+The wrapper sets `Accept: application/json` automatically (the GET endpoint
+returns YAML by default). Sigma normalizes layout XML (adds prolog) and may
+auto-fill default fields. The GET, not your input, is the new baseline.
 
 ### 8. Visually verify
 
@@ -149,10 +144,8 @@ previous version:
 
 ```bash
 TS=$(date +%Y%m%d-%H%M)
-eval "$(scripts/load-env.sh)" && export SIGMA_API_TOKEN=$(cat /tmp/.sigma_token) && \
-  curl -sf -H "Authorization: Bearer $SIGMA_API_TOKEN" -H "Accept: application/json" \
-    "$SIGMA_BASE_URL/v2/workbooks/<workbookId>/spec" \
-    | jq . > workbooks/<name>/iterations/${TS}-from-sigma.json
+scripts/api/publish-workbook.sh get-spec <workbookId> \
+  | jq . > workbooks/<name>/iterations/${TS}-from-sigma.json
 
 diff <(jq -S 'del(.workbookId, .url, .documentVersion, .latestDocumentVersion, .ownerId, .createdBy, .updatedBy, .createdAt, .updatedAt)' workbooks/<name>/spec.json) \
      <(jq -S 'del(.workbookId, .url, .documentVersion, .latestDocumentVersion, .ownerId, .createdBy, .updatedBy, .createdAt, .updatedAt)' workbooks/<name>/iterations/${TS}-from-sigma.json)

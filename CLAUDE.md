@@ -33,6 +33,25 @@ Domain-specific workbook-pattern skills (revenue, ops, fin-recon, etc.) get adde
 
 A read-only mirror of the upstream skills lives at `vendor/sigma-agent-skills/` for inspection while authoring new project skills. Refresh with `scripts/refresh-vendor.sh`.
 
+## Sigma documentation lookups via native MCP
+
+When you need a Sigma formula function reference (`Sum`, `DateDiff`,
+`Rollup`, etc.) or a REST API endpoint shape, use the native
+`mcp__claude_ai_Sigma_Docs__*` tools instead of `WebFetch`:
+
+- `mcp__claude_ai_Sigma_Docs__search` — keyword search across help docs
+- `mcp__claude_ai_Sigma_Docs__fetch` — fetch a docs page by id
+- `mcp__claude_ai_Sigma_Docs__list-endpoints` / `get-endpoint` /
+  `search-endpoints` — Sigma REST API reference
+
+No auth, no bash, no permission prompts when allowlisted. Schemas load
+via `ToolSearch` on first use. Already allowlisted in `.claude/settings.json`.
+
+Workspace discovery (finding workbooks/data models), data-model
+inspection, and workbook authoring/publishing all use the bash helpers
+in `scripts/api/`. See `.claude/skills/sigma-workbook-conventions/SKILL.md`
+for the workflow.
+
 ## Authentication
 
 1. `cp .env.example .env` and fill in `SIGMA_BASE_URL`, `SIGMA_CLIENT_ID`, `SIGMA_CLIENT_SECRET`.
@@ -41,22 +60,6 @@ A read-only mirror of the upstream skills lives at `vendor/sigma-agent-skills/` 
    with a 55-min TTL). No env-prelude or token chaining needed from the caller.
 3. If your `get-token.sh` lives somewhere other than `~/.claude/plugins/marketplaces/sigma-computing/...`, set `SIGMA_TOKEN_FETCHER` to its path.
 4. **Never echo `$SIGMA_API_TOKEN`, `$SIGMA_CLIENT_SECRET`, or any other secret.** Don't write secrets to files inside the workspace. Pass tokens only via `Authorization` headers.
-
-## Bash invocation hygiene
-
-Claude Code's permission patterns (e.g. `Bash(scripts/api/*)`) match the
-**start** of the command string. A `cd "<repo>" && script` prefix breaks the
-match against the bare pattern and falls back to a defensive `Bash(cd * &&
-scripts/api/*)` pattern instead.
-
-Working-directory reality: if the repo is the project CWD, invoke bare from
-the start (`scripts/api/foo.sh ...`). If the repo is nested under the CC
-working directory (as in this checkout — `Run 5.13.2026 10.45AM/ryan-
-workbook-skill`), one `cd ryan-workbook-skill` per session is unavoidable;
-after that, CWD persists and subsequent calls should be bare. The
-anti-pattern is **re-prepending `cd <repo> &&` on every command** — that
-defeats both pattern matching and readability. Full rule and rationale in
-`sigma-workbook-conventions/SKILL.md` → "Bash invocation hygiene."
 
 ## Layout
 
