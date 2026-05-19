@@ -1,0 +1,28 @@
+{
+  "session_mode": "build",
+  "prompt": "Using the PLUGS-Data-Model-vREL-1IGv1vnx5LHBWbRebxatD6 data model, Build me a one page sales performance dashboard that shows overall performance and revenue drivers, I want to understand our overall performance, top product performers, and store level details. place the analysis in the Claude-Testing-3Kzaga67BMlB7vVJQksjlX folder",
+  "expected_output": [
+    "Single-page workbook (the prompt says \"one page\" — agent honors it) created in `Claude Testing` folder.",
+    "Data source resolved via URL-slug: agent calls `find-file-by-urlid.sh 1IGv1vnx5LHBWbRebxatD6` (the urlId portion of the PLUGS-Data-Model slug), retrieves the internal UUID, then proceeds — NO semantic search or disambiguation needed since the data model is named explicitly.",
+    "Folder resolved similarly via `find-file-by-urlid.sh 3Kzaga67BMlB7vVJQksjlX` → Claude Testing UUID.",
+    "Uses data-model metrics via `[Metrics/<Name>]` references where the PLUGS data model exposes them — no hand-derived `Sum(...)` reimplementations of metrics that already exist.",
+    "KPI row near the top (4 tiles typical): headline performance metrics — revenue, units sold, profit margin or COGS, customer/order count — each with a date-dimension column for sparkline/comparison.",
+    "**Revenue drivers** addressed via a mix of chart kinds (combo / donut / scatter / bar all valid choices). Not all bar charts — the prompt invites variety.",
+    "**Top product performers** visualized as a bar chart sorted descending by the metric (top performers read at top). Categorical x-axis (product name / family / type) → `orientation: \"horizontal\"` + `xAxis.sort = {by: \"<yAxis-col-id>\", direction: \"descending\"}` per the chart-orientation rule.",
+    "**Store-level details** as a `table` element with passthrough columns (store name, region, state, revenue, units, etc.) so users can sort and drill.",
+    "Filter controls (3 typical: date range, region, product family or equivalent) wired to the central source element's columns by `id` (not name).",
+    "Containers used heavily for grouping (header bar, KPI row, chart row, detail row) — the page reads as logical blocks, not a flat grid.",
+    "Drill-down passthrough columns declared on every chart/KPI/pivot per the explicit-column-declaration rule.",
+    "Zero `DivideSafe(...)` references. Safe-divide patterns use `If([D] = 0, Null, [N]/[D])` or `Zn(...)`.",
+    "Layout: ONE top-level `layout` field, single `<?xml ?>` + single `<Page>` (since it's one page). No per-page `layout` field.",
+    "Plan-first workflow honored: written plan proposed and approved before POST.",
+    "`validate-spec.py` passes pre-POST.",
+    "POST returns HTTP 200; GET-back saved to `workbooks/<name>/spec.json`."
+  ],
+  "files": ["evals/02-single-page-sales-performance.spec.json"],
+  "reference_workbook": {
+    "name": "Sales Performance (Eval-1)",
+    "urlId": "oGZFP7xYXAdzeMdL6EvLv",
+    "url": "https://app.sigmacomputing.com/papercrane/workbook/oGZFP7xYXAdzeMdL6EvLv"
+  }
+}

@@ -21,6 +21,9 @@ workbooks/*/
 # Per-user session walkthroughs (not part of the skill itself)
 docs/sessions/
 
+# Phase 1 research artifact — competitor packaging review, internal-only
+docs/twells89-review.md
+
 # OS / editor noise
 .DS_Store
 .idea/

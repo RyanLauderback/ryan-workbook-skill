@@ -2,11 +2,13 @@
 name: sigma-workbook-conventions
 description: >-
   Use when authoring, editing, or reviewing any Sigma workbook/data-model spec
-  in this repo. Encodes project conventions on element naming, page/folder
-  layout, ID semantics on create-vs-update, secret handling, and common
-  pitfalls when generating Sigma JSON specs. Pair with sigma-data-models for
-  field-level reference, and with a domain-specific workbook-pattern skill
-  when one is available for the dashboard type being built.
+  in this repo, or whenever the user kicks off with "start build mode" or
+  "start training mode" (the project's two session-mode triggers). Encodes
+  project conventions on element naming, page/folder layout, ID semantics
+  on create-vs-update, secret handling, and common pitfalls when generating
+  Sigma JSON specs. Pair with sigma-data-models for field-level reference,
+  and with a domain-specific workbook-pattern skill when one is available
+  for the dashboard type being built.
 ---
 
 # Sigma Workbook Conventions
@@ -25,26 +27,129 @@ This skill is reference-only — no scripts. It assumes:
 
 ## Session modes
 
-Sessions in this workspace run in one of two modes, signaled by an
-explicit phrase in the user's first message:
+Sessions run in one of two modes. The user signals which mode by their first
+message — `start build mode` or `start training mode`. These phrases are a
+**Sigma-specific convention layered on top of Claude skills**; they're not
+part of Anthropic's generic skill model.
 
-| Mode | Trigger | Behavior |
+| Mode | Trigger | Purpose |
 |---|---|---|
-| **Training** (default) | `initialize training mode session` | Full agentic co-development. Propose plans, ask clarifying questions, surface inference choices, and after the build promote recurring findings into skills / reference / memory. Recommend skill modifications when a pattern recurs. |
-| **Test** | `initialize test mode session` | Build-only. Focus exclusively on producing the requested workbook using this skill as it currently exists. Do NOT propose skill modifications. Do NOT offer to promote findings. Do NOT editorialize about the iteration process. Solve blockers quietly within the build. The skill is treated as fixed reference material. |
+| **Build** (default for production work) | `start build mode` | Produce a workbook in Sigma. Kicks off with a 3-question `AskUserQuestion` gate that collects environment state, data source, and the verbatim user prompt — then proceeds through Recon → Plan → Approval → POST → GET → Visual verify. The plan-first workflow is the gate before any state-changing API call. |
+| **Training** | `start training mode` | Locally enrich the skill for the user's session context (e.g., migrating 100 Tableau reports, adding domain-specific patterns). May write to skill files with a `local-` filename prefix so additions are visually separable from canonical content. No 3-question gate — opens with "what are we capturing this session?" |
 
-If neither phrase is used at init, default to training mode.
+If neither phrase is given at init, default to **build mode** (the more common case).
 
-**Why two modes:** test mode supports recording demo videos for
-customers. The spotlight in those demos is on what Sigma + Claude can
-deliver right now, not on the meta-process of co-developing the skill.
-Skill-promotion chatter (even when valuable) pollutes the demo
-narrative.
+### Why two modes
 
-The rest of this skill — the plan-first workflow, naming, gotchas, and
-reference material — applies in both modes. The only thing test mode
-suppresses is the meta-layer where you'd normally surface findings for
-future skill improvement.
+Build mode is the high-volume production path. Customer/colleague sessions
+will almost always be builds; the structured kickoff exists to remove the
+friction patterns we've observed (env not set, ambiguous data source,
+implicit destination folder).
+
+Training mode is the enrichment path. When a user needs domain-specific
+context that doesn't belong in the published skill (Tableau-mapping notes,
+account-specific data-model exemplars, an industry-specific dashboard
+pattern), they capture it in training mode. The `local-` prefix keeps it
+visually separable so it never accidentally gets promoted into the published
+skill.
+
+### Build mode — the 3-question kickoff
+
+The very first action of a build-mode session is `AskUserQuestion` with three
+questions. Each question has a defined branch behavior:
+
+**Q1: Is your `.env` set up?**
+
+- **Yes** — Claude runs two actions in sequence to verify auth end-to-end:
+  1. `bash scripts/api/_env.sh` — warms the token cache at `/tmp/.sigma_token` (55-min TTL).
+  2. `scripts/api/whoami.sh` — actively probes `/v2/files?limit=5` to confirm the token works against the live API and surfaces 5 recent files the user can confirm visually.
+
+  Why both: passive bootstrap (`_env.sh`) succeeds even when credentials are wrong as long as `.env` has the variables filled in. The active `whoami` probe catches expired clients, wrong region URLs, and revoked tokens *before* recon starts — not mid-build.
+
+- **No** — Claude shares `.env.example` contents + a link to Sigma's "Administration → Developer Access" docs for OAuth client creation, then re-prompts Q1 once the user confirms setup.
+
+**Q2: What data source will you build against?**
+- Data model URL/slug (`Customer-Financials-461QUZu2VPny8KxImgSmfF`)
+- Warehouse table path (`<CONN>.<DB>.<SCHEMA>.<TABLE>` or `/t/<id>` URL)
+- Mixed prose (the resolver handles it)
+
+**Q3: What would you like to build, and where would you like the workbook placed in Sigma?**
+
+Free-text. Captured verbatim as the prompt-of-record and written to
+`workbooks/<name>/prompts/<timestamp>.md`. The "where" portion captures the
+destination folder URL/slug/name at the kickoff layer, so the planner doesn't
+have to re-ask. If the user doesn't name a destination here, the plan must
+surface it as an Open Decision before POST — destination is never silently
+defaulted.
+
+### Worked example — what a build-mode kickoff looks like
+
+```
+User: start build mode
+
+Claude: [calls AskUserQuestion with Q1, Q2, Q3 above]
+
+  Q1 → Yes
+Claude: [bash scripts/api/_env.sh]
+        [scripts/api/whoami.sh]
+        → "Authenticated to api.sigmacomputing.com. Recent files: ..."
+
+  Q2 → "Customer-Financials-461QUZu2VPny8KxImgSmfF data model"
+  Q3 → "customer profitability + attrition workbook in
+        Claude-Testing-3Kzaga67BMlB7vVJQksjlX folder"
+
+Claude: [writes the verbatim prompt to workbooks/<name>/prompts/<ts>.md]
+        [resolves URL slugs via scripts/api/find-file-by-urlid.sh]
+        [enters Recon — mcp-describe.sh on the data model]
+        [drafts the Plan, surfaces for user approval]
+```
+
+If `whoami.sh` returns non-zero, the agent surfaces the Sigma error verbatim
+and stops — does NOT continue into Recon with broken auth.
+
+### Plan-first reaffirmation
+
+The kickoff captures **raw inputs**. It does NOT replace the plan-first workflow.
+
+After the kickoff, the agent proceeds through Recon → Plan proposal → User approval → Build → GET-back → Visual verify, per `docs/iteration-playbook.md`. **Plan approval is the only authorization for state-changing API calls** (POST/PUT to `/v2/workbooks/spec`, `/v2/dataModels/*/spec`). The 3-gate does not pre-authorize anything except the auth warm-up itself.
+
+### Training mode — session-local marker convention
+
+Training mode may write to skill files (`.claude/skills/sigma-workbook-conventions/`)
+when the user is enriching for a specific session context. To keep these
+additions visually separable from canonical content, use the **`local-`
+filename prefix**:
+
+```
+.claude/skills/sigma-workbook-conventions/
+├── reference/
+│   ├── naming.md                          # canonical
+│   ├── function-reference.md              # canonical
+│   ├── element-shapes.md                  # canonical
+│   ├── layout-and-cross-element.md        # canonical
+│   ├── scope-and-edge-cases.md            # canonical
+│   ├── history.md                         # canonical
+│   └── local-tableau-migration.md         # session-local — added in training mode
+└── examples/
+    ├── data-model-sourced-overview.json        # canonical
+    └── local-cohort-tableau-port.json          # session-local
+```
+
+Why the prefix and not a `local/` subdir: Anthropic's skill-creator rule keeps
+references one level deep from `SKILL.md` (Claude's partial reads otherwise
+miss nested files). The `local-` prefix is one-level-deep AND globbable
+(`ls reference/local-*` lists every session-local addition).
+
+Optionally, each `local-*.md` file may start with a header banner:
+
+```markdown
+> **Session-local enrichment** — added 2026-05-18 for Tableau migration project.
+> Not canonical skill content; do not promote upstream.
+```
+
+Training mode is the only place this prefix is used. Build mode treats both
+canonical and `local-` files as readable reference (it can use them) but does
+not create new ones in this namespace.
 
 ## Workflow: resolve user input before planning
 
@@ -57,7 +162,7 @@ bash plumbing.
 
 For Sigma **function references** and **REST API endpoint shapes**
 (not workspace discovery), use the native `mcp__claude_ai_Sigma_Docs__*`
-tools — no bash, no auth, no `WebFetch`. See `reference/workbook-spec-api.md`
+tools — no bash, no auth, no `WebFetch`. See `reference/function-reference.md`
 → "Looking up Sigma functions."
 
 Route by what the prompt actually contains:
@@ -153,6 +258,30 @@ resolver also returns the table inventory it found via
 user to name the missing ones so the resolver can re-probe.
 
 ## Workflow: propose a plan before building
+
+### Required reading before authoring (HARD GATE)
+
+Before writing ANY spec JSON, `Read` the chunk files mapped to the task type
+below. This is not optional, and not a "scan the index then proceed." The
+agent must `Read` the actual chunk files in the current session and cite
+chunk + section in the plan.
+
+| Task type | Required chunks |
+|---|---|
+| Every build (always) | `reference/layout-and-cross-element.md` |
+| Viz-heavy build (>2 chart kinds, KPI rows, pivots) | + `reference/element-shapes.md` |
+| Formula-heavy build (custom calcs, metrics, Lookup, Rollup) | + `reference/function-reference.md` |
+| Round-trip / edge-case work (POST failures, format fields, axis controls) | + `reference/scope-and-edge-cases.md` |
+
+If chunks are skipped, the agent is operating on memory of prior sessions —
+which is exactly how the 2026-05-19 regression happened (passthrough collapse +
+metric carryover across DM switch). See `reference/history.md`.
+
+The plan output (per the next section) must include a "Chunks Read"
+line listing the files consulted. A plan without that line is incomplete
+and not approvable.
+
+### Plan content
 
 Workbook prompts often underspecify the dashboard — the user names the data
 and the question, not the visualizations or the filter set. Do not jump
@@ -291,159 +420,142 @@ authoritative spec and use it as the new baseline.
    they can drive multiple pages.
 5. Forgetting that columns must reference an existing source — declare sources first.
 
-## Workbook spec gotchas (load `reference/workbook-spec-api.md` BEFORE authoring)
+## Load-bearing rules — always-loaded summary
 
-For workbook specs specifically (not data models), ten rules from past
-iteration failures:
+Four rules carry most of the round-trip failures from prior sessions.
+Inline here because they are too important to live only in chunks. Each
+links to the chunk for full edge cases. **Read the chunks anyway** per
+the hard gate above — these summaries are insurance, not substitutes.
+**Always visually verify** the workbook in the UI after a POST/PUT —
+the API doesn't validate cross-element column resolution or visualization
+quality.
 
-1. **No implicit column inheritance.** A chart sourced from a sibling table
-   must redeclare every column it references. The CREATE endpoint accepts
-   broken specs that fail silently at render time.
-2. **Set explicit `name` on every column referenced by a sibling element.**
-   Inferred names (passthrough formulas with no `name` field) work in a
-   GET-back exemplar but fail at POST time with `dependency not found`.
-   Always write `name: "Date"` etc. on columns that downstream KPIs,
-   charts, or controls will reference by display name.
-3. **Verify data-model columns resolve before building on them.** A
-   column listed in `GET /v2/dataModels/{id}/spec` is not guaranteed to be
-   queryable from a workbook — orphaned/stale columns can pass through
-   the data-model spec and still fail formula resolution. When pulling
-   newer/unfamiliar columns, do a minimal one-table POST as a probe
-   first; if it returns 400, source from the warehouse table directly.
-4. **Always check the data model's `metrics` first.** Use `[Metrics/<Name>]`
-   instead of redoing aggregations in the workbook — preserves formatting
-   (currency, percent) and keeps a single source of truth. Caveat:
-   metrics live on data-model elements only. Warehouse-sourced workbook
-   tables have no access — replace with inline `Sum(...)` aggregations.
-5. **Controls bind by column `id`, not name.** `filters[].columnId` must
-   match a column id you've declared on the target element.
-6. **Visualization clarity is non-negotiable.** Every page gets a title
-   `text` element at the top (workbook `name` is metadata, not a visible
-   heading); every chart/KPI gets a descriptive `name`; KPIs over time-series
-   metrics get a date-dimension column for sparkline + period comparison;
-   KPIs need ~8–10 grid rows of height for the sparkline to read.
-7. **Use containers for page structure.** Wrap related elements (header
-   bar, KPI row + chart) in `kind: container` elements with `<GridContainer>`
-   layout XML so the page reads as logical blocks rather than a flat grid.
-8. **Omit column `format` at POST.** The `format` object requires a
-   `kind` field whose exact shape is undocumented; specs that include
-   `format` are rejected with `Missing "kind" field`. Configure currency
-   /percent formatting in the UI and rely on GET-back to learn the shape.
-9. **Derive complex per-row calcs on a parent table, not on the
-   viz.** Putting `If([Margin] >= Median([Margin]), …)` directly on a
-   chart where `[Margin]` is already an aggregated metric creates a
-   recursive aggregate ("Column has a recursive formula"). The
-   pattern: aggregate to the right grain in a parent table via
-   `groupings`, hold the scalar (median/mean/percentile) in that
-   table's `summary` array (**singular `summary`**, not `summaries`),
-   put the bucket/label column inside the grouping's `calculations`
-   referencing both the per-row metric and the summary value by local
-   name, and let the chart source from the parent and pass the bucket
-   column through. See `reference/workbook-spec-api.md` →
-   "Summary bar and aggregate-then-categorize pattern."
-10. **Pass through every source-table column on each visualization.**
-    Sigma's right-click drill-down on a chart only exposes columns
-    that chart declares. If a Revenue-by-Region bar only declares
-    `region` + `revenue` + the metric's material columns, the user
-    can't drill region → state → city → store even though those
-    columns exist on the source. Default: every chart/KPI/pivot
-    declares the full passthrough column set from its source (plus
-    any chart-specific derived columns). Exceptions only when the
-    source has 50+ columns and most are irrelevant to the page.
+### 1. Passthrough is mandatory; the only carve-out is Lookup-derived columns
 
-Full patterns, source kinds, formula namespaces, KPI/text/container shapes,
-GridContainer layout XML, and the page-structure pattern live in
-`reference/workbook-spec-api.md`. Always visually verify the workbook in
-the UI after a CREATE — the API doesn't validate cross-element column
-resolution or visualization quality.
+Every viz element (chart, KPI, pivot) declares the FULL passthrough column
+set from its source table. Default is passthrough-all. Right-click drill in
+the Sigma UI surfaces ONLY columns the viz declares — a 2-column chart has
+a 2-column drill, period.
+
+The ONLY exception: if the source table contains a `Lookup(...)`-derived
+column that produces a phantom series in a specific viz (e.g. a chart
+plotting `Sum([Metric])` accidentally splits by the Lookup column), strip
+**that specific Lookup column** from **that specific viz** only.
+
+This carve-out NEVER generalizes:
+- It does not apply to base data-model columns.
+- It does not apply to other vizs on the same page.
+- It does not justify "no chart passthroughs beyond x/y axes" — that
+  phrasing is the 2026-05-19 regression mode and is wrong.
+
+Full rule + recipe: `reference/layout-and-cross-element.md` → "Drill-down corollary."
+
+### 2. `[Metrics/<Name>]` resolution + hard rule on DM switch
+
+`[Metrics/<Name>]` references resolve against the data-model element a
+spec sources from. `mcp-describe.sh datamodel-element <dm> <el>` returns
+the metric catalog FOR THAT ELEMENT. Treat that catalog as the source of
+truth — if a metric isn't listed there, do not reference it from a spec
+that sources off that element.
+
+Slashes within metric names (`Cost/Member/Month`) are not safely
+encodable as `[Metrics/Cost/Member/Month]`. Either rename the metric in
+the data model, or fall back to a hand-derived formula. Never assume
+slash-name references parse — and never claim "round-tripped through
+GET" as evidence that they do; round-trip preserves strings, it does
+not validate them at render.
+
+**On data-model switch mid-session: re-derive every `[Metrics/...]`
+reference from the new recon. Never carry metric names forward from a
+previous DM's plan.** The 2026-05-19 regression was caused by carrying
+`[Metrics/Cost per Unit] * [Metrics/Encounter Volume]` from the original
+DM's plan into a spec sourced against a different DM that did not
+contain those metrics.
+
+Full rule: `reference/function-reference.md` → "Use data-model metrics" + `reference/scope-and-edge-cases.md` → "Metric resolution semantics."
+
+### 3. Inference anchor — every formula traces to recon
+
+Every formula in a proposed plan must trace to one of:
+- a `[Metrics/X]` confirmed in `mcp-describe` output for the source element, OR
+- a column declared on the source table that recon confirmed exists.
+
+"Reasonable assumption" formulas are forbidden. If recon doesn't show the
+field the user's prompt implies, the plan surfaces it as an Open Decision
+(item 6 in the plan structure), it does NOT silently assume the field
+exists. The cost of one extra clarification turn is far lower than the
+cost of a plan + spec that fails at render time.
+
+This applies equally to vague prompts ("build me a cost analysis") and
+specific ones ("show NIM by region"). For vague prompts, the agent's job
+is to lean into the recon and propose what's actually computable — not to
+imagine a dashboard and hope the data supports it.
+
+### 4. Control/column ID collision
+
+A control's `controlId` MUST NOT match any column `name` or `id` on the
+elements it filters. When names collide, Sigma resolves `[Date]` (and
+similar bare references) to the control, not the column. Downstream
+formulas like `Month([Date])` or `Year([Date])` silently break.
+
+Always prefix controls or use a distinct name: `DateRange`, `StoreFilter`,
+`PlanTypeCtrl`. When in doubt, fully-qualify column references in formulas:
+`[<ElementName>/Date]` instead of `[Date]`.
+
+Full rule: `reference/scope-and-edge-cases.md` → "Control/column ID collision."
+
+---
+
+The deeper edge-case checklist (column-declaration, explicit-`name`,
+control wiring, visualization clarity, containers, `format` field shape,
+summary-bar pattern, bar-chart `orientation` rule) lives in the chunks
+linked from "Reference and examples" below. The 4 rules in this section
+are the ones that, when violated, ship a broken workbook — so they're
+inline.
 
 ## Publishing — use `publish-workbook.sh`
 
-Workbook POST/GET goes through the wrapper:
-
 ```bash
-# POST (creates a new workbook). Auto-runs validate-spec.py first.
-scripts/api/publish-workbook.sh post workbooks/<name>/spec.json
-
-# GET the spec back as JSON — that's the new source of truth.
+scripts/api/publish-workbook.sh post     workbooks/<name>/spec.json   # POST (auto-validates first)
 scripts/api/publish-workbook.sh get-spec <workbookId> | jq . > workbooks/<name>/spec.json
-
-# GET workbook metadata (url, name, path, folderId).
-scripts/api/publish-workbook.sh get-meta <workbookId>
+scripts/api/publish-workbook.sh get-meta <workbookId>                  # url, name, path, folderId
 ```
 
-The wrapper:
-- Runs `validate-spec.py` before POST (fail-fast on the silent-rewrite
-  gotchas: missing `pages[].layout`, unplaced elements, empty containers,
-  column `format`, duplicate `controlId`).
-- Uses `sigma_curl` from `_env.sh`, which auto-injects
-  `Authorization: Bearer ...` and `Accept: application/json` headers and
-  retries once on HTTP 401 (cache eviction + refetch).
-- Doesn't have a `delete` subcommand. DELETE stays on the direct-curl
-  path so it always hits the DELETE ask pattern in `.claude/settings.json`.
+The wrapper runs `validate-spec.py` before POST (fail-fast on silent-rewrite
+gotchas) and uses `sigma_curl` for auth-injected, 401-retrying requests. No
+`delete` subcommand — DELETE goes direct-curl so it hits the `ask` pattern in
+`.claude/settings.json`.
 
-The validator catches the silent-rewrite failure mode from 2026-05-11
-(per-page `layout` fields ignored; charts stacked in a 1/13-wide single
-column). Run it via the wrapper; never skip.
+PUT (full-spec update of an existing workbook) is not in the wrapper; use
+direct curl with the same headers and run `validate-spec.py` manually first.
 
 ## Reference and examples
 
-- `reference/naming.md` — naming rubric.
-- `reference/workbook-spec-api.md` — **the load-bearing reference.** Read
-  before authoring any workbook spec. Contents:
-  - **Element kinds — verified table** (top of file) — maps every viz
-    intent (bar / line / area / combo / scatter / pie / donut / KPI /
-    pivot / table / control / container / text) to its `kind` value and
-    encoding fields.
-  - **Per-kind shape sections** with required fields, optional encodings,
-    and a minimal example for each kind. Bar/line/area/combo share one
-    section; pie/donut share another; scatter, pivot, KPI, table-with-
-    groupings each have their own.
-  - **Control catalog** — `controlType` values (`date-range`, `list`,
-    `text`, `number-range`, `segmented`) and the controls-as-formula-
-    values pattern (`[ControlId]` referenced inside formulas).
-  - **Aggregation patterns** — multi-level table `groupings` (with
-    `groupBy` + `calculations`), aggregated-sibling-plus-Lookup as the
-    legible default, `Rollup` as the inline alternative, the
-    materialize-then-window rule, and the **summary-bar pattern**
-    (`summary: [...]` on a parent table for scalars like median, used
-    by an in-grouping bucket column to label per-row data — see
-    "Summary bar and aggregate-then-categorize pattern").
-  - **Cross-element formulas** — `Lookup`, formula namespaces, data-model
-    metric references.
-  - **Spec correctness checks** — column-declaration rule, explicit-`name`
-    rule, **drill-down passthrough rule** (every chart/KPI/pivot
-    declares the full source-table passthrough column set so right-click
-    drill works), two-tier sourcing pattern, verifying via generated SQL.
-  - **Edge cases** — misleading `Invalid kind` errors, GET-spec 500 when
-    UI features aren't representable, unsupported kinds (maps, box plot,
-    sankey, etc.), the `format` field, `controlId` workbook-uniqueness.
-  - **Layout** — `<Page>` / `<GridContainer>` / `<LayoutElement>` 24-col
-    grid; page-structure pattern (header → body → detail).
-  - **Looking up Sigma functions** — convention for using the native
-    `mcp__claude_ai_Sigma_Docs__*` MCP tools (`search` + `fetch`) when
-    the formula you need isn't already documented here.
-- `examples/` — known-good specs to seed generation. Treat as immutable
-  references; clone-and-modify rather than editing in place.
-  - `data-model-sourced-overview.json` — minimal data-model-fed dashboard.
-  - `data-model-sourced-kpi-overview-with-containers.json` — KPI row +
-    bar chart + detail table, wrapped in containers (the canonical
-    page-structure exemplar).
-  - `data-model-sourced-multi-level-aggregated-table.json` — multi-level
-    `groupings` with `groupBy` + `calculations`; hierarchical
-    aggregations + `DateLookback` lag.
-  - `additional-workbook-features-chart-and-control-catalog.json` — one
-    of every supported chart kind (combo, donut, pie, area × 3, scatter)
-    and the newer control types (text, number-range, segmented). Source
-    when you need a verified shape for a kind not previously authored.
-  - `data-model-sourced-cohort-pivot.json` — **the canonical cohort
-    pattern.** Two-tier sourcing (raw passthrough → derived cohort
-    sibling); `Rollup(Min([Date]), [Cust Key], ...)` for first-purchase-
-    per-customer; `Greatest(DateDiff(...), 0)` non-negative guard; pivot
-    with weekly rows × weeks-since-first columns; KPI row using data-
-    model metrics; supporting line + bar charts. Clone-and-modify for
-    any "cohort / retention / weeks-since-first-action" prompt — only
-    the data-model IDs and folder ID need replacement.
+`reference/` is split into 5 focused files, all one level deep. Load only what
+the current task needs:
+
+- `reference/naming.md` — naming rubric (columns, metrics, controls, pages).
+- `reference/function-reference.md` — function quick-reference (date / aggregate / scalar / numeric guards / strings / casting / column-reference syntax) + formula namespaces + `[Metrics/<Name>]` usage + Sigma_Docs MCP lookup convention for functions not listed here.
+- `reference/element-shapes.md` — per-kind spec shape for every element (KPI, bar/line/area/combo, pie/donut, scatter, pivot, container, text, controls), the **bar-chart `orientation` rule**, series breakout / color-by, visualization clarity, the misleading-`Invalid kind` error pattern.
+- `reference/layout-and-cross-element.md` — layout XML (24-col grid, `<GridContainer>`, `<LayoutElement>`), the page-structure pattern, the column-declaration rule + drill-down corollary, the explicit-`name` rule, `Lookup` / `Rollup` patterns, table `groupings`, summary-bar pattern, two-tier sourcing, the canonical recipe.
+- `reference/scope-and-edge-cases.md` — what the code spec does NOT represent (KPI period comparison, pivot heatmap, axis-label rotation), GET-spec 500 cases, the `format` field (verified shape), warehouse-table fallback, verifying via generated SQL, twells89-adopted patterns (schema-drift fallback, persist-spec).
+- `reference/history.md` — dated incident log. Inline rules in the chunks are evergreen; this file carries when each rule was verified and the incident that surfaced it.
+
+`examples/` — known-good specs to seed generation. Treat as immutable
+references; clone-and-modify rather than editing in place. Each `.json`
+exemplar pairs with a sibling `.prompt.md` describing the source intent +
+templated placeholders (when applicable).
+
+  - **Single-page / minimal:**
+    - `data-model-sourced-overview.json` — minimal data-model-fed dashboard.
+    - `data-model-sourced-kpi-overview-with-containers.json` — KPI row + bar chart + detail table, wrapped in containers (canonical page-structure exemplar).
+  - **Catalog / kitchen-sink:**
+    - `data-model-sourced-multi-element-catalog.json` (Phase 7 — templated IDs) — single-page reference covering 6 chart kinds (bar, line, area, donut, scatter, pivot) + 3 KPIs + 4 control types (`list`, `date-range`, `text`, `segmented`) + multi-level `groupings` table (2-col `groupBy` + 3 calcs + sort) + plain table. The first exemplar to load when authoring a new visualization-heavy dashboard.
+    - `data-model-sourced-multi-level-aggregated-table.json` (legacy — hardcoded IDs) — combo-chart + container + 4 controls + 3 KPIs + 1 table; covers `combo-chart` shape which the multi-element catalog omits.
+    - `additional-workbook-features-chart-and-control-catalog.json` (legacy — hardcoded IDs) — 3 area-charts (stacking variants), combo, donut, **pie-chart**, scatter, 3 controls. Source when you need `pie-chart` or area-stacking-mode shapes.
+  - **Pattern-specific:**
+    - `data-model-sourced-cohort-pivot.json` (templated IDs) — two-tier sourcing (raw → derived cohort) + `Rollup(Min([Date]), [Cust Key], ...)` for first-purchase-per-customer + `Greatest(DateDiff(...), 0)` guard + pivot with weekly rows × weeks-since-first columns + KPI row + supporting line + bar charts. Clone for any cohort / retention / weeks-since-first-action prompt.
+    - `data-model-sourced-multi-page-profitability-attrition.json` (Phase 7 — templated IDs) — **multi-page reference**. 4 pages (Profitability Overview / Drivers / Attrition Signals / Data Sources). Demonstrates per-page source-table architecture (`Lookup()` requires same-page siblings), horizontal-orientation rule for categorical bar charts, drill-passthrough, `format: {kind: "number", formatString: ...}` verified shape, data-model metrics. The canonical multi-page reference.
 
 For data-model field-level mechanics (columns, metrics, relationships,
 filters, controls, formatting, folders, column-level security, workflows)

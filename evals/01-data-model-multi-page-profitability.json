@@ -1,0 +1,25 @@
+{
+  "session_mode": "build",
+  "prompt": "use the Customer-Financials-461QUZu2VPny8KxImgSmfF data model to build a customer profitability analysis. I also want to understand what customer behaviors potentially lead to leaving the bank. put the analysis in the Claude-Testing-3Kzaga67BMlB7vVJQksjlX folder",
+  "expected_output": [
+    "Multi-page workbook (3 pages typical) created in `Claude Testing` folder, addressing both profitability and attrition signals.",
+    "Page split covers: (a) profitability overview (KPI row + headline breakdowns), (b) profitability drivers (demographic/tenure/geography slices), (c) attrition signals (closed-account KPIs + leading-indicator charts + at-risk customer detail table).",
+    "Uses data-model metrics via `[Metrics/<Name>]` references (Net Interest Income, Gross Income, NIM, Total Deposits) — no hand-derived `Sum(...)` reimplementations of the same math.",
+    "Bar charts with **categorical x-axis** (Segment, Tenure Bracket, Region, Risk Rating) use `orientation: \"horizontal\"` + `xAxis.sort = {by: \"<yAxis-col-id>\", direction: \"descending\"}` per the chart-orientation rule.",
+    "Bar/line charts with **time-series x-axis** (e.g. `Close Month`) use vertical orientation (omit `orientation` field).",
+    "Zero `DivideSafe(...)` references. Safe-divide patterns use `If([D] = 0, Null, [N]/[D])` or `Zn(...)`.",
+    "Customer demographics (Age, Segment, Risk Rating, Tenure, etc.) joined onto the central fact via `Lookup()` against same-page sibling dim tables — NOT via raw `[D_DATAMODEL/...]` references.",
+    "Drill-down passthrough columns declared on every chart/KPI/pivot per the explicit-column-declaration rule (so right-click drill from a bar exposes the full dimension set).",
+    "Multi-page layout: ONE top-level `layout` field, single `<?xml ?>` declaration, multiple `<Page>` siblings. No per-page `layout` (silently discarded).",
+    "Containers used for header bar + KPI row grouping on each page; the page-structure pattern is visible.",
+    "Plan-first workflow honored: agent proposed a written plan (data inventory, charts, controls, layout, open decisions) and waited for explicit user approval before POSTing.",
+    "`validate-spec.py` passes pre-POST (no missing layout, no unplaced elements, no empty containers, no column `format` field, no duplicate `controlId`).",
+    "POST returns HTTP 200; GET-back is saved to `workbooks/<name>/spec.json` as the new source of truth."
+  ],
+  "files": ["evals/01-data-model-multi-page-profitability.spec.json"],
+  "reference_workbook": {
+    "name": "Customer Profitability & Attrition Signals",
+    "urlId": "3ZVbmdF04RhgUVdBwEtBvt",
+    "url": "https://app.sigmacomputing.com/papercrane/workbook/3ZVbmdF04RhgUVdBwEtBvt"
+  }
+}

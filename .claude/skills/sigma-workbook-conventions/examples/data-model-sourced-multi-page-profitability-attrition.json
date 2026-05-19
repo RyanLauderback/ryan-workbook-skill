@@ -1,0 +1,3130 @@
+{
+  "name": "Customer Profitability & Attrition Signals",
+  "schemaVersion": 1,
+  "folderId": "<DESTINATION_FOLDER_ID>",
+  "pages": [
+    {
+      "id": "page-overview",
+      "name": "Profitability Overview",
+      "elements": [
+        {
+          "id": "p1-container-header",
+          "kind": "container"
+        },
+        {
+          "id": "p1-text-title",
+          "kind": "text",
+          "body": "## **Customer Profitability \u2014 Overview**\n\nNet interest income, gross income, margin, and customer reach across the bank's portfolio.",
+          "verticalAlign": "middle"
+        },
+        {
+          "kind": "control",
+          "controlId": "Segment-P1",
+          "id": "p1-ctrl-segment",
+          "filters": [
+            {
+              "source": {
+                "kind": "table",
+                "elementId": "p1-tbl-fin-enriched"
+              },
+              "columnId": "p1-col-segment"
+            }
+          ],
+          "controlType": "list",
+          "mode": "include",
+          "selectionMode": "multiple",
+          "values": [],
+          "source": {
+            "kind": "source",
+            "source": {
+              "kind": "table",
+              "elementId": "p1-tbl-fin-enriched"
+            },
+            "columnId": "p1-col-segment"
+          }
+        },
+        {
+          "kind": "control",
+          "controlId": "Region-P1",
+          "id": "p1-ctrl-region",
+          "filters": [
+            {
+              "source": {
+                "kind": "table",
+                "elementId": "p1-tbl-fin-enriched"
+              },
+              "columnId": "p1-col-branch-region"
+            }
+          ],
+          "controlType": "list",
+          "mode": "include",
+          "selectionMode": "multiple",
+          "values": [],
+          "source": {
+            "kind": "source",
+            "source": {
+              "kind": "table",
+              "elementId": "p1-tbl-fin-enriched"
+            },
+            "columnId": "p1-col-branch-region"
+          }
+        },
+        {
+          "kind": "control",
+          "controlId": "Tenure-P1",
+          "id": "p1-ctrl-tenure",
+          "filters": [
+            {
+              "source": {
+                "kind": "table",
+                "elementId": "p1-tbl-fin-enriched"
+              },
+              "columnId": "p1-col-tenure-bracket"
+            }
+          ],
+          "controlType": "list",
+          "mode": "include",
+          "selectionMode": "multiple",
+          "values": [],
+          "source": {
+            "kind": "source",
+            "source": {
+              "kind": "table",
+              "elementId": "p1-tbl-fin-enriched"
+            },
+            "columnId": "p1-col-tenure-bracket"
+          }
+        },
+        {
+          "kind": "control",
+          "controlId": "Date-P1",
+          "id": "p1-ctrl-date",
+          "filters": [
+            {
+              "source": {
+                "kind": "table",
+                "elementId": "p1-tbl-fin-enriched"
+              },
+              "columnId": "p1-col-app-date"
+            }
+          ],
+          "controlType": "date-range",
+          "mode": "between",
+          "includeNulls": "when-no-value-is-selected"
+        },
+        {
+          "kind": "control",
+          "controlId": "Risk-P1",
+          "id": "p1-ctrl-risk",
+          "filters": [
+            {
+              "source": {
+                "kind": "table",
+                "elementId": "p1-tbl-fin-enriched"
+              },
+              "columnId": "p1-col-risk"
+            }
+          ],
+          "controlType": "list",
+          "mode": "include",
+          "selectionMode": "multiple",
+          "values": [],
+          "source": {
+            "kind": "source",
+            "source": {
+              "kind": "table",
+              "elementId": "p1-tbl-fin-enriched"
+            },
+            "columnId": "p1-col-risk"
+          }
+        },
+        {
+          "id": "p1-container-kpis",
+          "kind": "container"
+        },
+        {
+          "id": "p1-kpi-nii",
+          "kind": "kpi-chart",
+          "source": {
+            "elementId": "p1-tbl-fin-enriched",
+            "kind": "table"
+          },
+          "columns": [
+            {
+              "id": "p1-kpi-nii-val",
+              "formula": "[Metrics/Net Interest Income]",
+              "name": "Net Interest Income"
+            },
+            {
+              "id": "p1-kpi-nii-month",
+              "formula": "DateTrunc(\"month\", [Customer Financials Enriched P1/Application Date])",
+              "name": "Month"
+            }
+          ],
+          "value": {
+            "id": "p1-kpi-nii-val"
+          },
+          "name": "Net Interest Income"
+        },
+        {
+          "id": "p1-kpi-gross",
+          "kind": "kpi-chart",
+          "source": {
+            "elementId": "p1-tbl-fin-enriched",
+            "kind": "table"
+          },
+          "columns": [
+            {
+              "id": "p1-kpi-gross-val",
+              "formula": "[Metrics/Gross Income]",
+              "name": "Gross Income"
+            },
+            {
+              "id": "p1-kpi-gross-month",
+              "formula": "DateTrunc(\"month\", [Customer Financials Enriched P1/Application Date])",
+              "name": "Month"
+            }
+          ],
+          "value": {
+            "id": "p1-kpi-gross-val"
+          },
+          "name": "Gross Income"
+        },
+        {
+          "id": "p1-kpi-nim",
+          "kind": "kpi-chart",
+          "source": {
+            "elementId": "p1-tbl-fin-enriched",
+            "kind": "table"
+          },
+          "columns": [
+            {
+              "id": "p1-kpi-nim-val",
+              "formula": "[Metrics/Net Interest Margin (NIM)]",
+              "name": "Net Interest Margin"
+            }
+          ],
+          "value": {
+            "id": "p1-kpi-nim-val"
+          },
+          "name": "Net Interest Margin"
+        },
+        {
+          "id": "p1-kpi-customers",
+          "kind": "kpi-chart",
+          "source": {
+            "elementId": "p1-tbl-fin-enriched",
+            "kind": "table"
+          },
+          "columns": [
+            {
+              "id": "p1-kpi-cust-val",
+              "formula": "CountDistinct(If(IsNotNull([Customer Financials Enriched P1/Loan Amount]), [Customer Financials Enriched P1/Customer Key], Null))",
+              "name": "Customers Served"
+            }
+          ],
+          "value": {
+            "id": "p1-kpi-cust-val"
+          },
+          "name": "Customers Served"
+        },
+        {
+          "id": "p1-chart-nii-segment",
+          "kind": "bar-chart",
+          "source": {
+            "elementId": "p1-tbl-fin-enriched",
+            "kind": "table"
+          },
+          "columns": [
+            {
+              "id": "p1-bar-seg-x",
+              "formula": "[Customer Financials Enriched P1/Customer Segment]",
+              "name": "Customer Segment"
+            },
+            {
+              "id": "p1-bar-seg-y",
+              "formula": "[Metrics/Net Interest Income]",
+              "name": "Net Interest Income"
+            },
+            {
+              "id": "p1-bar-seg-cust-key",
+              "formula": "[Customer Financials Enriched P1/Customer Key]",
+              "name": "Customer Key"
+            },
+            {
+              "id": "p1-bar-seg-cust-name",
+              "formula": "[Customer Financials Enriched P1/Customer Name]",
+              "name": "Customer Name"
+            },
+            {
+              "id": "p1-bar-seg-cust-type",
+              "formula": "[Customer Financials Enriched P1/Customer Type]",
+              "name": "Customer Type"
+            },
+            {
+              "id": "p1-bar-seg-risk",
+              "formula": "[Customer Financials Enriched P1/Risk Rating]",
+              "name": "Risk Rating"
+            },
+            {
+              "id": "p1-bar-seg-age",
+              "formula": "[Customer Financials Enriched P1/Age]",
+              "name": "Age"
+            },
+            {
+              "id": "p1-bar-seg-credit",
+              "formula": "[Customer Financials Enriched P1/Credit Score]",
+              "name": "Credit Score"
+            },
+            {
+              "id": "p1-bar-seg-tenure",
+              "formula": "[Customer Financials Enriched P1/Years With Bank]",
+              "name": "Years With Bank"
+            },
+            {
+              "id": "p1-bar-seg-branch-region",
+              "formula": "[Customer Financials Enriched P1/Branch Region]",
+              "name": "Branch Region"
+            },
+            {
+              "id": "p1-bar-seg-loan-amount",
+              "formula": "[Customer Financials Enriched P1/Loan Amount]",
+              "name": "Loan Amount"
+            }
+          ],
+          "yAxis": [
+            {
+              "id": "p1-bar-seg-y"
+            }
+          ],
+          "xAxis": {
+            "id": "p1-bar-seg-x",
+            "sort": {
+              "by": "p1-bar-seg-y",
+              "direction": "descending"
+            }
+          },
+          "orientation": "horizontal",
+          "name": "Net Interest Income by Customer Segment"
+        },
+        {
+          "id": "p1-chart-nii-type",
+          "kind": "donut-chart",
+          "source": {
+            "elementId": "p1-tbl-fin-enriched",
+            "kind": "table"
+          },
+          "columns": [
+            {
+              "id": "p1-donut-type-cat",
+              "formula": "[Customer Financials Enriched P1/Customer Type]",
+              "name": "Customer Type"
+            },
+            {
+              "id": "p1-donut-type-val",
+              "formula": "[Metrics/Net Interest Income]",
+              "name": "Net Interest Income"
+            },
+            {
+              "id": "p1-donut-type-cust-key",
+              "formula": "[Customer Financials Enriched P1/Customer Key]",
+              "name": "Customer Key"
+            },
+            {
+              "id": "p1-donut-type-cust-name",
+              "formula": "[Customer Financials Enriched P1/Customer Name]",
+              "name": "Customer Name"
+            },
+            {
+              "id": "p1-donut-type-segment",
+              "formula": "[Customer Financials Enriched P1/Customer Segment]",
+              "name": "Customer Segment"
+            },
+            {
+              "id": "p1-donut-type-loan-amount",
+              "formula": "[Customer Financials Enriched P1/Loan Amount]",
+              "name": "Loan Amount"
+            }
+          ],
+          "color": {
+            "id": "p1-donut-type-cat"
+          },
+          "value": {
+            "id": "p1-donut-type-val"
+          },
+          "name": "Net Interest Income by Customer Type"
+        },
+        {
+          "id": "p1-tbl-fin-enriched",
+          "kind": "table",
+          "source": {
+            "elementId": "p1-tbl-fin",
+            "kind": "table"
+          },
+          "columns": [
+            {
+              "id": "p1-col-customer-key",
+              "formula": "[Customer Financials P1/Customer Key]",
+              "name": "Customer Key"
+            },
+            {
+              "id": "p1-col-branch-key",
+              "formula": "[Customer Financials P1/Branch Key]",
+              "name": "Branch Key"
+            },
+            {
+              "id": "p1-col-app-date",
+              "formula": "[Customer Financials P1/Application Date]",
+              "name": "Application Date"
+            },
+            {
+              "id": "p1-col-open-date",
+              "formula": "[Customer Financials P1/Open Date]",
+              "name": "Open Date"
+            },
+            {
+              "id": "p1-col-close-date",
+              "formula": "[Customer Financials P1/Close Date]",
+              "name": "Close Date"
+            },
+            {
+              "id": "p1-col-status",
+              "formula": "[Customer Financials P1/Status]",
+              "name": "Status"
+            },
+            {
+              "id": "p1-col-current-status",
+              "formula": "[Customer Financials P1/Current Status]",
+              "name": "Current Status"
+            },
+            {
+              "id": "p1-col-loan-amount",
+              "formula": "[Customer Financials P1/Loan Amount]",
+              "name": "Loan Amount"
+            },
+            {
+              "id": "p1-col-deposit-amount",
+              "formula": "[Customer Financials P1/Deposit Amount]",
+              "name": "Deposit Amount"
+            },
+            {
+              "id": "p1-col-interest-income",
+              "formula": "[Customer Financials P1/Interest Income]",
+              "name": "Interest Income"
+            },
+            {
+              "id": "p1-col-fee-income",
+              "formula": "[Customer Financials P1/Fee Income]",
+              "name": "Fee Income"
+            },
+            {
+              "id": "p1-col-cost-funds",
+              "formula": "[Customer Financials P1/Cost of Funds]",
+              "name": "Cost of Funds"
+            },
+            {
+              "id": "p1-col-operating-cost",
+              "formula": "[Customer Financials P1/Operating Cost]",
+              "name": "Operating Cost"
+            },
+            {
+              "id": "p1-col-loan-product-type",
+              "formula": "[Customer Financials P1/Loan Product Type]",
+              "name": "Loan Product Type"
+            },
+            {
+              "id": "p1-col-account-type",
+              "formula": "[Customer Financials P1/Account Type]",
+              "name": "Account Type"
+            },
+            {
+              "id": "p1-col-days-open",
+              "formula": "[Customer Financials P1/Days Open]",
+              "name": "Days Open"
+            },
+            {
+              "id": "p1-col-customer-name",
+              "formula": "Lookup([Customer Master P1/Customer Name], [Customer Key], [Customer Master P1/Customer Key])",
+              "name": "Customer Name"
+            },
+            {
+              "id": "p1-col-customer-type",
+              "formula": "Lookup([Customer Master P1/Customer Type], [Customer Key], [Customer Master P1/Customer Key])",
+              "name": "Customer Type"
+            },
+            {
+              "id": "p1-col-segment",
+              "formula": "Lookup([Customer Master P1/Customer Segment], [Customer Key], [Customer Master P1/Customer Key])",
+              "name": "Customer Segment"
+            },
+            {
+              "id": "p1-col-risk",
+              "formula": "Lookup([Customer Master P1/Risk Rating], [Customer Key], [Customer Master P1/Customer Key])",
+              "name": "Risk Rating"
+            },
+            {
+              "id": "p1-col-age",
+              "formula": "Lookup([Customer Master P1/Age], [Customer Key], [Customer Master P1/Customer Key])",
+              "name": "Age"
+            },
+            {
+              "id": "p1-col-income",
+              "formula": "Lookup([Customer Master P1/Annual Income], [Customer Key], [Customer Master P1/Customer Key])",
+              "name": "Annual Income"
+            },
+            {
+              "id": "p1-col-credit",
+              "formula": "Lookup([Customer Master P1/Credit Score], [Customer Key], [Customer Master P1/Customer Key])",
+              "name": "Credit Score"
+            },
+            {
+              "id": "p1-col-tenure",
+              "formula": "Lookup([Customer Master P1/Years With Bank], [Customer Key], [Customer Master P1/Customer Key])",
+              "name": "Years With Bank"
+            },
+            {
+              "id": "p1-col-ltv",
+              "formula": "Lookup([Customer Master P1/Lifetime Value Score], [Customer Key], [Customer Master P1/Customer Key])",
+              "name": "Lifetime Value Score"
+            },
+            {
+              "id": "p1-col-rm",
+              "formula": "Lookup([Customer Master P1/Relationship Manager], [Customer Key], [Customer Master P1/Customer Key])",
+              "name": "Relationship Manager"
+            },
+            {
+              "id": "p1-col-branch-name",
+              "formula": "Lookup([Branch Master P1/Branch Name], [Branch Key], [Branch Master P1/Branch Key])",
+              "name": "Branch Name"
+            },
+            {
+              "id": "p1-col-branch-region",
+              "formula": "Lookup([Branch Master P1/Branch Region], [Branch Key], [Branch Master P1/Branch Key])",
+              "name": "Branch Region"
+            },
+            {
+              "id": "p1-col-branch-state",
+              "formula": "Lookup([Branch Master P1/Branch State], [Branch Key], [Branch Master P1/Branch Key])",
+              "name": "Branch State"
+            },
+            {
+              "id": "p1-col-tenure-bracket",
+              "formula": "If([Years With Bank] < 1, \"0-1yr\", If([Years With Bank] < 3, \"1-3yr\", If([Years With Bank] < 5, \"3-5yr\", If([Years With Bank] < 10, \"5-10yr\", \"10+yr\"))))",
+              "name": "Tenure Bracket"
+            },
+            {
+              "id": "p1-col-age-bracket",
+              "formula": "If([Age] < 25, \"<25\", If([Age] < 35, \"25-34\", If([Age] < 45, \"35-44\", If([Age] < 55, \"45-54\", If([Age] < 65, \"55-64\", \"65+\")))))",
+              "name": "Age Bracket"
+            },
+            {
+              "id": "p1-col-credit-band",
+              "formula": "If([Credit Score] < 580, \"Subprime (300-579)\", If([Credit Score] < 670, \"Fair (580-669)\", If([Credit Score] < 740, \"Good (670-739)\", If([Credit Score] < 800, \"Very Good (740-799)\", \"Exceptional (800+)\"))))",
+              "name": "Credit Score Band"
+            },
+            {
+              "id": "p1-col-is-closed",
+              "formula": "If(IsNotNull([Close Date]), \"Closed\", \"Open\")",
+              "name": "Is Closed"
+            },
+            {
+              "id": "p1-col-nii-row",
+              "formula": "If(IsNotNull([Loan Amount]), [Interest Income] + [Fee Income] - [Cost of Funds] - [Operating Cost], 0)",
+              "name": "NII Row"
+            }
+          ],
+          "name": "Customer Financials Enriched P1",
+          "order": [
+            "p1-col-customer-key",
+            "p1-col-branch-key",
+            "p1-col-app-date",
+            "p1-col-open-date",
+            "p1-col-close-date",
+            "p1-col-status",
+            "p1-col-current-status",
+            "p1-col-loan-amount",
+            "p1-col-deposit-amount",
+            "p1-col-interest-income",
+            "p1-col-fee-income",
+            "p1-col-cost-funds",
+            "p1-col-operating-cost",
+            "p1-col-loan-product-type",
+            "p1-col-account-type",
+            "p1-col-days-open",
+            "p1-col-customer-name",
+            "p1-col-customer-type",
+            "p1-col-segment",
+            "p1-col-risk",
+            "p1-col-age",
+            "p1-col-income",
+            "p1-col-credit",
+            "p1-col-tenure",
+            "p1-col-ltv",
+            "p1-col-rm",
+            "p1-col-branch-name",
+            "p1-col-branch-region",
+            "p1-col-branch-state",
+            "p1-col-tenure-bracket",
+            "p1-col-age-bracket",
+            "p1-col-credit-band",
+            "p1-col-is-closed",
+            "p1-col-nii-row"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "page-drivers",
+      "name": "Drivers",
+      "elements": [
+        {
+          "id": "p2-container-header",
+          "kind": "container"
+        },
+        {
+          "id": "p2-text-title",
+          "kind": "text",
+          "body": "## **Profitability Drivers**\n\nWhich customer demographics, tenure brackets, and branches actually carry the income.",
+          "verticalAlign": "middle"
+        },
+        {
+          "kind": "control",
+          "controlId": "Segment-P2",
+          "id": "p2-ctrl-segment",
+          "filters": [
+            {
+              "source": {
+                "kind": "table",
+                "elementId": "p2-tbl-fin-enriched"
+              },
+              "columnId": "p2-col-segment"
+            }
+          ],
+          "controlType": "list",
+          "mode": "include",
+          "selectionMode": "multiple",
+          "values": [],
+          "source": {
+            "kind": "source",
+            "source": {
+              "kind": "table",
+              "elementId": "p2-tbl-fin-enriched"
+            },
+            "columnId": "p2-col-segment"
+          }
+        },
+        {
+          "kind": "control",
+          "controlId": "Region-P2",
+          "id": "p2-ctrl-region",
+          "filters": [
+            {
+              "source": {
+                "kind": "table",
+                "elementId": "p2-tbl-fin-enriched"
+              },
+              "columnId": "p2-col-branch-region"
+            }
+          ],
+          "controlType": "list",
+          "mode": "include",
+          "selectionMode": "multiple",
+          "values": [],
+          "source": {
+            "kind": "source",
+            "source": {
+              "kind": "table",
+              "elementId": "p2-tbl-fin-enriched"
+            },
+            "columnId": "p2-col-branch-region"
+          }
+        },
+        {
+          "kind": "control",
+          "controlId": "Tenure-P2",
+          "id": "p2-ctrl-tenure",
+          "filters": [
+            {
+              "source": {
+                "kind": "table",
+                "elementId": "p2-tbl-fin-enriched"
+              },
+              "columnId": "p2-col-tenure-bracket"
+            }
+          ],
+          "controlType": "list",
+          "mode": "include",
+          "selectionMode": "multiple",
+          "values": [],
+          "source": {
+            "kind": "source",
+            "source": {
+              "kind": "table",
+              "elementId": "p2-tbl-fin-enriched"
+            },
+            "columnId": "p2-col-tenure-bracket"
+          }
+        },
+        {
+          "kind": "control",
+          "controlId": "Date-P2",
+          "id": "p2-ctrl-date",
+          "filters": [
+            {
+              "source": {
+                "kind": "table",
+                "elementId": "p2-tbl-fin-enriched"
+              },
+              "columnId": "p2-col-app-date"
+            }
+          ],
+          "controlType": "date-range",
+          "mode": "between",
+          "includeNulls": "when-no-value-is-selected"
+        },
+        {
+          "kind": "control",
+          "controlId": "Risk-P2",
+          "id": "p2-ctrl-risk",
+          "filters": [
+            {
+              "source": {
+                "kind": "table",
+                "elementId": "p2-tbl-fin-enriched"
+              },
+              "columnId": "p2-col-risk"
+            }
+          ],
+          "controlType": "list",
+          "mode": "include",
+          "selectionMode": "multiple",
+          "values": [],
+          "source": {
+            "kind": "source",
+            "source": {
+              "kind": "table",
+              "elementId": "p2-tbl-fin-enriched"
+            },
+            "columnId": "p2-col-risk"
+          }
+        },
+        {
+          "id": "p2-container-charts",
+          "kind": "container"
+        },
+        {
+          "id": "p2-chart-nii-tenure",
+          "kind": "bar-chart",
+          "source": {
+            "elementId": "p2-tbl-fin-enriched",
+            "kind": "table"
+          },
+          "columns": [
+            {
+              "id": "p2-bt-x",
+              "formula": "[Customer Financials Enriched P2/Tenure Bracket]",
+              "name": "Tenure Bracket"
+            },
+            {
+              "id": "p2-bt-y",
+              "formula": "[Metrics/Net Interest Income]",
+              "name": "Net Interest Income"
+            },
+            {
+              "id": "p2-bt-customer-key",
+              "formula": "[Customer Financials Enriched P2/Customer Key]",
+              "name": "Customer Key"
+            },
+            {
+              "id": "p2-bt-customer-name",
+              "formula": "[Customer Financials Enriched P2/Customer Name]",
+              "name": "Customer Name"
+            },
+            {
+              "id": "p2-bt-segment",
+              "formula": "[Customer Financials Enriched P2/Customer Segment]",
+              "name": "Customer Segment"
+            },
+            {
+              "id": "p2-bt-age",
+              "formula": "[Customer Financials Enriched P2/Age]",
+              "name": "Age"
+            },
+            {
+              "id": "p2-bt-credit",
+              "formula": "[Customer Financials Enriched P2/Credit Score]",
+              "name": "Credit Score"
+            },
+            {
+              "id": "p2-bt-branch-region",
+              "formula": "[Customer Financials Enriched P2/Branch Region]",
+              "name": "Branch Region"
+            },
+            {
+              "id": "p2-bt-loan-amount",
+              "formula": "[Customer Financials Enriched P2/Loan Amount]",
+              "name": "Loan Amount"
+            }
+          ],
+          "yAxis": [
+            {
+              "id": "p2-bt-y"
+            }
+          ],
+          "xAxis": {
+            "id": "p2-bt-x",
+            "sort": {
+              "by": "p2-bt-y",
+              "direction": "descending"
+            }
+          },
+          "orientation": "horizontal",
+          "name": "Net Interest Income by Tenure Bracket"
+        },
+        {
+          "id": "p2-chart-nii-age",
+          "kind": "bar-chart",
+          "source": {
+            "elementId": "p2-tbl-fin-enriched",
+            "kind": "table"
+          },
+          "columns": [
+            {
+              "id": "p2-ba-x",
+              "formula": "[Customer Financials Enriched P2/Age Bracket]",
+              "name": "Age Bracket"
+            },
+            {
+              "id": "p2-ba-y",
+              "formula": "[Metrics/Net Interest Income]",
+              "name": "Net Interest Income"
+            },
+            {
+              "id": "p2-ba-customer-key",
+              "formula": "[Customer Financials Enriched P2/Customer Key]",
+              "name": "Customer Key"
+            },
+            {
+              "id": "p2-ba-customer-name",
+              "formula": "[Customer Financials Enriched P2/Customer Name]",
+              "name": "Customer Name"
+            },
+            {
+              "id": "p2-ba-segment",
+              "formula": "[Customer Financials Enriched P2/Customer Segment]",
+              "name": "Customer Segment"
+            },
+            {
+              "id": "p2-ba-tenure",
+              "formula": "[Customer Financials Enriched P2/Tenure Bracket]",
+              "name": "Tenure Bracket"
+            },
+            {
+              "id": "p2-ba-credit",
+              "formula": "[Customer Financials Enriched P2/Credit Score]",
+              "name": "Credit Score"
+            },
+            {
+              "id": "p2-ba-branch-region",
+              "formula": "[Customer Financials Enriched P2/Branch Region]",
+              "name": "Branch Region"
+            },
+            {
+              "id": "p2-ba-loan-amount",
+              "formula": "[Customer Financials Enriched P2/Loan Amount]",
+              "name": "Loan Amount"
+            }
+          ],
+          "yAxis": [
+            {
+              "id": "p2-ba-y"
+            }
+          ],
+          "xAxis": {
+            "id": "p2-ba-x",
+            "sort": {
+              "by": "p2-ba-y",
+              "direction": "descending"
+            }
+          },
+          "orientation": "horizontal",
+          "name": "Net Interest Income by Age Bracket"
+        },
+        {
+          "id": "p2-chart-nii-credit",
+          "kind": "bar-chart",
+          "source": {
+            "elementId": "p2-tbl-fin-enriched",
+            "kind": "table"
+          },
+          "columns": [
+            {
+              "id": "p2-bc-x",
+              "formula": "[Customer Financials Enriched P2/Credit Score Band]",
+              "name": "Credit Score Band"
+            },
+            {
+              "id": "p2-bc-y",
+              "formula": "[Metrics/Net Interest Income]",
+              "name": "Net Interest Income"
+            },
+            {
+              "id": "p2-bc-customer-key",
+              "formula": "[Customer Financials Enriched P2/Customer Key]",
+              "name": "Customer Key"
+            },
+            {
+              "id": "p2-bc-customer-name",
+              "formula": "[Customer Financials Enriched P2/Customer Name]",
+              "name": "Customer Name"
+            },
+            {
+              "id": "p2-bc-segment",
+              "formula": "[Customer Financials Enriched P2/Customer Segment]",
+              "name": "Customer Segment"
+            },
+            {
+              "id": "p2-bc-tenure",
+              "formula": "[Customer Financials Enriched P2/Tenure Bracket]",
+              "name": "Tenure Bracket"
+            },
+            {
+              "id": "p2-bc-age",
+              "formula": "[Customer Financials Enriched P2/Age]",
+              "name": "Age"
+            },
+            {
+              "id": "p2-bc-branch-region",
+              "formula": "[Customer Financials Enriched P2/Branch Region]",
+              "name": "Branch Region"
+            },
+            {
+              "id": "p2-bc-loan-amount",
+              "formula": "[Customer Financials Enriched P2/Loan Amount]",
+              "name": "Loan Amount"
+            }
+          ],
+          "yAxis": [
+            {
+              "id": "p2-bc-y"
+            }
+          ],
+          "xAxis": {
+            "id": "p2-bc-x",
+            "sort": {
+              "by": "p2-bc-y",
+              "direction": "descending"
+            }
+          },
+          "orientation": "horizontal",
+          "name": "Net Interest Income by Credit Score Band"
+        },
+        {
+          "id": "p2-chart-nii-region",
+          "kind": "bar-chart",
+          "source": {
+            "elementId": "p2-tbl-fin-enriched",
+            "kind": "table"
+          },
+          "columns": [
+            {
+              "id": "p2-br-x",
+              "formula": "[Customer Financials Enriched P2/Branch Region]",
+              "name": "Branch Region"
+            },
+            {
+              "id": "p2-br-y",
+              "formula": "[Metrics/Net Interest Income]",
+              "name": "Net Interest Income"
+            },
+            {
+              "id": "p2-br-customer-key",
+              "formula": "[Customer Financials Enriched P2/Customer Key]",
+              "name": "Customer Key"
+            },
+            {
+              "id": "p2-br-customer-name",
+              "formula": "[Customer Financials Enriched P2/Customer Name]",
+              "name": "Customer Name"
+            },
+            {
+              "id": "p2-br-segment",
+              "formula": "[Customer Financials Enriched P2/Customer Segment]",
+              "name": "Customer Segment"
+            },
+            {
+              "id": "p2-br-tenure",
+              "formula": "[Customer Financials Enriched P2/Tenure Bracket]",
+              "name": "Tenure Bracket"
+            },
+            {
+              "id": "p2-br-age",
+              "formula": "[Customer Financials Enriched P2/Age]",
+              "name": "Age"
+            },
+            {
+              "id": "p2-br-credit",
+              "formula": "[Customer Financials Enriched P2/Credit Score]",
+              "name": "Credit Score"
+            },
+            {
+              "id": "p2-br-loan-amount",
+              "formula": "[Customer Financials Enriched P2/Loan Amount]",
+              "name": "Loan Amount"
+            },
+            {
+              "id": "p2-br-branch-state",
+              "formula": "[Customer Financials Enriched P2/Branch State]",
+              "name": "Branch State"
+            }
+          ],
+          "yAxis": [
+            {
+              "id": "p2-br-y"
+            }
+          ],
+          "xAxis": {
+            "id": "p2-br-x",
+            "sort": {
+              "by": "p2-br-y",
+              "direction": "descending"
+            }
+          },
+          "orientation": "horizontal",
+          "name": "Net Interest Income by Branch Region"
+        },
+        {
+          "id": "p2-tbl-detail",
+          "kind": "table",
+          "source": {
+            "elementId": "p2-tbl-fin-enriched",
+            "kind": "table"
+          },
+          "columns": [
+            {
+              "id": "p2-td-customer-key",
+              "formula": "[Customer Financials Enriched P2/Customer Key]",
+              "name": "Customer Key"
+            },
+            {
+              "id": "p2-td-customer-name",
+              "formula": "[Customer Financials Enriched P2/Customer Name]",
+              "name": "Customer Name"
+            },
+            {
+              "id": "p2-td-customer-type",
+              "formula": "[Customer Financials Enriched P2/Customer Type]",
+              "name": "Customer Type"
+            },
+            {
+              "id": "p2-td-segment",
+              "formula": "[Customer Financials Enriched P2/Customer Segment]",
+              "name": "Customer Segment"
+            },
+            {
+              "id": "p2-td-risk",
+              "formula": "[Customer Financials Enriched P2/Risk Rating]",
+              "name": "Risk Rating"
+            },
+            {
+              "id": "p2-td-tenure-bracket",
+              "formula": "[Customer Financials Enriched P2/Tenure Bracket]",
+              "name": "Tenure Bracket"
+            },
+            {
+              "id": "p2-td-age-bracket",
+              "formula": "[Customer Financials Enriched P2/Age Bracket]",
+              "name": "Age Bracket"
+            },
+            {
+              "id": "p2-td-credit-band",
+              "formula": "[Customer Financials Enriched P2/Credit Score Band]",
+              "name": "Credit Score Band"
+            },
+            {
+              "id": "p2-td-branch-region",
+              "formula": "[Customer Financials Enriched P2/Branch Region]",
+              "name": "Branch Region"
+            },
+            {
+              "id": "p2-td-rm",
+              "formula": "[Customer Financials Enriched P2/Relationship Manager]",
+              "name": "Relationship Manager"
+            },
+            {
+              "id": "p2-td-loan-amount",
+              "formula": "Sum([Customer Financials Enriched P2/Loan Amount])",
+              "name": "Loan Amount"
+            },
+            {
+              "id": "p2-td-deposit-amount",
+              "formula": "Sum([Customer Financials Enriched P2/Deposit Amount])",
+              "name": "Total Deposits"
+            },
+            {
+              "id": "p2-td-nii",
+              "formula": "[Metrics/Net Interest Income]",
+              "name": "Net Interest Income"
+            }
+          ],
+          "name": "Customer Detail",
+          "order": [
+            "p2-td-customer-key",
+            "p2-td-customer-name",
+            "p2-td-customer-type",
+            "p2-td-segment",
+            "p2-td-risk",
+            "p2-td-tenure-bracket",
+            "p2-td-age-bracket",
+            "p2-td-credit-band",
+            "p2-td-branch-region",
+            "p2-td-rm",
+            "p2-td-loan-amount",
+            "p2-td-deposit-amount",
+            "p2-td-nii"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "page-attrition",
+      "name": "Attrition Signals",
+      "elements": [
+        {
+          "id": "p3-container-header",
+          "kind": "container"
+        },
+        {
+          "id": "p3-text-title",
+          "kind": "text",
+          "body": "## **Attrition Signals**\n\nClosed accounts as a leading indicator. At-risk = any account closed in last 180 days.",
+          "verticalAlign": "middle"
+        },
+        {
+          "kind": "control",
+          "controlId": "Segment-P3",
+          "id": "p3-ctrl-segment",
+          "filters": [
+            {
+              "source": {
+                "kind": "table",
+                "elementId": "p3-tbl-fin-enriched"
+              },
+              "columnId": "p3-col-segment"
+            }
+          ],
+          "controlType": "list",
+          "mode": "include",
+          "selectionMode": "multiple",
+          "values": [],
+          "source": {
+            "kind": "source",
+            "source": {
+              "kind": "table",
+              "elementId": "p3-tbl-fin-enriched"
+            },
+            "columnId": "p3-col-segment"
+          }
+        },
+        {
+          "kind": "control",
+          "controlId": "Region-P3",
+          "id": "p3-ctrl-region",
+          "filters": [
+            {
+              "source": {
+                "kind": "table",
+                "elementId": "p3-tbl-fin-enriched"
+              },
+              "columnId": "p3-col-branch-region"
+            }
+          ],
+          "controlType": "list",
+          "mode": "include",
+          "selectionMode": "multiple",
+          "values": [],
+          "source": {
+            "kind": "source",
+            "source": {
+              "kind": "table",
+              "elementId": "p3-tbl-fin-enriched"
+            },
+            "columnId": "p3-col-branch-region"
+          }
+        },
+        {
+          "kind": "control",
+          "controlId": "Tenure-P3",
+          "id": "p3-ctrl-tenure",
+          "filters": [
+            {
+              "source": {
+                "kind": "table",
+                "elementId": "p3-tbl-fin-enriched"
+              },
+              "columnId": "p3-col-tenure-bracket"
+            }
+          ],
+          "controlType": "list",
+          "mode": "include",
+          "selectionMode": "multiple",
+          "values": [],
+          "source": {
+            "kind": "source",
+            "source": {
+              "kind": "table",
+              "elementId": "p3-tbl-fin-enriched"
+            },
+            "columnId": "p3-col-tenure-bracket"
+          }
+        },
+        {
+          "kind": "control",
+          "controlId": "Date-P3",
+          "id": "p3-ctrl-date",
+          "filters": [
+            {
+              "source": {
+                "kind": "table",
+                "elementId": "p3-tbl-fin-enriched"
+              },
+              "columnId": "p3-col-app-date"
+            }
+          ],
+          "controlType": "date-range",
+          "mode": "between",
+          "includeNulls": "when-no-value-is-selected"
+        },
+        {
+          "kind": "control",
+          "controlId": "Risk-P3",
+          "id": "p3-ctrl-risk",
+          "filters": [
+            {
+              "source": {
+                "kind": "table",
+                "elementId": "p3-tbl-fin-enriched"
+              },
+              "columnId": "p3-col-risk"
+            }
+          ],
+          "controlType": "list",
+          "mode": "include",
+          "selectionMode": "multiple",
+          "values": [],
+          "source": {
+            "kind": "source",
+            "source": {
+              "kind": "table",
+              "elementId": "p3-tbl-fin-enriched"
+            },
+            "columnId": "p3-col-risk"
+          }
+        },
+        {
+          "id": "p3-container-kpis",
+          "kind": "container"
+        },
+        {
+          "id": "p3-kpi-closed-pct",
+          "kind": "kpi-chart",
+          "source": {
+            "elementId": "p3-tbl-fin-enriched",
+            "kind": "table"
+          },
+          "columns": [
+            {
+              "id": "p3-kpi-cp-val",
+              "formula": "Zn(CountIf(IsNotNull([Customer Financials Enriched P3/Close Date])) / Count([Customer Financials Enriched P3/Customer Key]))",
+              "name": "% Accounts Closed"
+            },
+            {
+              "id": "8d84f41672b388fbaceac29448dff83d",
+              "formula": "[Customer Financials Enriched P3/App Date (original)]"
+            },
+            {
+              "id": "277484353c2172895458336df33d5912",
+              "formula": "[Customer Financials Enriched P3/Loan Number]"
+            },
+            {
+              "id": "ced0f16f00692383ec4dc2421f041580",
+              "formula": "[Customer Financials Enriched P3/Branch]"
+            },
+            {
+              "id": "f3802d005c0da0d97b9e1970e554afc8",
+              "formula": "[Customer Financials Enriched P3/Product Key]"
+            },
+            {
+              "id": "5ab3395b56f34ab34fbe2a3c7f5dcd06",
+              "formula": "[Customer Financials Enriched P3/Days Open]"
+            },
+            {
+              "id": "cda31fa244d94a8d7616f547110cf7b4",
+              "formula": "[Customer Financials Enriched P3/Interest Rate]"
+            },
+            {
+              "id": "4be4ae342d9bf05c442cd5fa05b35ba3",
+              "formula": "[Customer Financials Enriched P3/Loan Product]"
+            },
+            {
+              "id": "2ce8ae2c6116f73ec75e192b624c4097",
+              "formula": "[Customer Financials Enriched P3/Loan Product Type]"
+            },
+            {
+              "id": "e916c20ed7e00fc3336e64fdbe5ac9cc",
+              "formula": "[Customer Financials Enriched P3/Loan Type]"
+            },
+            {
+              "id": "efd2a42aa527e87d1c318b0d18f26845",
+              "formula": "[Customer Financials Enriched P3/Account Number]"
+            },
+            {
+              "id": "ae240acb674e1439289ae1a7eef98aaf",
+              "formula": "[Customer Financials Enriched P3/Deposit Product]"
+            },
+            {
+              "id": "bfb2bac77454e93dd9426b9690084ac0",
+              "formula": "[Customer Financials Enriched P3/Deposit Product Type]"
+            },
+            {
+              "id": "408215a2530e0a1cc209c9615bbd4b27",
+              "formula": "[Customer Financials Enriched P3/Latest]"
+            }
+          ],
+          "value": {
+            "id": "p3-kpi-cp-val"
+          },
+          "name": "% Accounts Closed"
+        },
+        {
+          "id": "p3-kpi-at-risk",
+          "kind": "kpi-chart",
+          "source": {
+            "elementId": "p3-tbl-fin-enriched",
+            "kind": "table"
+          },
+          "columns": [
+            {
+              "id": "p3-kpi-ar-val",
+              "formula": "CountDistinct(If([Customer Financials Enriched P3/Recently Closed], [Customer Financials Enriched P3/Customer Key], Null))",
+              "name": "At-Risk Customers"
+            },
+            {
+              "id": "8d84f41672b388fbaceac29448dff83d",
+              "formula": "[Customer Financials Enriched P3/App Date (original)]"
+            },
+            {
+              "id": "277484353c2172895458336df33d5912",
+              "formula": "[Customer Financials Enriched P3/Loan Number]"
+            },
+            {
+              "id": "ced0f16f00692383ec4dc2421f041580",
+              "formula": "[Customer Financials Enriched P3/Branch]"
+            },
+            {
+              "id": "f3802d005c0da0d97b9e1970e554afc8",
+              "formula": "[Customer Financials Enriched P3/Product Key]"
+            },
+            {
+              "id": "5ab3395b56f34ab34fbe2a3c7f5dcd06",
+              "formula": "[Customer Financials Enriched P3/Days Open]"
+            },
+            {
+              "id": "cda31fa244d94a8d7616f547110cf7b4",
+              "formula": "[Customer Financials Enriched P3/Interest Rate]"
+            },
+            {
+              "id": "4be4ae342d9bf05c442cd5fa05b35ba3",
+              "formula": "[Customer Financials Enriched P3/Loan Product]"
+            },
+            {
+              "id": "2ce8ae2c6116f73ec75e192b624c4097",
+              "formula": "[Customer Financials Enriched P3/Loan Product Type]"
+            },
+            {
+              "id": "e916c20ed7e00fc3336e64fdbe5ac9cc",
+              "formula": "[Customer Financials Enriched P3/Loan Type]"
+            },
+            {
+              "id": "efd2a42aa527e87d1c318b0d18f26845",
+              "formula": "[Customer Financials Enriched P3/Account Number]"
+            },
+            {
+              "id": "ae240acb674e1439289ae1a7eef98aaf",
+              "formula": "[Customer Financials Enriched P3/Deposit Product]"
+            },
+            {
+              "id": "bfb2bac77454e93dd9426b9690084ac0",
+              "formula": "[Customer Financials Enriched P3/Deposit Product Type]"
+            },
+            {
+              "id": "408215a2530e0a1cc209c9615bbd4b27",
+              "formula": "[Customer Financials Enriched P3/Latest]"
+            }
+          ],
+          "value": {
+            "id": "p3-kpi-ar-val"
+          },
+          "name": "At-Risk Customers (180d)"
+        },
+        {
+          "id": "p3-kpi-nii-risk",
+          "kind": "kpi-chart",
+          "source": {
+            "elementId": "p3-tbl-fin-enriched",
+            "kind": "table"
+          },
+          "columns": [
+            {
+              "id": "p3-kpi-nr-val",
+              "formula": "Zn(SumIf([Customer Financials Enriched P3/NII Row], [Customer Financials Enriched P3/Recently Closed]))",
+              "name": "NII at Risk",
+              "format": {
+                "kind": "number",
+                "formatString": "$,.2f"
+              }
+            },
+            {
+              "id": "8d84f41672b388fbaceac29448dff83d",
+              "formula": "[Customer Financials Enriched P3/App Date (original)]"
+            },
+            {
+              "id": "277484353c2172895458336df33d5912",
+              "formula": "[Customer Financials Enriched P3/Loan Number]"
+            },
+            {
+              "id": "ced0f16f00692383ec4dc2421f041580",
+              "formula": "[Customer Financials Enriched P3/Branch]"
+            },
+            {
+              "id": "f3802d005c0da0d97b9e1970e554afc8",
+              "formula": "[Customer Financials Enriched P3/Product Key]"
+            },
+            {
+              "id": "5ab3395b56f34ab34fbe2a3c7f5dcd06",
+              "formula": "[Customer Financials Enriched P3/Days Open]"
+            },
+            {
+              "id": "cda31fa244d94a8d7616f547110cf7b4",
+              "formula": "[Customer Financials Enriched P3/Interest Rate]"
+            },
+            {
+              "id": "4be4ae342d9bf05c442cd5fa05b35ba3",
+              "formula": "[Customer Financials Enriched P3/Loan Product]"
+            },
+            {
+              "id": "2ce8ae2c6116f73ec75e192b624c4097",
+              "formula": "[Customer Financials Enriched P3/Loan Product Type]"
+            },
+            {
+              "id": "e916c20ed7e00fc3336e64fdbe5ac9cc",
+              "formula": "[Customer Financials Enriched P3/Loan Type]"
+            },
+            {
+              "id": "efd2a42aa527e87d1c318b0d18f26845",
+              "formula": "[Customer Financials Enriched P3/Account Number]"
+            },
+            {
+              "id": "ae240acb674e1439289ae1a7eef98aaf",
+              "formula": "[Customer Financials Enriched P3/Deposit Product]"
+            },
+            {
+              "id": "bfb2bac77454e93dd9426b9690084ac0",
+              "formula": "[Customer Financials Enriched P3/Deposit Product Type]"
+            },
+            {
+              "id": "408215a2530e0a1cc209c9615bbd4b27",
+              "formula": "[Customer Financials Enriched P3/Latest]"
+            }
+          ],
+          "value": {
+            "id": "p3-kpi-nr-val"
+          },
+          "name": "NII at Risk"
+        },
+        {
+          "id": "p3-chart-closures-trend",
+          "kind": "line-chart",
+          "source": {
+            "elementId": "p3-tbl-fin-enriched",
+            "kind": "table"
+          },
+          "columns": [
+            {
+              "id": "p3-ln-x",
+              "formula": "DateTrunc(\"month\", [Customer Financials Enriched P3/Close Date])",
+              "name": "Close Month"
+            },
+            {
+              "id": "p3-ln-y",
+              "formula": "CountIf(IsNotNull([Customer Financials Enriched P3/Close Date]))",
+              "name": "Closures"
+            },
+            {
+              "id": "p3-ln-customer-key",
+              "formula": "[Customer Financials Enriched P3/Customer Key]",
+              "name": "Customer Key"
+            },
+            {
+              "id": "p3-ln-customer-name",
+              "formula": "[Customer Financials Enriched P3/Customer Name]",
+              "name": "Customer Name"
+            },
+            {
+              "id": "p3-ln-segment",
+              "formula": "[Customer Financials Enriched P3/Customer Segment]",
+              "name": "Customer Segment"
+            },
+            {
+              "id": "p3-ln-tenure",
+              "formula": "[Customer Financials Enriched P3/Tenure Bracket]",
+              "name": "Tenure Bracket"
+            },
+            {
+              "id": "p3-ln-account-type",
+              "formula": "[Customer Financials Enriched P3/Account Type]",
+              "name": "Account Type"
+            },
+            {
+              "id": "p3-ln-loan-amount",
+              "formula": "[Customer Financials Enriched P3/Loan Amount]",
+              "name": "Loan Amount"
+            },
+            {
+              "id": "8d84f41672b388fbaceac29448dff83d",
+              "formula": "[Customer Financials Enriched P3/App Date (original)]"
+            },
+            {
+              "id": "277484353c2172895458336df33d5912",
+              "formula": "[Customer Financials Enriched P3/Loan Number]"
+            },
+            {
+              "id": "ced0f16f00692383ec4dc2421f041580",
+              "formula": "[Customer Financials Enriched P3/Branch]"
+            },
+            {
+              "id": "f3802d005c0da0d97b9e1970e554afc8",
+              "formula": "[Customer Financials Enriched P3/Product Key]"
+            },
+            {
+              "id": "5ab3395b56f34ab34fbe2a3c7f5dcd06",
+              "formula": "[Customer Financials Enriched P3/Days Open]"
+            },
+            {
+              "id": "cda31fa244d94a8d7616f547110cf7b4",
+              "formula": "[Customer Financials Enriched P3/Interest Rate]"
+            },
+            {
+              "id": "4be4ae342d9bf05c442cd5fa05b35ba3",
+              "formula": "[Customer Financials Enriched P3/Loan Product]"
+            },
+            {
+              "id": "2ce8ae2c6116f73ec75e192b624c4097",
+              "formula": "[Customer Financials Enriched P3/Loan Product Type]"
+            },
+            {
+              "id": "e916c20ed7e00fc3336e64fdbe5ac9cc",
+              "formula": "[Customer Financials Enriched P3/Loan Type]"
+            },
+            {
+              "id": "efd2a42aa527e87d1c318b0d18f26845",
+              "formula": "[Customer Financials Enriched P3/Account Number]"
+            },
+            {
+              "id": "ae240acb674e1439289ae1a7eef98aaf",
+              "formula": "[Customer Financials Enriched P3/Deposit Product]"
+            },
+            {
+              "id": "bfb2bac77454e93dd9426b9690084ac0",
+              "formula": "[Customer Financials Enriched P3/Deposit Product Type]"
+            },
+            {
+              "id": "408215a2530e0a1cc209c9615bbd4b27",
+              "formula": "[Customer Financials Enriched P3/Latest]"
+            }
+          ],
+          "yAxis": [
+            {
+              "id": "p3-ln-y"
+            }
+          ],
+          "xAxis": {
+            "id": "p3-ln-x",
+            "sort": {
+              "by": "p3-ln-x",
+              "direction": "ascending"
+            }
+          },
+          "name": "Account Closures by Month"
+        },
+        {
+          "id": "p3-chart-closure-segment",
+          "kind": "bar-chart",
+          "source": {
+            "elementId": "p3-tbl-fin-enriched",
+            "kind": "table"
+          },
+          "columns": [
+            {
+              "id": "p3-cs-x",
+              "formula": "[Customer Financials Enriched P3/Customer Segment]",
+              "name": "Customer Segment"
+            },
+            {
+              "id": "p3-cs-y",
+              "formula": "Zn(CountIf(IsNotNull([Customer Financials Enriched P3/Close Date])) / Count([Customer Financials Enriched P3/Customer Key]))",
+              "name": "Closure Rate"
+            },
+            {
+              "id": "p3-cs-customer-key",
+              "formula": "[Customer Financials Enriched P3/Customer Key]",
+              "name": "Customer Key"
+            },
+            {
+              "id": "p3-cs-tenure",
+              "formula": "[Customer Financials Enriched P3/Tenure Bracket]",
+              "name": "Tenure Bracket"
+            },
+            {
+              "id": "p3-cs-risk",
+              "formula": "[Customer Financials Enriched P3/Risk Rating]",
+              "name": "Risk Rating"
+            },
+            {
+              "id": "8d84f41672b388fbaceac29448dff83d",
+              "formula": "[Customer Financials Enriched P3/App Date (original)]"
+            },
+            {
+              "id": "277484353c2172895458336df33d5912",
+              "formula": "[Customer Financials Enriched P3/Loan Number]"
+            },
+            {
+              "id": "ced0f16f00692383ec4dc2421f041580",
+              "formula": "[Customer Financials Enriched P3/Branch]"
+            },
+            {
+              "id": "f3802d005c0da0d97b9e1970e554afc8",
+              "formula": "[Customer Financials Enriched P3/Product Key]"
+            },
+            {
+              "id": "5ab3395b56f34ab34fbe2a3c7f5dcd06",
+              "formula": "[Customer Financials Enriched P3/Days Open]"
+            },
+            {
+              "id": "cda31fa244d94a8d7616f547110cf7b4",
+              "formula": "[Customer Financials Enriched P3/Interest Rate]"
+            },
+            {
+              "id": "4be4ae342d9bf05c442cd5fa05b35ba3",
+              "formula": "[Customer Financials Enriched P3/Loan Product]"
+            },
+            {
+              "id": "2ce8ae2c6116f73ec75e192b624c4097",
+              "formula": "[Customer Financials Enriched P3/Loan Product Type]"
+            },
+            {
+              "id": "e916c20ed7e00fc3336e64fdbe5ac9cc",
+              "formula": "[Customer Financials Enriched P3/Loan Type]"
+            },
+            {
+              "id": "efd2a42aa527e87d1c318b0d18f26845",
+              "formula": "[Customer Financials Enriched P3/Account Number]"
+            },
+            {
+              "id": "ae240acb674e1439289ae1a7eef98aaf",
+              "formula": "[Customer Financials Enriched P3/Deposit Product]"
+            },
+            {
+              "id": "bfb2bac77454e93dd9426b9690084ac0",
+              "formula": "[Customer Financials Enriched P3/Deposit Product Type]"
+            },
+            {
+              "id": "408215a2530e0a1cc209c9615bbd4b27",
+              "formula": "[Customer Financials Enriched P3/Latest]"
+            }
+          ],
+          "yAxis": [
+            {
+              "id": "p3-cs-y"
+            }
+          ],
+          "xAxis": {
+            "id": "p3-cs-x",
+            "sort": {
+              "by": "p3-cs-y",
+              "direction": "descending"
+            }
+          },
+          "orientation": "horizontal",
+          "name": "Closure Rate by Customer Segment"
+        },
+        {
+          "id": "p3-chart-closure-tenure",
+          "kind": "bar-chart",
+          "source": {
+            "elementId": "p3-tbl-fin-enriched",
+            "kind": "table"
+          },
+          "columns": [
+            {
+              "id": "p3-ct-x",
+              "formula": "[Customer Financials Enriched P3/Tenure Bracket]",
+              "name": "Tenure Bracket"
+            },
+            {
+              "id": "p3-ct-y",
+              "formula": "Zn(CountIf(IsNotNull([Customer Financials Enriched P3/Close Date])) / Count([Customer Financials Enriched P3/Customer Key]))",
+              "name": "Closure Rate"
+            },
+            {
+              "id": "p3-ct-customer-key",
+              "formula": "[Customer Financials Enriched P3/Customer Key]",
+              "name": "Customer Key"
+            },
+            {
+              "id": "p3-ct-segment",
+              "formula": "[Customer Financials Enriched P3/Customer Segment]",
+              "name": "Customer Segment"
+            },
+            {
+              "id": "p3-ct-risk",
+              "formula": "[Customer Financials Enriched P3/Risk Rating]",
+              "name": "Risk Rating"
+            },
+            {
+              "id": "8d84f41672b388fbaceac29448dff83d",
+              "formula": "[Customer Financials Enriched P3/App Date (original)]"
+            },
+            {
+              "id": "277484353c2172895458336df33d5912",
+              "formula": "[Customer Financials Enriched P3/Loan Number]"
+            },
+            {
+              "id": "ced0f16f00692383ec4dc2421f041580",
+              "formula": "[Customer Financials Enriched P3/Branch]"
+            },
+            {
+              "id": "f3802d005c0da0d97b9e1970e554afc8",
+              "formula": "[Customer Financials Enriched P3/Product Key]"
+            },
+            {
+              "id": "5ab3395b56f34ab34fbe2a3c7f5dcd06",
+              "formula": "[Customer Financials Enriched P3/Days Open]"
+            },
+            {
+              "id": "cda31fa244d94a8d7616f547110cf7b4",
+              "formula": "[Customer Financials Enriched P3/Interest Rate]"
+            },
+            {
+              "id": "4be4ae342d9bf05c442cd5fa05b35ba3",
+              "formula": "[Customer Financials Enriched P3/Loan Product]"
+            },
+            {
+              "id": "2ce8ae2c6116f73ec75e192b624c4097",
+              "formula": "[Customer Financials Enriched P3/Loan Product Type]"
+            },
+            {
+              "id": "e916c20ed7e00fc3336e64fdbe5ac9cc",
+              "formula": "[Customer Financials Enriched P3/Loan Type]"
+            },
+            {
+              "id": "efd2a42aa527e87d1c318b0d18f26845",
+              "formula": "[Customer Financials Enriched P3/Account Number]"
+            },
+            {
+              "id": "ae240acb674e1439289ae1a7eef98aaf",
+              "formula": "[Customer Financials Enriched P3/Deposit Product]"
+            },
+            {
+              "id": "bfb2bac77454e93dd9426b9690084ac0",
+              "formula": "[Customer Financials Enriched P3/Deposit Product Type]"
+            },
+            {
+              "id": "408215a2530e0a1cc209c9615bbd4b27",
+              "formula": "[Customer Financials Enriched P3/Latest]"
+            }
+          ],
+          "yAxis": [
+            {
+              "id": "p3-ct-y"
+            }
+          ],
+          "xAxis": {
+            "id": "p3-ct-x",
+            "sort": {
+              "by": "p3-ct-y",
+              "direction": "descending"
+            }
+          },
+          "orientation": "horizontal",
+          "name": "Closure Rate by Tenure Bracket"
+        },
+        {
+          "id": "p3-tbl-at-risk",
+          "kind": "table",
+          "source": {
+            "elementId": "p3-tbl-fin-enriched",
+            "kind": "table"
+          },
+          "columns": [
+            {
+              "id": "p3-ar-customer-key",
+              "formula": "[Customer Financials Enriched P3/Customer Key]",
+              "name": "Customer Key"
+            },
+            {
+              "id": "p3-ar-customer-name",
+              "formula": "[Customer Financials Enriched P3/Customer Name]",
+              "name": "Customer Name"
+            },
+            {
+              "id": "p3-ar-segment",
+              "formula": "[Customer Financials Enriched P3/Customer Segment]",
+              "name": "Customer Segment"
+            },
+            {
+              "id": "p3-ar-tenure-bracket",
+              "formula": "[Customer Financials Enriched P3/Tenure Bracket]",
+              "name": "Tenure Bracket"
+            },
+            {
+              "id": "p3-ar-risk",
+              "formula": "[Customer Financials Enriched P3/Risk Rating]",
+              "name": "Risk Rating"
+            },
+            {
+              "id": "p3-ar-rm",
+              "formula": "[Customer Financials Enriched P3/Relationship Manager]",
+              "name": "Relationship Manager"
+            },
+            {
+              "id": "p3-ar-last-close",
+              "formula": "[Customer Financials Enriched P3/Close Date]",
+              "name": "Last Close Date"
+            },
+            {
+              "id": "p3-ar-account-type",
+              "formula": "[Customer Financials Enriched P3/Account Type]",
+              "name": "Account Type"
+            },
+            {
+              "id": "p3-ar-nii",
+              "formula": "[Metrics/Net Interest Income]",
+              "name": "Net Interest Income"
+            },
+            {
+              "id": "p3-ar-recently-closed",
+              "formula": "[Customer Financials Enriched P3/Recently Closed]",
+              "name": "Recently Closed"
+            },
+            {
+              "id": "8d84f41672b388fbaceac29448dff83d",
+              "formula": "[Customer Financials Enriched P3/App Date (original)]"
+            },
+            {
+              "id": "277484353c2172895458336df33d5912",
+              "formula": "[Customer Financials Enriched P3/Loan Number]"
+            },
+            {
+              "id": "ced0f16f00692383ec4dc2421f041580",
+              "formula": "[Customer Financials Enriched P3/Branch]"
+            },
+            {
+              "id": "f3802d005c0da0d97b9e1970e554afc8",
+              "formula": "[Customer Financials Enriched P3/Product Key]"
+            },
+            {
+              "id": "5ab3395b56f34ab34fbe2a3c7f5dcd06",
+              "formula": "[Customer Financials Enriched P3/Days Open]"
+            },
+            {
+              "id": "cda31fa244d94a8d7616f547110cf7b4",
+              "formula": "[Customer Financials Enriched P3/Interest Rate]"
+            },
+            {
+              "id": "4be4ae342d9bf05c442cd5fa05b35ba3",
+              "formula": "[Customer Financials Enriched P3/Loan Product]"
+            },
+            {
+              "id": "2ce8ae2c6116f73ec75e192b624c4097",
+              "formula": "[Customer Financials Enriched P3/Loan Product Type]"
+            },
+            {
+              "id": "e916c20ed7e00fc3336e64fdbe5ac9cc",
+              "formula": "[Customer Financials Enriched P3/Loan Type]"
+            },
+            {
+              "id": "efd2a42aa527e87d1c318b0d18f26845",
+              "formula": "[Customer Financials Enriched P3/Account Number]"
+            },
+            {
+              "id": "ae240acb674e1439289ae1a7eef98aaf",
+              "formula": "[Customer Financials Enriched P3/Deposit Product]"
+            },
+            {
+              "id": "bfb2bac77454e93dd9426b9690084ac0",
+              "formula": "[Customer Financials Enriched P3/Deposit Product Type]"
+            },
+            {
+              "id": "408215a2530e0a1cc209c9615bbd4b27",
+              "formula": "[Customer Financials Enriched P3/Latest]"
+            }
+          ],
+          "name": "At-Risk Customers",
+          "order": [
+            "p3-ar-customer-key",
+            "p3-ar-customer-name",
+            "p3-ar-segment",
+            "p3-ar-tenure-bracket",
+            "p3-ar-risk",
+            "p3-ar-rm",
+            "p3-ar-last-close",
+            "p3-ar-account-type",
+            "p3-ar-nii",
+            "p3-ar-recently-closed",
+            "8d84f41672b388fbaceac29448dff83d",
+            "277484353c2172895458336df33d5912",
+            "ced0f16f00692383ec4dc2421f041580",
+            "f3802d005c0da0d97b9e1970e554afc8",
+            "5ab3395b56f34ab34fbe2a3c7f5dcd06",
+            "cda31fa244d94a8d7616f547110cf7b4",
+            "4be4ae342d9bf05c442cd5fa05b35ba3",
+            "2ce8ae2c6116f73ec75e192b624c4097",
+            "e916c20ed7e00fc3336e64fdbe5ac9cc",
+            "efd2a42aa527e87d1c318b0d18f26845",
+            "ae240acb674e1439289ae1a7eef98aaf",
+            "bfb2bac77454e93dd9426b9690084ac0",
+            "408215a2530e0a1cc209c9615bbd4b27"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "pnQ-xkUPrL",
+      "name": "Data Sources",
+      "elements": [
+        {
+          "id": "p1-tbl-fin",
+          "kind": "table",
+          "source": {
+            "dataModelId": "<DATA_MODEL_ID>",
+            "elementId": "<FACT_ELEMENT_ID>",
+            "kind": "data-model"
+          },
+          "columns": [
+            {
+              "id": "p1f-customer-key",
+              "formula": "[<FACT_ELEMENT_NAME>/Customer Key]",
+              "name": "Customer Key"
+            },
+            {
+              "id": "p1f-branch-key",
+              "formula": "[<FACT_ELEMENT_NAME>/Branch Key]",
+              "name": "Branch Key"
+            },
+            {
+              "id": "p1f-product-key",
+              "formula": "[<FACT_ELEMENT_NAME>/Product Key]",
+              "name": "Product Key"
+            },
+            {
+              "id": "p1f-loan-number",
+              "formula": "[<FACT_ELEMENT_NAME>/Loan Number]",
+              "name": "Loan Number"
+            },
+            {
+              "id": "p1f-account-number",
+              "formula": "[<FACT_ELEMENT_NAME>/Account Number]",
+              "name": "Account Number"
+            },
+            {
+              "id": "p1f-app-date",
+              "formula": "[<FACT_ELEMENT_NAME>/Application Date]",
+              "name": "Application Date"
+            },
+            {
+              "id": "p1f-open-date",
+              "formula": "[<FACT_ELEMENT_NAME>/Open Date]",
+              "name": "Open Date"
+            },
+            {
+              "id": "p1f-close-date",
+              "formula": "[<FACT_ELEMENT_NAME>/Close Date]",
+              "name": "Close Date"
+            },
+            {
+              "id": "p1f-status",
+              "formula": "[<FACT_ELEMENT_NAME>/Status]",
+              "name": "Status"
+            },
+            {
+              "id": "p1f-current-status",
+              "formula": "[<FACT_ELEMENT_NAME>/Current Status]",
+              "name": "Current Status"
+            },
+            {
+              "id": "p1f-loan-amount",
+              "formula": "[<FACT_ELEMENT_NAME>/Loan Amount]",
+              "name": "Loan Amount"
+            },
+            {
+              "id": "p1f-deposit-amount",
+              "formula": "[<FACT_ELEMENT_NAME>/Deposit Amount]",
+              "name": "Deposit Amount"
+            },
+            {
+              "id": "p1f-interest-income",
+              "formula": "[<FACT_ELEMENT_NAME>/Interest Income]",
+              "name": "Interest Income"
+            },
+            {
+              "id": "p1f-fee-income",
+              "formula": "[<FACT_ELEMENT_NAME>/Fee Income]",
+              "name": "Fee Income"
+            },
+            {
+              "id": "p1f-cost-funds",
+              "formula": "[<FACT_ELEMENT_NAME>/Cost of Funds]",
+              "name": "Cost of Funds"
+            },
+            {
+              "id": "p1f-operating-cost",
+              "formula": "[<FACT_ELEMENT_NAME>/Operating Cost]",
+              "name": "Operating Cost"
+            },
+            {
+              "id": "p1f-loan-product",
+              "formula": "[<FACT_ELEMENT_NAME>/Loan Product]",
+              "name": "Loan Product"
+            },
+            {
+              "id": "p1f-loan-product-type",
+              "formula": "[<FACT_ELEMENT_NAME>/Loan Product Type]",
+              "name": "Loan Product Type"
+            },
+            {
+              "id": "p1f-loan-type",
+              "formula": "[<FACT_ELEMENT_NAME>/Loan Type]",
+              "name": "Loan Type"
+            },
+            {
+              "id": "p1f-deposit-product",
+              "formula": "[<FACT_ELEMENT_NAME>/Deposit Product]",
+              "name": "Deposit Product"
+            },
+            {
+              "id": "p1f-deposit-product-type",
+              "formula": "[<FACT_ELEMENT_NAME>/Deposit Product Type]",
+              "name": "Deposit Product Type"
+            },
+            {
+              "id": "p1f-account-type",
+              "formula": "[<FACT_ELEMENT_NAME>/Account Type]",
+              "name": "Account Type"
+            },
+            {
+              "id": "p1f-days-open",
+              "formula": "[<FACT_ELEMENT_NAME>/Days Open]",
+              "name": "Days Open"
+            },
+            {
+              "id": "p1f-interest-rate",
+              "formula": "[<FACT_ELEMENT_NAME>/Interest Rate]",
+              "name": "Interest Rate"
+            },
+            {
+              "id": "p1f-branch",
+              "formula": "[<FACT_ELEMENT_NAME>/Branch]",
+              "name": "Branch"
+            }
+          ],
+          "name": "Customer Financials P1",
+          "order": [
+            "p1f-customer-key",
+            "p1f-branch-key",
+            "p1f-product-key",
+            "p1f-loan-number",
+            "p1f-account-number",
+            "p1f-app-date",
+            "p1f-open-date",
+            "p1f-close-date",
+            "p1f-status",
+            "p1f-current-status",
+            "p1f-loan-amount",
+            "p1f-deposit-amount",
+            "p1f-interest-income",
+            "p1f-fee-income",
+            "p1f-cost-funds",
+            "p1f-operating-cost",
+            "p1f-loan-product",
+            "p1f-loan-product-type",
+            "p1f-loan-type",
+            "p1f-deposit-product",
+            "p1f-deposit-product-type",
+            "p1f-account-type",
+            "p1f-days-open",
+            "p1f-interest-rate",
+            "p1f-branch"
+          ],
+          "visibleAsSource": false
+        },
+        {
+          "id": "p1-tbl-cust-dim",
+          "kind": "table",
+          "source": {
+            "dataModelId": "<DATA_MODEL_ID>",
+            "elementId": "<CUST_DIM_ELEMENT_ID>",
+            "kind": "data-model"
+          },
+          "columns": [
+            {
+              "id": "p1c-customer-key",
+              "formula": "[<CUST_DIM_ELEMENT_NAME>/Customer Key]",
+              "name": "Customer Key"
+            },
+            {
+              "id": "p1c-customer-name",
+              "formula": "[<CUST_DIM_ELEMENT_NAME>/Customer Name]",
+              "name": "Customer Name"
+            },
+            {
+              "id": "p1c-customer-type",
+              "formula": "[<CUST_DIM_ELEMENT_NAME>/Customer Type]",
+              "name": "Customer Type"
+            },
+            {
+              "id": "p1c-segment",
+              "formula": "[<CUST_DIM_ELEMENT_NAME>/Customer Segment]",
+              "name": "Customer Segment"
+            },
+            {
+              "id": "p1c-risk",
+              "formula": "[<CUST_DIM_ELEMENT_NAME>/Risk Rating]",
+              "name": "Risk Rating"
+            },
+            {
+              "id": "p1c-age",
+              "formula": "[<CUST_DIM_ELEMENT_NAME>/Age]",
+              "name": "Age"
+            },
+            {
+              "id": "p1c-income",
+              "formula": "[<CUST_DIM_ELEMENT_NAME>/Annual Income]",
+              "name": "Annual Income"
+            },
+            {
+              "id": "p1c-credit",
+              "formula": "[<CUST_DIM_ELEMENT_NAME>/Credit Score]",
+              "name": "Credit Score"
+            },
+            {
+              "id": "p1c-tenure",
+              "formula": "[<CUST_DIM_ELEMENT_NAME>/Years With Bank]",
+              "name": "Years With Bank"
+            },
+            {
+              "id": "p1c-since",
+              "formula": "[<CUST_DIM_ELEMENT_NAME>/Customer Since]",
+              "name": "Customer Since"
+            },
+            {
+              "id": "p1c-ltv",
+              "formula": "[<CUST_DIM_ELEMENT_NAME>/Lifetime Value Score]",
+              "name": "Lifetime Value Score"
+            },
+            {
+              "id": "p1c-rm",
+              "formula": "[<CUST_DIM_ELEMENT_NAME>/Relationship Manager]",
+              "name": "Relationship Manager"
+            }
+          ],
+          "name": "Customer Master P1",
+          "order": [
+            "p1c-customer-key",
+            "p1c-customer-name",
+            "p1c-customer-type",
+            "p1c-segment",
+            "p1c-risk",
+            "p1c-age",
+            "p1c-income",
+            "p1c-credit",
+            "p1c-tenure",
+            "p1c-since",
+            "p1c-ltv",
+            "p1c-rm"
+          ],
+          "visibleAsSource": false
+        },
+        {
+          "id": "p1-tbl-branch-dim",
+          "kind": "table",
+          "source": {
+            "dataModelId": "<DATA_MODEL_ID>",
+            "elementId": "<BRANCH_DIM_ELEMENT_ID>",
+            "kind": "data-model"
+          },
+          "columns": [
+            {
+              "id": "p1b-branch-key",
+              "formula": "[<BRANCH_DIM_ELEMENT_NAME>/Branch Key]",
+              "name": "Branch Key"
+            },
+            {
+              "id": "p1b-branch-name",
+              "formula": "[<BRANCH_DIM_ELEMENT_NAME>/Branch Name]",
+              "name": "Branch Name"
+            },
+            {
+              "id": "p1b-branch-region",
+              "formula": "[<BRANCH_DIM_ELEMENT_NAME>/Branch Region]",
+              "name": "Branch Region"
+            },
+            {
+              "id": "p1b-branch-state",
+              "formula": "[<BRANCH_DIM_ELEMENT_NAME>/Branch State]",
+              "name": "Branch State"
+            }
+          ],
+          "name": "Branch Master P1",
+          "order": [
+            "p1b-branch-key",
+            "p1b-branch-name",
+            "p1b-branch-region",
+            "p1b-branch-state"
+          ],
+          "visibleAsSource": false
+        },
+        {
+          "id": "p2-tbl-fin-enriched",
+          "kind": "table",
+          "source": {
+            "elementId": "p2-tbl-fin",
+            "kind": "table"
+          },
+          "columns": [
+            {
+              "id": "p2-col-customer-key",
+              "formula": "[Customer Financials P2/Customer Key]",
+              "name": "Customer Key"
+            },
+            {
+              "id": "p2-col-branch-key",
+              "formula": "[Customer Financials P2/Branch Key]",
+              "name": "Branch Key"
+            },
+            {
+              "id": "p2-col-app-date",
+              "formula": "[Customer Financials P2/Application Date]",
+              "name": "Application Date"
+            },
+            {
+              "id": "p2-col-open-date",
+              "formula": "[Customer Financials P2/Open Date]",
+              "name": "Open Date"
+            },
+            {
+              "id": "p2-col-close-date",
+              "formula": "[Customer Financials P2/Close Date]",
+              "name": "Close Date"
+            },
+            {
+              "id": "p2-col-loan-amount",
+              "formula": "[Customer Financials P2/Loan Amount]",
+              "name": "Loan Amount"
+            },
+            {
+              "id": "p2-col-deposit-amount",
+              "formula": "[Customer Financials P2/Deposit Amount]",
+              "name": "Deposit Amount"
+            },
+            {
+              "id": "p2-col-interest-income",
+              "formula": "[Customer Financials P2/Interest Income]",
+              "name": "Interest Income"
+            },
+            {
+              "id": "p2-col-fee-income",
+              "formula": "[Customer Financials P2/Fee Income]",
+              "name": "Fee Income"
+            },
+            {
+              "id": "p2-col-cost-funds",
+              "formula": "[Customer Financials P2/Cost of Funds]",
+              "name": "Cost of Funds"
+            },
+            {
+              "id": "p2-col-operating-cost",
+              "formula": "[Customer Financials P2/Operating Cost]",
+              "name": "Operating Cost"
+            },
+            {
+              "id": "p2-col-status",
+              "formula": "[Customer Financials P2/Status]",
+              "name": "Status"
+            },
+            {
+              "id": "p2-col-current-status",
+              "formula": "[Customer Financials P2/Current Status]",
+              "name": "Current Status"
+            },
+            {
+              "id": "p2-col-loan-product-type",
+              "formula": "[Customer Financials P2/Loan Product Type]",
+              "name": "Loan Product Type"
+            },
+            {
+              "id": "p2-col-account-type",
+              "formula": "[Customer Financials P2/Account Type]",
+              "name": "Account Type"
+            },
+            {
+              "id": "p2-col-customer-name",
+              "formula": "Lookup([Customer Master P2/Customer Name], [Customer Key], [Customer Master P2/Customer Key])",
+              "name": "Customer Name"
+            },
+            {
+              "id": "p2-col-customer-type",
+              "formula": "Lookup([Customer Master P2/Customer Type], [Customer Key], [Customer Master P2/Customer Key])",
+              "name": "Customer Type"
+            },
+            {
+              "id": "p2-col-segment",
+              "formula": "Lookup([Customer Master P2/Customer Segment], [Customer Key], [Customer Master P2/Customer Key])",
+              "name": "Customer Segment"
+            },
+            {
+              "id": "p2-col-risk",
+              "formula": "Lookup([Customer Master P2/Risk Rating], [Customer Key], [Customer Master P2/Customer Key])",
+              "name": "Risk Rating"
+            },
+            {
+              "id": "p2-col-age",
+              "formula": "Lookup([Customer Master P2/Age], [Customer Key], [Customer Master P2/Customer Key])",
+              "name": "Age"
+            },
+            {
+              "id": "p2-col-income",
+              "formula": "Lookup([Customer Master P2/Annual Income], [Customer Key], [Customer Master P2/Customer Key])",
+              "name": "Annual Income"
+            },
+            {
+              "id": "p2-col-credit",
+              "formula": "Lookup([Customer Master P2/Credit Score], [Customer Key], [Customer Master P2/Customer Key])",
+              "name": "Credit Score"
+            },
+            {
+              "id": "p2-col-tenure",
+              "formula": "Lookup([Customer Master P2/Years With Bank], [Customer Key], [Customer Master P2/Customer Key])",
+              "name": "Years With Bank"
+            },
+            {
+              "id": "p2-col-ltv",
+              "formula": "Lookup([Customer Master P2/Lifetime Value Score], [Customer Key], [Customer Master P2/Customer Key])",
+              "name": "Lifetime Value Score"
+            },
+            {
+              "id": "p2-col-rm",
+              "formula": "Lookup([Customer Master P2/Relationship Manager], [Customer Key], [Customer Master P2/Customer Key])",
+              "name": "Relationship Manager"
+            },
+            {
+              "id": "p2-col-branch-name",
+              "formula": "Lookup([Branch Master P2/Branch Name], [Branch Key], [Branch Master P2/Branch Key])",
+              "name": "Branch Name"
+            },
+            {
+              "id": "p2-col-branch-region",
+              "formula": "Lookup([Branch Master P2/Branch Region], [Branch Key], [Branch Master P2/Branch Key])",
+              "name": "Branch Region"
+            },
+            {
+              "id": "p2-col-branch-state",
+              "formula": "Lookup([Branch Master P2/Branch State], [Branch Key], [Branch Master P2/Branch Key])",
+              "name": "Branch State"
+            },
+            {
+              "id": "p2-col-tenure-bracket",
+              "formula": "If([Years With Bank] < 1, \"0-1yr\", If([Years With Bank] < 3, \"1-3yr\", If([Years With Bank] < 5, \"3-5yr\", If([Years With Bank] < 10, \"5-10yr\", \"10+yr\"))))",
+              "name": "Tenure Bracket"
+            },
+            {
+              "id": "p2-col-age-bracket",
+              "formula": "If([Age] < 25, \"<25\", If([Age] < 35, \"25-34\", If([Age] < 45, \"35-44\", If([Age] < 55, \"45-54\", If([Age] < 65, \"55-64\", \"65+\")))))",
+              "name": "Age Bracket"
+            },
+            {
+              "id": "p2-col-credit-band",
+              "formula": "If([Credit Score] < 580, \"Subprime (300-579)\", If([Credit Score] < 670, \"Fair (580-669)\", If([Credit Score] < 740, \"Good (670-739)\", If([Credit Score] < 800, \"Very Good (740-799)\", \"Exceptional (800+)\"))))",
+              "name": "Credit Score Band"
+            },
+            {
+              "id": "p2-col-nii-row",
+              "formula": "If(IsNotNull([Loan Amount]), [Interest Income] + [Fee Income] - [Cost of Funds] - [Operating Cost], 0)",
+              "name": "NII Row"
+            }
+          ],
+          "name": "Customer Financials Enriched P2",
+          "order": [
+            "p2-col-customer-key",
+            "p2-col-branch-key",
+            "p2-col-app-date",
+            "p2-col-open-date",
+            "p2-col-close-date",
+            "p2-col-loan-amount",
+            "p2-col-deposit-amount",
+            "p2-col-interest-income",
+            "p2-col-fee-income",
+            "p2-col-cost-funds",
+            "p2-col-operating-cost",
+            "p2-col-status",
+            "p2-col-current-status",
+            "p2-col-loan-product-type",
+            "p2-col-account-type",
+            "p2-col-customer-name",
+            "p2-col-customer-type",
+            "p2-col-segment",
+            "p2-col-risk",
+            "p2-col-age",
+            "p2-col-income",
+            "p2-col-credit",
+            "p2-col-tenure",
+            "p2-col-ltv",
+            "p2-col-rm",
+            "p2-col-branch-name",
+            "p2-col-branch-region",
+            "p2-col-branch-state",
+            "p2-col-tenure-bracket",
+            "p2-col-age-bracket",
+            "p2-col-credit-band",
+            "p2-col-nii-row"
+          ]
+        },
+        {
+          "id": "p2-tbl-fin",
+          "kind": "table",
+          "source": {
+            "dataModelId": "<DATA_MODEL_ID>",
+            "elementId": "<FACT_ELEMENT_ID>",
+            "kind": "data-model"
+          },
+          "columns": [
+            {
+              "id": "p2f-customer-key",
+              "formula": "[<FACT_ELEMENT_NAME>/Customer Key]",
+              "name": "Customer Key"
+            },
+            {
+              "id": "p2f-branch-key",
+              "formula": "[<FACT_ELEMENT_NAME>/Branch Key]",
+              "name": "Branch Key"
+            },
+            {
+              "id": "p2f-app-date",
+              "formula": "[<FACT_ELEMENT_NAME>/Application Date]",
+              "name": "Application Date"
+            },
+            {
+              "id": "p2f-open-date",
+              "formula": "[<FACT_ELEMENT_NAME>/Open Date]",
+              "name": "Open Date"
+            },
+            {
+              "id": "p2f-close-date",
+              "formula": "[<FACT_ELEMENT_NAME>/Close Date]",
+              "name": "Close Date"
+            },
+            {
+              "id": "p2f-loan-amount",
+              "formula": "[<FACT_ELEMENT_NAME>/Loan Amount]",
+              "name": "Loan Amount"
+            },
+            {
+              "id": "p2f-deposit-amount",
+              "formula": "[<FACT_ELEMENT_NAME>/Deposit Amount]",
+              "name": "Deposit Amount"
+            },
+            {
+              "id": "p2f-interest-income",
+              "formula": "[<FACT_ELEMENT_NAME>/Interest Income]",
+              "name": "Interest Income"
+            },
+            {
+              "id": "p2f-fee-income",
+              "formula": "[<FACT_ELEMENT_NAME>/Fee Income]",
+              "name": "Fee Income"
+            },
+            {
+              "id": "p2f-cost-funds",
+              "formula": "[<FACT_ELEMENT_NAME>/Cost of Funds]",
+              "name": "Cost of Funds"
+            },
+            {
+              "id": "p2f-operating-cost",
+              "formula": "[<FACT_ELEMENT_NAME>/Operating Cost]",
+              "name": "Operating Cost"
+            },
+            {
+              "id": "p2f-status",
+              "formula": "[<FACT_ELEMENT_NAME>/Status]",
+              "name": "Status"
+            },
+            {
+              "id": "p2f-current-status",
+              "formula": "[<FACT_ELEMENT_NAME>/Current Status]",
+              "name": "Current Status"
+            },
+            {
+              "id": "p2f-loan-product-type",
+              "formula": "[<FACT_ELEMENT_NAME>/Loan Product Type]",
+              "name": "Loan Product Type"
+            },
+            {
+              "id": "p2f-account-type",
+              "formula": "[<FACT_ELEMENT_NAME>/Account Type]",
+              "name": "Account Type"
+            }
+          ],
+          "name": "Customer Financials P2",
+          "order": [
+            "p2f-customer-key",
+            "p2f-branch-key",
+            "p2f-app-date",
+            "p2f-open-date",
+            "p2f-close-date",
+            "p2f-loan-amount",
+            "p2f-deposit-amount",
+            "p2f-interest-income",
+            "p2f-fee-income",
+            "p2f-cost-funds",
+            "p2f-operating-cost",
+            "p2f-status",
+            "p2f-current-status",
+            "p2f-loan-product-type",
+            "p2f-account-type"
+          ],
+          "visibleAsSource": false
+        },
+        {
+          "id": "p2-tbl-cust-dim",
+          "kind": "table",
+          "source": {
+            "dataModelId": "<DATA_MODEL_ID>",
+            "elementId": "<CUST_DIM_ELEMENT_ID>",
+            "kind": "data-model"
+          },
+          "columns": [
+            {
+              "id": "p2c-customer-key",
+              "formula": "[<CUST_DIM_ELEMENT_NAME>/Customer Key]",
+              "name": "Customer Key"
+            },
+            {
+              "id": "p2c-customer-name",
+              "formula": "[<CUST_DIM_ELEMENT_NAME>/Customer Name]",
+              "name": "Customer Name"
+            },
+            {
+              "id": "p2c-customer-type",
+              "formula": "[<CUST_DIM_ELEMENT_NAME>/Customer Type]",
+              "name": "Customer Type"
+            },
+            {
+              "id": "p2c-segment",
+              "formula": "[<CUST_DIM_ELEMENT_NAME>/Customer Segment]",
+              "name": "Customer Segment"
+            },
+            {
+              "id": "p2c-risk",
+              "formula": "[<CUST_DIM_ELEMENT_NAME>/Risk Rating]",
+              "name": "Risk Rating"
+            },
+            {
+              "id": "p2c-age",
+              "formula": "[<CUST_DIM_ELEMENT_NAME>/Age]",
+              "name": "Age"
+            },
+            {
+              "id": "p2c-income",
+              "formula": "[<CUST_DIM_ELEMENT_NAME>/Annual Income]",
+              "name": "Annual Income"
+            },
+            {
+              "id": "p2c-credit",
+              "formula": "[<CUST_DIM_ELEMENT_NAME>/Credit Score]",
+              "name": "Credit Score"
+            },
+            {
+              "id": "p2c-tenure",
+              "formula": "[<CUST_DIM_ELEMENT_NAME>/Years With Bank]",
+              "name": "Years With Bank"
+            },
+            {
+              "id": "p2c-ltv",
+              "formula": "[<CUST_DIM_ELEMENT_NAME>/Lifetime Value Score]",
+              "name": "Lifetime Value Score"
+            },
+            {
+              "id": "p2c-rm",
+              "formula": "[<CUST_DIM_ELEMENT_NAME>/Relationship Manager]",
+              "name": "Relationship Manager"
+            }
+          ],
+          "name": "Customer Master P2",
+          "order": [
+            "p2c-customer-key",
+            "p2c-customer-name",
+            "p2c-customer-type",
+            "p2c-segment",
+            "p2c-risk",
+            "p2c-age",
+            "p2c-income",
+            "p2c-credit",
+            "p2c-tenure",
+            "p2c-ltv",
+            "p2c-rm"
+          ],
+          "visibleAsSource": false
+        },
+        {
+          "id": "p2-tbl-branch-dim",
+          "kind": "table",
+          "source": {
+            "dataModelId": "<DATA_MODEL_ID>",
+            "elementId": "<BRANCH_DIM_ELEMENT_ID>",
+            "kind": "data-model"
+          },
+          "columns": [
+            {
+              "id": "p2b-branch-key",
+              "formula": "[<BRANCH_DIM_ELEMENT_NAME>/Branch Key]",
+              "name": "Branch Key"
+            },
+            {
+              "id": "p2b-branch-name",
+              "formula": "[<BRANCH_DIM_ELEMENT_NAME>/Branch Name]",
+              "name": "Branch Name"
+            },
+            {
+              "id": "p2b-branch-region",
+              "formula": "[<BRANCH_DIM_ELEMENT_NAME>/Branch Region]",
+              "name": "Branch Region"
+            },
+            {
+              "id": "p2b-branch-state",
+              "formula": "[<BRANCH_DIM_ELEMENT_NAME>/Branch State]",
+              "name": "Branch State"
+            }
+          ],
+          "name": "Branch Master P2",
+          "order": [
+            "p2b-branch-key",
+            "p2b-branch-name",
+            "p2b-branch-region",
+            "p2b-branch-state"
+          ],
+          "visibleAsSource": false
+        },
+        {
+          "id": "p3-tbl-fin-enriched",
+          "kind": "table",
+          "source": {
+            "elementId": "p3-tbl-fin",
+            "kind": "table"
+          },
+          "columns": [
+            {
+              "id": "p3-col-customer-key",
+              "formula": "[Customer Financials P3/Customer Key]",
+              "name": "Customer Key"
+            },
+            {
+              "id": "p3-col-branch-key",
+              "formula": "[Customer Financials P3/Branch Key]",
+              "name": "Branch Key"
+            },
+            {
+              "id": "p3-col-app-date",
+              "formula": "[Customer Financials P3/Application Date]",
+              "name": "Application Date"
+            },
+            {
+              "id": "p3-col-open-date",
+              "formula": "[Customer Financials P3/Open Date]",
+              "name": "Open Date"
+            },
+            {
+              "id": "p3-col-close-date",
+              "formula": "[Customer Financials P3/Close Date]",
+              "name": "Close Date"
+            },
+            {
+              "id": "p3-col-loan-amount",
+              "formula": "[Customer Financials P3/Loan Amount]",
+              "name": "Loan Amount"
+            },
+            {
+              "id": "p3-col-deposit-amount",
+              "formula": "[Customer Financials P3/Deposit Amount]",
+              "name": "Deposit Amount"
+            },
+            {
+              "id": "p3-col-interest-income",
+              "formula": "[Customer Financials P3/Interest Income]",
+              "name": "Interest Income"
+            },
+            {
+              "id": "p3-col-fee-income",
+              "formula": "[Customer Financials P3/Fee Income]",
+              "name": "Fee Income"
+            },
+            {
+              "id": "p3-col-cost-funds",
+              "formula": "[Customer Financials P3/Cost of Funds]",
+              "name": "Cost of Funds"
+            },
+            {
+              "id": "p3-col-operating-cost",
+              "formula": "[Customer Financials P3/Operating Cost]",
+              "name": "Operating Cost"
+            },
+            {
+              "id": "p3-col-status",
+              "formula": "[Customer Financials P3/Status]",
+              "name": "Status"
+            },
+            {
+              "id": "p3-col-current-status",
+              "formula": "[Customer Financials P3/Current Status]",
+              "name": "Current Status"
+            },
+            {
+              "id": "p3-col-account-type",
+              "formula": "[Customer Financials P3/Account Type]",
+              "name": "Account Type"
+            },
+            {
+              "id": "p3-col-customer-name",
+              "formula": "Lookup([Customer Master P3/Customer Name], [Customer Key], [Customer Master P3/Customer Key])",
+              "name": "Customer Name"
+            },
+            {
+              "id": "p3-col-customer-type",
+              "formula": "Lookup([Customer Master P3/Customer Type], [Customer Key], [Customer Master P3/Customer Key])",
+              "name": "Customer Type"
+            },
+            {
+              "id": "p3-col-segment",
+              "formula": "Lookup([Customer Master P3/Customer Segment], [Customer Key], [Customer Master P3/Customer Key])",
+              "name": "Customer Segment"
+            },
+            {
+              "id": "p3-col-risk",
+              "formula": "Lookup([Customer Master P3/Risk Rating], [Customer Key], [Customer Master P3/Customer Key])",
+              "name": "Risk Rating"
+            },
+            {
+              "id": "p3-col-tenure",
+              "formula": "Lookup([Customer Master P3/Years With Bank], [Customer Key], [Customer Master P3/Customer Key])",
+              "name": "Years With Bank"
+            },
+            {
+              "id": "p3-col-rm",
+              "formula": "Lookup([Customer Master P3/Relationship Manager], [Customer Key], [Customer Master P3/Customer Key])",
+              "name": "Relationship Manager"
+            },
+            {
+              "id": "p3-col-branch-name",
+              "formula": "Lookup([Branch Master P3/Branch Name], [Branch Key], [Branch Master P3/Branch Key])",
+              "name": "Branch Name"
+            },
+            {
+              "id": "p3-col-branch-region",
+              "formula": "Lookup([Branch Master P3/Branch Region], [Branch Key], [Branch Master P3/Branch Key])",
+              "name": "Branch Region"
+            },
+            {
+              "id": "p3-col-tenure-bracket",
+              "formula": "If([Years With Bank] < 1, \"0-1yr\", If([Years With Bank] < 3, \"1-3yr\", If([Years With Bank] < 5, \"3-5yr\", If([Years With Bank] < 10, \"5-10yr\", \"10+yr\"))))",
+              "name": "Tenure Bracket"
+            },
+            {
+              "id": "p3-col-nii-row",
+              "formula": "If(IsNotNull([Loan Amount]), [Interest Income] + [Fee Income] - [Cost of Funds] - [Operating Cost], 0)",
+              "name": "NII Row"
+            },
+            {
+              "id": "p3-col-recently-closed",
+              "formula": "If(IsNotNull([Close Date]) and DateDiff(\"day\", [Close Date], Today()) <= 180, True, False)",
+              "name": "Recently Closed"
+            },
+            {
+              "id": "df91f0159e65804bea09c459ccf25f76",
+              "formula": "[Customer Financials P3/App Date (original)]"
+            },
+            {
+              "id": "3e9f3abd1765c53c5b6e092a6e8162ef",
+              "formula": "[Customer Financials P3/Loan Number]"
+            },
+            {
+              "id": "ec053f8e29287d58e2bb06b831f649f3",
+              "formula": "[Customer Financials P3/Branch]"
+            },
+            {
+              "id": "c5657f20e5e800f5e67e96d14e966803",
+              "formula": "[Customer Financials P3/Product Key]"
+            },
+            {
+              "id": "53bad67e69b04f796b6ea4830f298702",
+              "formula": "[Customer Financials P3/Days Open]"
+            },
+            {
+              "id": "ed14cc66e763e84aedb4ab009c28fecc",
+              "formula": "[Customer Financials P3/Interest Rate]"
+            },
+            {
+              "id": "a69d422c8631c9fd7643d1cd09e704d3",
+              "formula": "[Customer Financials P3/Loan Product]"
+            },
+            {
+              "id": "8ed510fb8cea7d5294dc3e3e51ead7cc",
+              "formula": "[Customer Financials P3/Loan Product Type]"
+            },
+            {
+              "id": "3a4f0010b979d569fa9f0217464b3529",
+              "formula": "[Customer Financials P3/Loan Type]"
+            },
+            {
+              "id": "cd557c49838876e6057b7eca11d29f23",
+              "formula": "[Customer Financials P3/Account Number]"
+            },
+            {
+              "id": "a0dbf80b38b3c0e1766c107e7487d588",
+              "formula": "[Customer Financials P3/Deposit Product]"
+            },
+            {
+              "id": "7ceaf7e2df4a7cdfdab6530095ce2794",
+              "formula": "[Customer Financials P3/Deposit Product Type]"
+            },
+            {
+              "id": "xUqvxfpTd2",
+              "formula": "Max([Application Date])",
+              "name": "Latest"
+            }
+          ],
+          "name": "Customer Financials Enriched P3",
+          "filters": [
+            {
+              "id": "9HFQbdwRS7",
+              "columnId": "p3-col-deposit-amount",
+              "kind": "list",
+              "mode": "include",
+              "values": [
+                null
+              ]
+            }
+          ],
+          "groupings": [
+            {
+              "id": "7vYlLkZtj-",
+              "groupBy": [
+                "p3-col-customer-key"
+              ]
+            }
+          ],
+          "order": [
+            "p3-col-branch-key",
+            "p3-col-app-date",
+            "p3-col-open-date",
+            "p3-col-close-date",
+            "p3-col-loan-amount",
+            "p3-col-deposit-amount",
+            "p3-col-interest-income",
+            "p3-col-fee-income",
+            "p3-col-cost-funds",
+            "p3-col-operating-cost",
+            "p3-col-status",
+            "p3-col-current-status",
+            "p3-col-account-type",
+            "p3-col-customer-name",
+            "p3-col-customer-type",
+            "p3-col-segment",
+            "p3-col-risk",
+            "p3-col-tenure",
+            "p3-col-rm",
+            "p3-col-branch-name",
+            "p3-col-branch-region",
+            "p3-col-tenure-bracket",
+            "p3-col-nii-row",
+            "p3-col-recently-closed",
+            "df91f0159e65804bea09c459ccf25f76",
+            "3e9f3abd1765c53c5b6e092a6e8162ef",
+            "ec053f8e29287d58e2bb06b831f649f3",
+            "c5657f20e5e800f5e67e96d14e966803",
+            "53bad67e69b04f796b6ea4830f298702",
+            "ed14cc66e763e84aedb4ab009c28fecc",
+            "a69d422c8631c9fd7643d1cd09e704d3",
+            "8ed510fb8cea7d5294dc3e3e51ead7cc",
+            "3a4f0010b979d569fa9f0217464b3529",
+            "cd557c49838876e6057b7eca11d29f23",
+            "a0dbf80b38b3c0e1766c107e7487d588",
+            "7ceaf7e2df4a7cdfdab6530095ce2794"
+          ],
+          "summary": [
+            "xUqvxfpTd2"
+          ]
+        },
+        {
+          "id": "p3-tbl-fin",
+          "kind": "table",
+          "source": {
+            "dataModelId": "<DATA_MODEL_ID>",
+            "elementId": "<FACT_ELEMENT_ID>",
+            "kind": "data-model"
+          },
+          "columns": [
+            {
+              "id": "p3f-customer-key",
+              "formula": "[<FACT_ELEMENT_NAME>/Customer Key]",
+              "name": "Customer Key"
+            },
+            {
+              "id": "p3f-branch-key",
+              "formula": "[<FACT_ELEMENT_NAME>/Branch Key]",
+              "name": "Branch Key"
+            },
+            {
+              "id": "p3f-app-date",
+              "formula": "[<FACT_ELEMENT_NAME>/Application Date]",
+              "name": "Application Date"
+            },
+            {
+              "id": "p3f-open-date",
+              "formula": "[<FACT_ELEMENT_NAME>/Open Date]",
+              "name": "Open Date"
+            },
+            {
+              "id": "p3f-close-date",
+              "formula": "[<FACT_ELEMENT_NAME>/Close Date]",
+              "name": "Close Date"
+            },
+            {
+              "id": "p3f-loan-amount",
+              "formula": "[<FACT_ELEMENT_NAME>/Loan Amount]",
+              "name": "Loan Amount"
+            },
+            {
+              "id": "p3f-deposit-amount",
+              "formula": "[<FACT_ELEMENT_NAME>/Deposit Amount]",
+              "name": "Deposit Amount"
+            },
+            {
+              "id": "p3f-interest-income",
+              "formula": "[<FACT_ELEMENT_NAME>/Interest Income]",
+              "name": "Interest Income"
+            },
+            {
+              "id": "p3f-fee-income",
+              "formula": "[<FACT_ELEMENT_NAME>/Fee Income]",
+              "name": "Fee Income"
+            },
+            {
+              "id": "p3f-cost-funds",
+              "formula": "[<FACT_ELEMENT_NAME>/Cost of Funds]",
+              "name": "Cost of Funds"
+            },
+            {
+              "id": "p3f-operating-cost",
+              "formula": "[<FACT_ELEMENT_NAME>/Operating Cost]",
+              "name": "Operating Cost"
+            },
+            {
+              "id": "p3f-status",
+              "formula": "[<FACT_ELEMENT_NAME>/Status]",
+              "name": "Status"
+            },
+            {
+              "id": "p3f-current-status",
+              "formula": "[<FACT_ELEMENT_NAME>/Current Status]",
+              "name": "Current Status"
+            },
+            {
+              "id": "p3f-account-type",
+              "formula": "[<FACT_ELEMENT_NAME>/Account Type]",
+              "name": "Account Type"
+            },
+            {
+              "id": "3aIx3Z22M7",
+              "formula": "[<FACT_ELEMENT_NAME>/App Date (original)]"
+            },
+            {
+              "id": "iZemS1ALob",
+              "formula": "[<FACT_ELEMENT_NAME>/Loan Number]"
+            },
+            {
+              "id": "N88fDHoJsI",
+              "formula": "[<FACT_ELEMENT_NAME>/Branch]"
+            },
+            {
+              "id": "uW_Y7mLlqz",
+              "formula": "[<FACT_ELEMENT_NAME>/Product Key]"
+            },
+            {
+              "id": "TUU6gXnha8",
+              "formula": "[<FACT_ELEMENT_NAME>/Days Open]"
+            },
+            {
+              "id": "kzEAp0lloI",
+              "formula": "[<FACT_ELEMENT_NAME>/Interest Rate]"
+            },
+            {
+              "id": "NvfJg3WnJg",
+              "formula": "[<FACT_ELEMENT_NAME>/Loan Product]"
+            },
+            {
+              "id": "C0Gtxconv9",
+              "formula": "[<FACT_ELEMENT_NAME>/Loan Product Type]"
+            },
+            {
+              "id": "07JSydlu-N",
+              "formula": "[<FACT_ELEMENT_NAME>/Loan Type]"
+            },
+            {
+              "id": "wZkKV4xLvd",
+              "formula": "[<FACT_ELEMENT_NAME>/Account Number]"
+            },
+            {
+              "id": "xkKSgO4y1P",
+              "formula": "[<FACT_ELEMENT_NAME>/Deposit Product]"
+            },
+            {
+              "id": "8eWR6Wf39R",
+              "formula": "[<FACT_ELEMENT_NAME>/Deposit Product Type]"
+            }
+          ],
+          "name": "Customer Financials P3",
+          "order": [
+            "p3f-customer-key",
+            "p3f-branch-key",
+            "p3f-app-date",
+            "p3f-open-date",
+            "p3f-close-date",
+            "p3f-loan-amount",
+            "p3f-deposit-amount",
+            "p3f-interest-income",
+            "p3f-fee-income",
+            "p3f-cost-funds",
+            "p3f-operating-cost",
+            "p3f-status",
+            "p3f-current-status",
+            "p3f-account-type",
+            "3aIx3Z22M7",
+            "iZemS1ALob",
+            "N88fDHoJsI",
+            "uW_Y7mLlqz",
+            "TUU6gXnha8",
+            "kzEAp0lloI",
+            "NvfJg3WnJg",
+            "C0Gtxconv9",
+            "07JSydlu-N",
+            "wZkKV4xLvd",
+            "xkKSgO4y1P",
+            "8eWR6Wf39R"
+          ],
+          "visibleAsSource": false
+        },
+        {
+          "id": "p3-tbl-cust-dim",
+          "kind": "table",
+          "source": {
+            "dataModelId": "<DATA_MODEL_ID>",
+            "elementId": "<CUST_DIM_ELEMENT_ID>",
+            "kind": "data-model"
+          },
+          "columns": [
+            {
+              "id": "p3c-customer-key",
+              "formula": "[<CUST_DIM_ELEMENT_NAME>/Customer Key]",
+              "name": "Customer Key"
+            },
+            {
+              "id": "p3c-customer-name",
+              "formula": "[<CUST_DIM_ELEMENT_NAME>/Customer Name]",
+              "name": "Customer Name"
+            },
+            {
+              "id": "p3c-customer-type",
+              "formula": "[<CUST_DIM_ELEMENT_NAME>/Customer Type]",
+              "name": "Customer Type"
+            },
+            {
+              "id": "p3c-segment",
+              "formula": "[<CUST_DIM_ELEMENT_NAME>/Customer Segment]",
+              "name": "Customer Segment"
+            },
+            {
+              "id": "p3c-risk",
+              "formula": "[<CUST_DIM_ELEMENT_NAME>/Risk Rating]",
+              "name": "Risk Rating"
+            },
+            {
+              "id": "p3c-tenure",
+              "formula": "[<CUST_DIM_ELEMENT_NAME>/Years With Bank]",
+              "name": "Years With Bank"
+            },
+            {
+              "id": "p3c-rm",
+              "formula": "[<CUST_DIM_ELEMENT_NAME>/Relationship Manager]",
+              "name": "Relationship Manager"
+            }
+          ],
+          "name": "Customer Master P3",
+          "order": [
+            "p3c-customer-key",
+            "p3c-customer-name",
+            "p3c-customer-type",
+            "p3c-segment",
+            "p3c-risk",
+            "p3c-tenure",
+            "p3c-rm"
+          ],
+          "visibleAsSource": false
+        },
+        {
+          "id": "p3-tbl-branch-dim",
+          "kind": "table",
+          "source": {
+            "dataModelId": "<DATA_MODEL_ID>",
+            "elementId": "<BRANCH_DIM_ELEMENT_ID>",
+            "kind": "data-model"
+          },
+          "columns": [
+            {
+              "id": "p3b-branch-key",
+              "formula": "[<BRANCH_DIM_ELEMENT_NAME>/Branch Key]",
+              "name": "Branch Key"
+            },
+            {
+              "id": "p3b-branch-name",
+              "formula": "[<BRANCH_DIM_ELEMENT_NAME>/Branch Name]",
+              "name": "Branch Name"
+            },
+            {
+              "id": "p3b-branch-region",
+              "formula": "[<BRANCH_DIM_ELEMENT_NAME>/Branch Region]",
+              "name": "Branch Region"
+            }
+          ],
+          "name": "Branch Master P3",
+          "order": [
+            "p3b-branch-key",
+            "p3b-branch-name",
+            "p3b-branch-region"
+          ],
+          "visibleAsSource": false
+        }
+      ],
+      "visibility": "hidden"
+    }
+  ],
+  "layout": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<Page type=\"grid\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\" id=\"page-overview\">\n  <GridContainer elementId=\"p1-container-header\" type=\"grid\" gridColumn=\"1 / 25\" gridRow=\"1 / 5\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n    <LayoutElement elementId=\"p1-text-title\" gridColumn=\"1 / 25\" gridRow=\"1 / 3\"/>\n    <LayoutElement elementId=\"p1-ctrl-segment\" gridColumn=\"1 / 6\" gridRow=\"3 / 5\"/>\n    <LayoutElement elementId=\"p1-ctrl-region\" gridColumn=\"6 / 11\" gridRow=\"3 / 5\"/>\n    <LayoutElement elementId=\"p1-ctrl-tenure\" gridColumn=\"11 / 16\" gridRow=\"3 / 5\"/>\n    <LayoutElement elementId=\"p1-ctrl-date\" gridColumn=\"16 / 21\" gridRow=\"3 / 5\"/>\n    <LayoutElement elementId=\"p1-ctrl-risk\" gridColumn=\"21 / 25\" gridRow=\"3 / 5\"/>\n  </GridContainer>\n  <GridContainer elementId=\"p1-container-kpis\" type=\"grid\" gridColumn=\"1 / 25\" gridRow=\"5 / 15\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n    <LayoutElement elementId=\"p1-kpi-nii\" gridColumn=\"1 / 7\" gridRow=\"1 / 10\"/>\n    <LayoutElement elementId=\"p1-kpi-gross\" gridColumn=\"7 / 13\" gridRow=\"1 / 10\"/>\n    <LayoutElement elementId=\"p1-kpi-nim\" gridColumn=\"13 / 19\" gridRow=\"1 / 10\"/>\n    <LayoutElement elementId=\"p1-kpi-customers\" gridColumn=\"19 / 25\" gridRow=\"1 / 10\"/>\n  </GridContainer>\n  <LayoutElement elementId=\"p1-chart-nii-segment\" gridColumn=\"1 / 15\" gridRow=\"15 / 28\"/>\n  <LayoutElement elementId=\"p1-chart-nii-type\" gridColumn=\"15 / 25\" gridRow=\"15 / 28\"/>\n  <LayoutElement elementId=\"p1-tbl-fin-enriched\" gridColumn=\"1 / 25\" gridRow=\"28 / 42\"/>\n</Page>\n<Page type=\"grid\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\" id=\"page-drivers\">\n  <GridContainer elementId=\"p2-container-header\" type=\"grid\" gridColumn=\"1 / 25\" gridRow=\"1 / 5\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n    <LayoutElement elementId=\"p2-text-title\" gridColumn=\"1 / 25\" gridRow=\"1 / 3\"/>\n    <LayoutElement elementId=\"p2-ctrl-segment\" gridColumn=\"1 / 6\" gridRow=\"3 / 5\"/>\n    <LayoutElement elementId=\"p2-ctrl-region\" gridColumn=\"6 / 11\" gridRow=\"3 / 5\"/>\n    <LayoutElement elementId=\"p2-ctrl-tenure\" gridColumn=\"11 / 16\" gridRow=\"3 / 5\"/>\n    <LayoutElement elementId=\"p2-ctrl-date\" gridColumn=\"16 / 21\" gridRow=\"3 / 5\"/>\n    <LayoutElement elementId=\"p2-ctrl-risk\" gridColumn=\"21 / 25\" gridRow=\"3 / 5\"/>\n  </GridContainer>\n  <GridContainer elementId=\"p2-container-charts\" type=\"grid\" gridColumn=\"1 / 25\" gridRow=\"5 / 22\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n    <LayoutElement elementId=\"p2-chart-nii-tenure\" gridColumn=\"1 / 13\" gridRow=\"1 / 9\"/>\n    <LayoutElement elementId=\"p2-chart-nii-age\" gridColumn=\"13 / 25\" gridRow=\"1 / 9\"/>\n    <LayoutElement elementId=\"p2-chart-nii-credit\" gridColumn=\"1 / 13\" gridRow=\"9 / 18\"/>\n    <LayoutElement elementId=\"p2-chart-nii-region\" gridColumn=\"13 / 25\" gridRow=\"9 / 18\"/>\n  </GridContainer>\n  <LayoutElement elementId=\"p2-tbl-detail\" gridColumn=\"1 / 25\" gridRow=\"22 / 38\"/>\n</Page>\n<Page type=\"grid\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\" id=\"page-attrition\">\n  <GridContainer elementId=\"p3-container-header\" type=\"grid\" gridColumn=\"1 / 25\" gridRow=\"1 / 5\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n    <LayoutElement elementId=\"p3-text-title\" gridColumn=\"1 / 25\" gridRow=\"1 / 3\"/>\n    <LayoutElement elementId=\"p3-ctrl-segment\" gridColumn=\"1 / 6\" gridRow=\"3 / 5\"/>\n    <LayoutElement elementId=\"p3-ctrl-region\" gridColumn=\"6 / 11\" gridRow=\"3 / 5\"/>\n    <LayoutElement elementId=\"p3-ctrl-tenure\" gridColumn=\"11 / 16\" gridRow=\"3 / 5\"/>\n    <LayoutElement elementId=\"p3-ctrl-date\" gridColumn=\"16 / 21\" gridRow=\"3 / 5\"/>\n    <LayoutElement elementId=\"p3-ctrl-risk\" gridColumn=\"21 / 25\" gridRow=\"3 / 5\"/>\n  </GridContainer>\n  <GridContainer elementId=\"p3-container-kpis\" type=\"grid\" gridColumn=\"1 / 25\" gridRow=\"5 / 15\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n    <LayoutElement elementId=\"p3-kpi-closed-pct\" gridColumn=\"1 / 9\" gridRow=\"1 / 10\"/>\n    <LayoutElement elementId=\"p3-kpi-at-risk\" gridColumn=\"9 / 17\" gridRow=\"1 / 10\"/>\n    <LayoutElement elementId=\"p3-kpi-nii-risk\" gridColumn=\"17 / 25\" gridRow=\"1 / 10\"/>\n  </GridContainer>\n  <LayoutElement elementId=\"p3-chart-closures-trend\" gridColumn=\"1 / 25\" gridRow=\"15 / 25\"/>\n  <LayoutElement elementId=\"p3-chart-closure-segment\" gridColumn=\"1 / 13\" gridRow=\"25 / 35\"/>\n  <LayoutElement elementId=\"p3-chart-closure-tenure\" gridColumn=\"13 / 25\" gridRow=\"25 / 35\"/>\n  <LayoutElement elementId=\"p3-tbl-at-risk\" gridColumn=\"1 / 25\" gridRow=\"35 / 49\"/>\n</Page>\n<Page type=\"grid\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\" id=\"pnQ-xkUPrL\">\n  <LayoutElement elementId=\"p1-tbl-fin\" gridColumn=\"1 / 9\" gridRow=\"1 / 22\"/>\n  <LayoutElement elementId=\"p1-tbl-cust-dim\" gridColumn=\"9 / 17\" gridRow=\"1 / 22\"/>\n  <LayoutElement elementId=\"p1-tbl-branch-dim\" gridColumn=\"17 / 25\" gridRow=\"1 / 22\"/>\n  <LayoutElement elementId=\"p2-tbl-fin-enriched\" gridColumn=\"1 / 25\" gridRow=\"22 / 36\"/>\n  <LayoutElement elementId=\"p2-tbl-fin\" gridColumn=\"1 / 9\" gridRow=\"36 / 46\"/>\n  <LayoutElement elementId=\"p2-tbl-cust-dim\" gridColumn=\"9 / 17\" gridRow=\"36 / 46\"/>\n  <LayoutElement elementId=\"p2-tbl-branch-dim\" gridColumn=\"17 / 25\" gridRow=\"36 / 46\"/>\n  <LayoutElement elementId=\"p3-tbl-fin-enriched\" gridColumn=\"1 / 25\" gridRow=\"46 / 60\"/>\n  <LayoutElement elementId=\"p3-tbl-fin\" gridColumn=\"1 / 9\" gridRow=\"60 / 75\"/>\n  <LayoutElement elementId=\"p3-tbl-cust-dim\" gridColumn=\"9 / 17\" gridRow=\"60 / 75\"/>\n  <LayoutElement elementId=\"p3-tbl-branch-dim\" gridColumn=\"17 / 25\" gridRow=\"60 / 75\"/>\n</Page>\n"
+}

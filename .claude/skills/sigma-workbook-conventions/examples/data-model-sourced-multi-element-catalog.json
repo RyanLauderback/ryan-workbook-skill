@@ -1,0 +1,1246 @@
+{
+  "name": "Exemplar Workbook",
+  "schemaVersion": 1,
+  "folderId": "<DESTINATION_FOLDER_ID>",
+  "pages": [
+    {
+      "id": "HB8mkmuyLQ",
+      "name": "Visualization Reference Examples",
+      "elements": [
+        {
+          "kind": "control",
+          "controlId": "Store-Name",
+          "id": "V0BcadPyEPcon",
+          "filters": [
+            {
+              "source": {
+                "kind": "table",
+                "elementId": "nkAxuQcdtM"
+              },
+              "columnId": "NY25gspvxa"
+            }
+          ],
+          "controlType": "list",
+          "mode": "include",
+          "selectionMode": "multiple",
+          "values": [],
+          "source": {
+            "kind": "source",
+            "source": {
+              "kind": "table",
+              "elementId": "nkAxuQcdtM"
+            },
+            "columnId": "NY25gspvxa"
+          }
+        },
+        {
+          "kind": "control",
+          "controlId": "Date",
+          "id": "MyKxo56bPscon",
+          "filters": [
+            {
+              "source": {
+                "kind": "table",
+                "elementId": "nkAxuQcdtM"
+              },
+              "columnId": "AMz3WIWOND"
+            }
+          ],
+          "controlType": "date-range",
+          "mode": "between",
+          "includeNulls": "when-no-value-is-selected"
+        },
+        {
+          "kind": "control",
+          "controlId": "Product-Type",
+          "id": "Nf-TyDowNVcon",
+          "filters": [
+            {
+              "source": {
+                "kind": "table",
+                "elementId": "nkAxuQcdtM"
+              },
+              "columnId": "8Iaj-JXXU0"
+            }
+          ],
+          "controlType": "list",
+          "mode": "include",
+          "selectionMode": "multiple",
+          "values": [],
+          "source": {
+            "kind": "source",
+            "source": {
+              "kind": "table",
+              "elementId": "nkAxuQcdtM"
+            },
+            "columnId": "8Iaj-JXXU0"
+          }
+        },
+        {
+          "kind": "control",
+          "controlId": "Cust-Name",
+          "id": "v-enwIJ40Hcon",
+          "filters": [
+            {
+              "source": {
+                "kind": "table",
+                "elementId": "nkAxuQcdtM"
+              },
+              "columnId": "JDQJrgIvU5"
+            }
+          ],
+          "case": "insensitive",
+          "controlType": "text",
+          "mode": "contains",
+          "value": "",
+          "includeNulls": "when-no-value-is-selected",
+          "showOperators": true
+        },
+        {
+          "kind": "control",
+          "controlId": "Store-Region",
+          "id": "XNJ41O5Q-Ycon",
+          "filters": [
+            {
+              "source": {
+                "kind": "table",
+                "elementId": "nkAxuQcdtM"
+              },
+              "columnId": "AFvkQF_K7t"
+            }
+          ],
+          "controlType": "list",
+          "mode": "include",
+          "selectionMode": "multiple",
+          "values": [],
+          "source": {
+            "kind": "source",
+            "source": {
+              "kind": "table",
+              "elementId": "nkAxuQcdtM"
+            },
+            "columnId": "AFvkQF_K7t"
+          }
+        },
+        {
+          "kind": "control",
+          "controlId": "Product-Type-1",
+          "id": "qmxw_AClg4con",
+          "filters": [
+            {
+              "source": {
+                "kind": "table",
+                "elementId": "nkAxuQcdtM"
+              },
+              "columnId": "8Iaj-JXXU0"
+            }
+          ],
+          "controlType": "segmented",
+          "showClearLabel": true,
+          "source": {
+            "kind": "source",
+            "source": {
+              "kind": "table",
+              "elementId": "nkAxuQcdtM"
+            },
+            "columnId": "8Iaj-JXXU0"
+          },
+          "value": null
+        },
+        {
+          "id": "KHt335AdEk",
+          "kind": "kpi-chart",
+          "source": {
+            "elementId": "nkAxuQcdtM",
+            "kind": "table"
+          },
+          "columns": [
+            {
+              "id": "AG9vDeoWkY",
+              "formula": "DateTrunc(\"month\", [Date])",
+              "name": "Month"
+            },
+            {
+              "id": "edDc-4Rjko",
+              "formula": "[Metrics/Total Revenue]",
+              "name": "Total Revenue",
+              "format": {
+                "kind": "number",
+                "formatString": "$,.2f"
+              }
+            },
+            {
+              "id": "E41lgzEeyS",
+              "formula": "[<DATA_MODEL_ELEMENT_NAME>/Order Number]"
+            },
+            {
+              "id": "SJT8kAqXCy",
+              "formula": "[<DATA_MODEL_ELEMENT_NAME>/Date]"
+            },
+            {
+              "id": "SCwlXSMTB2",
+              "formula": "[<DATA_MODEL_ELEMENT_NAME>/Quantity]"
+            },
+            {
+              "id": "vEC6gjnlLt",
+              "formula": "[<DATA_MODEL_ELEMENT_NAME>/Price]"
+            },
+            {
+              "id": "xoSEXIJ_ko",
+              "formula": "[<DATA_MODEL_ELEMENT_NAME>/Unit Cost]"
+            },
+            {
+              "id": "sO3Vd4G7Vs",
+              "formula": "[<DATA_MODEL_ELEMENT_NAME>/Store Key]"
+            },
+            {
+              "id": "ZL0Nox3v7-",
+              "formula": "[<DATA_MODEL_ELEMENT_NAME>/Store Name]"
+            },
+            {
+              "id": "ZLmZdNoPpw",
+              "formula": "[<DATA_MODEL_ELEMENT_NAME>/Store Region]"
+            },
+            {
+              "id": "rLq4nuKPBS",
+              "formula": "[<DATA_MODEL_ELEMENT_NAME>/Cust Key]"
+            },
+            {
+              "id": "pT7SUKjuDU",
+              "formula": "[<DATA_MODEL_ELEMENT_NAME>/Cust Name]"
+            },
+            {
+              "id": "7UiRncIhe3",
+              "formula": "[<DATA_MODEL_ELEMENT_NAME>/Product Name]"
+            },
+            {
+              "id": "gWYT1PeJoh",
+              "formula": "[<DATA_MODEL_ELEMENT_NAME>/Product Type]"
+            },
+            {
+              "id": "L4tgQ4fmob",
+              "formula": "[<DATA_MODEL_ELEMENT_NAME>/Product Key]"
+            },
+            {
+              "id": "fulcu4NQli",
+              "formula": "[<DATA_MODEL_ELEMENT_NAME>/Sales Amount]"
+            }
+          ],
+          "value": {
+            "id": "edDc-4Rjko"
+          },
+          "name": "Total Revenue"
+        },
+        {
+          "id": "qXtLwkXk40",
+          "kind": "kpi-chart",
+          "source": {
+            "elementId": "nkAxuQcdtM",
+            "kind": "table"
+          },
+          "columns": [
+            {
+              "id": "2hpJfn-QE0",
+              "formula": "DateTrunc(\"month\", [Date])",
+              "name": "Month"
+            },
+            {
+              "id": "qeIyqu6uFM",
+              "formula": "[Metrics/Total Profit]",
+              "name": "Total Profit",
+              "format": {
+                "kind": "number",
+                "formatString": "$,.2f"
+              }
+            },
+            {
+              "id": "5WQqZOj6Ww",
+              "formula": "[<DATA_MODEL_ELEMENT_NAME>/Order Number]"
+            },
+            {
+              "id": "XIWRdpbyPm",
+              "formula": "[<DATA_MODEL_ELEMENT_NAME>/Date]"
+            },
+            {
+              "id": "8LZqDGOzey",
+              "formula": "[<DATA_MODEL_ELEMENT_NAME>/Quantity]"
+            },
+            {
+              "id": "MEeLBL-amT",
+              "formula": "[<DATA_MODEL_ELEMENT_NAME>/Price]"
+            },
+            {
+              "id": "A4sRTtyrdE",
+              "formula": "[<DATA_MODEL_ELEMENT_NAME>/Unit Cost]"
+            },
+            {
+              "id": "ZTZzLtDdK7",
+              "formula": "[<DATA_MODEL_ELEMENT_NAME>/Store Key]"
+            },
+            {
+              "id": "OseomKLMWs",
+              "formula": "[<DATA_MODEL_ELEMENT_NAME>/Store Name]"
+            },
+            {
+              "id": "LN9OPUYYRr",
+              "formula": "[<DATA_MODEL_ELEMENT_NAME>/Store Region]"
+            },
+            {
+              "id": "Uns5NoGbmR",
+              "formula": "[<DATA_MODEL_ELEMENT_NAME>/Cust Key]"
+            },
+            {
+              "id": "oKiuMuL4D9",
+              "formula": "[<DATA_MODEL_ELEMENT_NAME>/Cust Name]"
+            },
+            {
+              "id": "nAihXmOumA",
+              "formula": "[<DATA_MODEL_ELEMENT_NAME>/Product Name]"
+            },
+            {
+              "id": "f2DWJ20osS",
+              "formula": "[<DATA_MODEL_ELEMENT_NAME>/Product Type]"
+            },
+            {
+              "id": "MBl-ta_2MD",
+              "formula": "[<DATA_MODEL_ELEMENT_NAME>/Product Key]"
+            },
+            {
+              "id": "EvA7NE_Psp",
+              "formula": "[<DATA_MODEL_ELEMENT_NAME>/Sales Amount]"
+            }
+          ],
+          "value": {
+            "id": "qeIyqu6uFM"
+          },
+          "name": "Total Profit"
+        },
+        {
+          "id": "YU0fZTRT38",
+          "kind": "kpi-chart",
+          "source": {
+            "elementId": "nkAxuQcdtM",
+            "kind": "table"
+          },
+          "columns": [
+            {
+              "id": "5UDEGkAiw_",
+              "formula": "DateTrunc(\"month\", [Date])",
+              "name": "Month"
+            },
+            {
+              "id": "xBfG6rdVmt",
+              "formula": "[Metrics/AOV]",
+              "name": "AOV",
+              "format": {
+                "kind": "number",
+                "formatString": "$.2f"
+              }
+            },
+            {
+              "id": "A8UIVWBTJx",
+              "formula": "[<DATA_MODEL_ELEMENT_NAME>/Order Number]"
+            },
+            {
+              "id": "lk6lgxeOus",
+              "formula": "[<DATA_MODEL_ELEMENT_NAME>/Date]"
+            },
+            {
+              "id": "cmRCXwk-iU",
+              "formula": "[<DATA_MODEL_ELEMENT_NAME>/Quantity]"
+            },
+            {
+              "id": "pKugeFpqvs",
+              "formula": "[<DATA_MODEL_ELEMENT_NAME>/Price]"
+            },
+            {
+              "id": "Hp7-5WdtMr",
+              "formula": "[<DATA_MODEL_ELEMENT_NAME>/Unit Cost]"
+            },
+            {
+              "id": "UoEjvHsnPz",
+              "formula": "[<DATA_MODEL_ELEMENT_NAME>/Store Key]"
+            },
+            {
+              "id": "bwwlNGKKYm",
+              "formula": "[<DATA_MODEL_ELEMENT_NAME>/Store Name]"
+            },
+            {
+              "id": "kYssKlz7x-",
+              "formula": "[<DATA_MODEL_ELEMENT_NAME>/Store Region]"
+            },
+            {
+              "id": "p-EgTBLfc1",
+              "formula": "[<DATA_MODEL_ELEMENT_NAME>/Cust Key]"
+            },
+            {
+              "id": "1evBS9Us7N",
+              "formula": "[<DATA_MODEL_ELEMENT_NAME>/Cust Name]"
+            },
+            {
+              "id": "VOMswTLH3u",
+              "formula": "[<DATA_MODEL_ELEMENT_NAME>/Product Name]"
+            },
+            {
+              "id": "LmoF7EEyXS",
+              "formula": "[<DATA_MODEL_ELEMENT_NAME>/Product Type]"
+            },
+            {
+              "id": "Z-fSRvq83Y",
+              "formula": "[<DATA_MODEL_ELEMENT_NAME>/Product Key]"
+            },
+            {
+              "id": "6erOrnloTN",
+              "formula": "[<DATA_MODEL_ELEMENT_NAME>/Sales Amount]"
+            }
+          ],
+          "value": {
+            "id": "xBfG6rdVmt"
+          },
+          "name": "Average Order Value (AOV)"
+        },
+        {
+          "id": "A1zp6efFzW",
+          "kind": "bar-chart",
+          "source": {
+            "elementId": "nkAxuQcdtM",
+            "kind": "table"
+          },
+          "columns": [
+            {
+              "id": "wdo8edxQq4",
+              "formula": "[Store Region (1)]"
+            },
+            {
+              "id": "HPEzxjRvpb",
+              "formula": "[<DATA_MODEL_ELEMENT_NAME>/Store Region]",
+              "name": "Store Region"
+            },
+            {
+              "id": "K3RgJZSXyg",
+              "formula": "[Metrics/Total Revenue]",
+              "name": "Total Revenue",
+              "format": {
+                "kind": "number",
+                "formatString": "$,.2f"
+              }
+            },
+            {
+              "id": "MuX1XD-Qhi",
+              "formula": "[<DATA_MODEL_ELEMENT_NAME>/Order Number]"
+            },
+            {
+              "id": "j9X_0n_56d",
+              "formula": "[<DATA_MODEL_ELEMENT_NAME>/Date]"
+            },
+            {
+              "id": "0JLtTyrpva",
+              "formula": "[<DATA_MODEL_ELEMENT_NAME>/Quantity]"
+            },
+            {
+              "id": "4O56Yv8h4i",
+              "formula": "[<DATA_MODEL_ELEMENT_NAME>/Price]"
+            },
+            {
+              "id": "c_ZRRFgsWI",
+              "formula": "[<DATA_MODEL_ELEMENT_NAME>/Unit Cost]"
+            },
+            {
+              "id": "OEZjVwvBUP",
+              "formula": "[<DATA_MODEL_ELEMENT_NAME>/Store Key]"
+            },
+            {
+              "id": "xRzaYpQ3Ys",
+              "formula": "[<DATA_MODEL_ELEMENT_NAME>/Store Name]"
+            },
+            {
+              "id": "NBPNujHq42",
+              "formula": "[<DATA_MODEL_ELEMENT_NAME>/Cust Key]"
+            },
+            {
+              "id": "zNWEiCNdoe",
+              "formula": "[<DATA_MODEL_ELEMENT_NAME>/Cust Name]"
+            },
+            {
+              "id": "l1iv6SWXmy",
+              "formula": "[<DATA_MODEL_ELEMENT_NAME>/Product Name]"
+            },
+            {
+              "id": "qslNfIefxj",
+              "formula": "[<DATA_MODEL_ELEMENT_NAME>/Product Type]"
+            },
+            {
+              "id": "KxdpKChM33",
+              "formula": "[<DATA_MODEL_ELEMENT_NAME>/Product Key]"
+            },
+            {
+              "id": "WnNSqrR75X",
+              "formula": "[<DATA_MODEL_ELEMENT_NAME>/Sales Amount]"
+            }
+          ],
+          "yAxis": [
+            {
+              "id": "K3RgJZSXyg"
+            }
+          ],
+          "xAxis": {
+            "id": "HPEzxjRvpb",
+            "sort": {
+              "by": "K3RgJZSXyg",
+              "direction": "descending"
+            }
+          },
+          "orientation": "horizontal",
+          "color": {
+            "by": "category",
+            "column": "wdo8edxQq4"
+          },
+          "name": "Revenue by Store Region"
+        },
+        {
+          "id": "uLwqxpjcRX",
+          "kind": "donut-chart",
+          "source": {
+            "elementId": "nkAxuQcdtM",
+            "kind": "table"
+          },
+          "columns": [
+            {
+              "id": "YxfxjPhf4w",
+              "formula": "[<DATA_MODEL_ELEMENT_NAME>/Product Type]",
+              "name": "Product Type"
+            },
+            {
+              "id": "tzXZCc9Njb",
+              "formula": "[Metrics/Total Revenue]",
+              "name": "Total Revenue",
+              "format": {
+                "kind": "number",
+                "formatString": "$,.2f"
+              }
+            },
+            {
+              "id": "XxN6Ol5e29",
+              "formula": "[<DATA_MODEL_ELEMENT_NAME>/Order Number]"
+            },
+            {
+              "id": "Z5TVoJ69gn",
+              "formula": "[<DATA_MODEL_ELEMENT_NAME>/Date]"
+            },
+            {
+              "id": "665ce_GcUc",
+              "formula": "[<DATA_MODEL_ELEMENT_NAME>/Quantity]"
+            },
+            {
+              "id": "WmQRq65YK1",
+              "formula": "[<DATA_MODEL_ELEMENT_NAME>/Price]"
+            },
+            {
+              "id": "13KAtuQbTh",
+              "formula": "[<DATA_MODEL_ELEMENT_NAME>/Unit Cost]"
+            },
+            {
+              "id": "rlmcDCxaJP",
+              "formula": "[<DATA_MODEL_ELEMENT_NAME>/Store Key]"
+            },
+            {
+              "id": "8mhVwL-MHh",
+              "formula": "[<DATA_MODEL_ELEMENT_NAME>/Store Name]"
+            },
+            {
+              "id": "0iJOCoTBWI",
+              "formula": "[<DATA_MODEL_ELEMENT_NAME>/Store Region]"
+            },
+            {
+              "id": "ibH6EBSGHj",
+              "formula": "[<DATA_MODEL_ELEMENT_NAME>/Cust Key]"
+            },
+            {
+              "id": "keyoFBpLfV",
+              "formula": "[<DATA_MODEL_ELEMENT_NAME>/Cust Name]"
+            },
+            {
+              "id": "zyWpYDkP9H",
+              "formula": "[<DATA_MODEL_ELEMENT_NAME>/Product Name]"
+            },
+            {
+              "id": "L1lpEgFu2R",
+              "formula": "[<DATA_MODEL_ELEMENT_NAME>/Product Key]"
+            },
+            {
+              "id": "1ECrDEx26w",
+              "formula": "[<DATA_MODEL_ELEMENT_NAME>/Sales Amount]"
+            }
+          ],
+          "color": {
+            "id": "YxfxjPhf4w",
+            "sort": {
+              "by": "tzXZCc9Njb",
+              "direction": "descending"
+            }
+          },
+          "value": {
+            "id": "tzXZCc9Njb"
+          },
+          "name": "Revenue Distribution by Product Type",
+          "legend": {
+            "position": "right"
+          }
+        },
+        {
+          "kind": "control",
+          "controlId": "date-part",
+          "id": "LEsdoBZqtp",
+          "controlType": "segmented",
+          "source": {
+            "kind": "manual",
+            "valueType": "text",
+            "values": [
+              "year",
+              "quarter",
+              "month",
+              "week",
+              "day"
+            ],
+            "labels": [
+              "Year",
+              "Quarter",
+              "Month",
+              "Week",
+              "Day"
+            ]
+          },
+          "value": "month"
+        },
+        {
+          "id": "woTaO2B0q7",
+          "kind": "line-chart",
+          "source": {
+            "elementId": "nkAxuQcdtM",
+            "kind": "table"
+          },
+          "columns": [
+            {
+              "id": "vdy_AkcbVR",
+              "formula": "[<DATA_MODEL_ELEMENT_NAME>/Product Type]",
+              "name": "Product Type"
+            },
+            {
+              "id": "kxc9GyUewl",
+              "formula": "DateTrunc([date-part], [Date])",
+              "name": "Month"
+            },
+            {
+              "id": "KqQZjbCQ20",
+              "formula": "[Metrics/Total Revenue]",
+              "name": "Total Revenue",
+              "format": {
+                "kind": "number",
+                "formatString": "$,.2f"
+              }
+            },
+            {
+              "id": "Do3eqqkzoU",
+              "formula": "[<DATA_MODEL_ELEMENT_NAME>/Order Number]"
+            },
+            {
+              "id": "OzkNIggelz",
+              "formula": "[<DATA_MODEL_ELEMENT_NAME>/Date]"
+            },
+            {
+              "id": "az5pY8YRTE",
+              "formula": "[<DATA_MODEL_ELEMENT_NAME>/Quantity]"
+            },
+            {
+              "id": "ASLs_IMHkH",
+              "formula": "[<DATA_MODEL_ELEMENT_NAME>/Price]"
+            },
+            {
+              "id": "8Qz5NDezS9",
+              "formula": "[<DATA_MODEL_ELEMENT_NAME>/Unit Cost]"
+            },
+            {
+              "id": "B0ragKPyCY",
+              "formula": "[<DATA_MODEL_ELEMENT_NAME>/Store Key]"
+            },
+            {
+              "id": "XbffT3wG7n",
+              "formula": "[<DATA_MODEL_ELEMENT_NAME>/Store Name]"
+            },
+            {
+              "id": "E3nYpv_mkS",
+              "formula": "[<DATA_MODEL_ELEMENT_NAME>/Store Region]"
+            },
+            {
+              "id": "stSfTUscb-",
+              "formula": "[<DATA_MODEL_ELEMENT_NAME>/Cust Key]"
+            },
+            {
+              "id": "dbYMnRQsh0",
+              "formula": "[<DATA_MODEL_ELEMENT_NAME>/Cust Name]"
+            },
+            {
+              "id": "JcaHxK8Ml0",
+              "formula": "[<DATA_MODEL_ELEMENT_NAME>/Product Name]"
+            },
+            {
+              "id": "E7zeLVYiXk",
+              "formula": "[<DATA_MODEL_ELEMENT_NAME>/Product Key]"
+            },
+            {
+              "id": "sAjYKLKZ-U",
+              "formula": "[<DATA_MODEL_ELEMENT_NAME>/Sales Amount]"
+            }
+          ],
+          "yAxis": [
+            {
+              "id": "KqQZjbCQ20"
+            }
+          ],
+          "xAxis": {
+            "id": "kxc9GyUewl",
+            "sort": {
+              "direction": "ascending"
+            }
+          },
+          "color": {
+            "by": "category",
+            "column": "vdy_AkcbVR"
+          },
+          "name": "Revenue Trend by Product Type",
+          "legend": {
+            "position": "right"
+          }
+        },
+        {
+          "id": "eJJCs_kzhF",
+          "kind": "area-chart",
+          "source": {
+            "elementId": "nkAxuQcdtM",
+            "kind": "table"
+          },
+          "columns": [
+            {
+              "id": "2BaoQwfW9E",
+              "formula": "[<DATA_MODEL_ELEMENT_NAME>/Product Type]",
+              "name": "Product Type"
+            },
+            {
+              "id": "I4Vykdmrtg",
+              "formula": "DateTrunc([date-part], [Date])",
+              "name": "Month"
+            },
+            {
+              "id": "vRZU96BkS0",
+              "formula": "[Metrics/Total Revenue]",
+              "name": "Total Revenue",
+              "format": {
+                "kind": "number",
+                "formatString": "$,.2f"
+              }
+            },
+            {
+              "id": "i_AJ8TaQtU",
+              "formula": "[<DATA_MODEL_ELEMENT_NAME>/Order Number]"
+            },
+            {
+              "id": "Hm5NQeCoW0",
+              "formula": "[<DATA_MODEL_ELEMENT_NAME>/Date]"
+            },
+            {
+              "id": "kHpQCvkAUn",
+              "formula": "[<DATA_MODEL_ELEMENT_NAME>/Quantity]"
+            },
+            {
+              "id": "RGIDYvbWZO",
+              "formula": "[<DATA_MODEL_ELEMENT_NAME>/Price]"
+            },
+            {
+              "id": "8aVM432Evk",
+              "formula": "[<DATA_MODEL_ELEMENT_NAME>/Unit Cost]"
+            },
+            {
+              "id": "9Fy-B2rcqm",
+              "formula": "[<DATA_MODEL_ELEMENT_NAME>/Store Key]"
+            },
+            {
+              "id": "e8UCPpOZbR",
+              "formula": "[<DATA_MODEL_ELEMENT_NAME>/Store Name]"
+            },
+            {
+              "id": "AUM-INWOzl",
+              "formula": "[<DATA_MODEL_ELEMENT_NAME>/Store Region]"
+            },
+            {
+              "id": "rkkh8Kkj4b",
+              "formula": "[<DATA_MODEL_ELEMENT_NAME>/Cust Key]"
+            },
+            {
+              "id": "zgbj6zD_CN",
+              "formula": "[<DATA_MODEL_ELEMENT_NAME>/Cust Name]"
+            },
+            {
+              "id": "tBu1UIzS2-",
+              "formula": "[<DATA_MODEL_ELEMENT_NAME>/Product Name]"
+            },
+            {
+              "id": "s8AXtVut71",
+              "formula": "[<DATA_MODEL_ELEMENT_NAME>/Product Key]"
+            },
+            {
+              "id": "hHLPynbCJy",
+              "formula": "[<DATA_MODEL_ELEMENT_NAME>/Sales Amount]"
+            }
+          ],
+          "yAxis": [
+            {
+              "id": "vRZU96BkS0"
+            }
+          ],
+          "xAxis": {
+            "id": "I4Vykdmrtg",
+            "sort": {
+              "direction": "ascending"
+            }
+          },
+          "color": {
+            "by": "category",
+            "column": "2BaoQwfW9E"
+          },
+          "name": "Revenue Over Time (Stacked Area)",
+          "legend": {
+            "position": "right"
+          }
+        },
+        {
+          "id": "6YyrqyUNfB",
+          "kind": "scatter-chart",
+          "source": {
+            "elementId": "bq_qweRhcx",
+            "kind": "table",
+            "groupingId": "-9bxpBq1p5"
+          },
+          "columns": [
+            {
+              "id": "Y0zqNBH30H",
+              "formula": "[Store Performance Data/Store Region]",
+              "name": "Store Region"
+            },
+            {
+              "id": "sADWzxUZxE",
+              "formula": "Sum([Total Revenue])",
+              "format": {
+                "kind": "number",
+                "formatString": "$,.2f"
+              }
+            },
+            {
+              "id": "mwh5R5CIey",
+              "formula": "Sum([Total Profit])",
+              "format": {
+                "kind": "number",
+                "formatString": "$,.2f"
+              }
+            },
+            {
+              "id": "4gHhWqyt1M",
+              "formula": "[Store Performance Data/Store Name]",
+              "name": "Store Name"
+            },
+            {
+              "id": "wqa_9dvb2U",
+              "formula": "[Store Performance Data/Total Revenue]",
+              "name": "Total Revenue"
+            },
+            {
+              "id": "FhNTTihXuo",
+              "formula": "[Store Performance Data/Total Profit]",
+              "name": "Total Profit"
+            },
+            {
+              "id": "wptEtCRFX_",
+              "formula": "[Store Performance Data/Total Revenue]",
+              "hidden": true
+            }
+          ],
+          "yAxis": [
+            {
+              "id": "mwh5R5CIey"
+            }
+          ],
+          "xAxis": {
+            "id": "sADWzxUZxE"
+          },
+          "color": {
+            "by": "category",
+            "column": "Y0zqNBH30H"
+          },
+          "name": "Profit vs Revenue by Store (Top 50)",
+          "legend": {
+            "position": "right"
+          }
+        },
+        {
+          "id": "q5lej1uYSj",
+          "kind": "pivot-table",
+          "source": {
+            "elementId": "nkAxuQcdtM",
+            "kind": "table"
+          },
+          "columns": [
+            {
+              "id": "AFvkQF_K7t",
+              "formula": "[<DATA_MODEL_ELEMENT_NAME>/Store Region]"
+            },
+            {
+              "id": "8Iaj-JXXU0",
+              "formula": "[<DATA_MODEL_ELEMENT_NAME>/Product Type]"
+            },
+            {
+              "id": "THbM4R5YxQ",
+              "formula": "Sum([Sales Amount])",
+              "name": "Total Revenue",
+              "format": {
+                "kind": "number",
+                "formatString": "$,.2f"
+              }
+            },
+            {
+              "id": "mOlqHQ70te",
+              "formula": "Sum([Sales Amount]) - Sum([Quantity] * [Unit Cost])",
+              "name": "Total Profit",
+              "format": {
+                "kind": "number",
+                "formatString": "$,.2f"
+              }
+            },
+            {
+              "id": "jvIqPnwlrk",
+              "formula": "[<DATA_MODEL_ELEMENT_NAME>/Order Number]"
+            },
+            {
+              "id": "AMz3WIWOND",
+              "formula": "[<DATA_MODEL_ELEMENT_NAME>/Date]"
+            },
+            {
+              "id": "H_7AztnjTT",
+              "formula": "[<DATA_MODEL_ELEMENT_NAME>/Quantity]"
+            },
+            {
+              "id": "5pQMQbBbze",
+              "formula": "[<DATA_MODEL_ELEMENT_NAME>/Price]"
+            },
+            {
+              "id": "aUlnKC6t5i",
+              "formula": "[<DATA_MODEL_ELEMENT_NAME>/Unit Cost]"
+            },
+            {
+              "id": "hpfsioDTYs",
+              "formula": "[<DATA_MODEL_ELEMENT_NAME>/Store Key]"
+            },
+            {
+              "id": "NY25gspvxa",
+              "formula": "[<DATA_MODEL_ELEMENT_NAME>/Store Name]"
+            },
+            {
+              "id": "IK5d9k0Mjq",
+              "formula": "[<DATA_MODEL_ELEMENT_NAME>/Cust Key]"
+            },
+            {
+              "id": "JDQJrgIvU5",
+              "formula": "[<DATA_MODEL_ELEMENT_NAME>/Cust Name]"
+            },
+            {
+              "id": "fFLJU2z-uo",
+              "formula": "[<DATA_MODEL_ELEMENT_NAME>/Product Name]"
+            },
+            {
+              "id": "JTIJ0XZq1i",
+              "formula": "[<DATA_MODEL_ELEMENT_NAME>/Product Key]"
+            },
+            {
+              "id": "7yrZG0YhLl",
+              "formula": "[<DATA_MODEL_ELEMENT_NAME>/Sales Amount]"
+            }
+          ],
+          "values": [
+            "THbM4R5YxQ",
+            "mOlqHQ70te"
+          ],
+          "rowsBy": [
+            {
+              "id": "AFvkQF_K7t",
+              "sort": {
+                "by": "THbM4R5YxQ",
+                "direction": "descending"
+              }
+            }
+          ],
+          "columnsBy": [
+            {
+              "id": "8Iaj-JXXU0"
+            }
+          ],
+          "name": "Revenue & Profit by Region and Product Type"
+        },
+        {
+          "id": "bq_qweRhcx",
+          "kind": "table",
+          "source": {
+            "elementId": "nkAxuQcdtM",
+            "kind": "table"
+          },
+          "columns": [
+            {
+              "id": "T3NYH_Bw-e",
+              "formula": "[<DATA_MODEL_ELEMENT_NAME>/Store Name]",
+              "name": "Store Name"
+            },
+            {
+              "id": "W_7ie9DKhL",
+              "formula": "[<DATA_MODEL_ELEMENT_NAME>/Store Region]",
+              "name": "Store Region"
+            },
+            {
+              "id": "cRh9aqA5GJ",
+              "formula": "[Metrics/Total Revenue]",
+              "name": "Total Revenue"
+            },
+            {
+              "id": "Mbd9Ih_mKH",
+              "formula": "[Metrics/Total Profit]",
+              "name": "Total Profit"
+            },
+            {
+              "id": "nJYjNXMxiD",
+              "formula": "RowNumber()",
+              "name": "row_number",
+              "hidden": true
+            },
+            {
+              "id": "7GTf1kLUSB",
+              "formula": "[<DATA_MODEL_ELEMENT_NAME>/Order Number]"
+            },
+            {
+              "id": "SE0xN0rq3d",
+              "formula": "[<DATA_MODEL_ELEMENT_NAME>/Date]"
+            },
+            {
+              "id": "pG2dx7pcTI",
+              "formula": "[<DATA_MODEL_ELEMENT_NAME>/Quantity]"
+            },
+            {
+              "id": "S7kMK1Wo0a",
+              "formula": "[<DATA_MODEL_ELEMENT_NAME>/Price]"
+            },
+            {
+              "id": "OCJK4_muF1",
+              "formula": "[<DATA_MODEL_ELEMENT_NAME>/Unit Cost]"
+            },
+            {
+              "id": "NXHIU8si3t",
+              "formula": "[<DATA_MODEL_ELEMENT_NAME>/Store Key]"
+            },
+            {
+              "id": "1RhAWMXGlq",
+              "formula": "[<DATA_MODEL_ELEMENT_NAME>/Cust Key]"
+            },
+            {
+              "id": "VeIYBAmLev",
+              "formula": "[<DATA_MODEL_ELEMENT_NAME>/Cust Name]"
+            },
+            {
+              "id": "2Idyg569o4",
+              "formula": "[<DATA_MODEL_ELEMENT_NAME>/Product Name]"
+            },
+            {
+              "id": "C8liR0fyC8",
+              "formula": "[<DATA_MODEL_ELEMENT_NAME>/Product Type]"
+            },
+            {
+              "id": "e8d4WMDEAF",
+              "formula": "[<DATA_MODEL_ELEMENT_NAME>/Product Key]"
+            },
+            {
+              "id": "GXc4HG7RWB",
+              "formula": "[<DATA_MODEL_ELEMENT_NAME>/Sales Amount]"
+            }
+          ],
+          "name": "Store Performance Data",
+          "filters": [
+            {
+              "id": "AxDSDzb1cr",
+              "columnId": "nJYjNXMxiD",
+              "kind": "number-range",
+              "includeNulls": "always",
+              "min": 1,
+              "max": 50
+            }
+          ],
+          "folders": [
+            {
+              "id": "ejtrqOFhcK",
+              "name": "Store Fields"
+            },
+            {
+              "id": "k1izm3KaL3",
+              "name": "Customer Fields"
+            },
+            {
+              "id": "rcDbFcFEBq",
+              "name": "Product Fields"
+            }
+          ],
+          "groupings": [
+            {
+              "id": "-9bxpBq1p5",
+              "groupBy": [
+                "T3NYH_Bw-e",
+                "W_7ie9DKhL"
+              ],
+              "calculations": [
+                "cRh9aqA5GJ",
+                "Mbd9Ih_mKH",
+                "nJYjNXMxiD"
+              ],
+              "sort": [
+                {
+                  "columnId": "cRh9aqA5GJ",
+                  "direction": "descending",
+                  "nulls": "first"
+                }
+              ]
+            }
+          ],
+          "order": [
+            "7GTf1kLUSB",
+            "SE0xN0rq3d",
+            "pG2dx7pcTI",
+            "S7kMK1Wo0a",
+            "OCJK4_muF1",
+            "NXHIU8si3t",
+            "1RhAWMXGlq",
+            "VeIYBAmLev",
+            "2Idyg569o4",
+            "C8liR0fyC8",
+            "e8d4WMDEAF",
+            "GXc4HG7RWB",
+            "ejtrqOFhcK",
+            "k1izm3KaL3",
+            "rcDbFcFEBq"
+          ],
+          "visibleAsSource": false
+        },
+        {
+          "id": "nkAxuQcdtM",
+          "kind": "table",
+          "source": {
+            "dataModelId": "<DATA_MODEL_ID>",
+            "elementId": "<DATA_MODEL_ELEMENT_ID>",
+            "kind": "data-model"
+          },
+          "columns": [
+            {
+              "id": "jvIqPnwlrk",
+              "formula": "[Transactions with Details & Relationships (5M)/Order Number]"
+            },
+            {
+              "id": "AMz3WIWOND",
+              "formula": "[Transactions with Details & Relationships (5M)/Date]"
+            },
+            {
+              "id": "H_7AztnjTT",
+              "formula": "[Transactions with Details & Relationships (5M)/Quantity]"
+            },
+            {
+              "id": "5pQMQbBbze",
+              "formula": "[Transactions with Details & Relationships (5M)/Price]"
+            },
+            {
+              "id": "aUlnKC6t5i",
+              "formula": "[Transactions with Details & Relationships (5M)/Unit Cost]"
+            },
+            {
+              "id": "hpfsioDTYs",
+              "formula": "[Transactions with Details & Relationships (5M)/Store Key]"
+            },
+            {
+              "id": "NY25gspvxa",
+              "formula": "[Transactions with Details & Relationships (5M)/Store Name]"
+            },
+            {
+              "id": "AFvkQF_K7t",
+              "formula": "[Transactions with Details & Relationships (5M)/Store Region]"
+            },
+            {
+              "id": "IK5d9k0Mjq",
+              "formula": "[Transactions with Details & Relationships (5M)/Cust Key]"
+            },
+            {
+              "id": "JDQJrgIvU5",
+              "formula": "[Transactions with Details & Relationships (5M)/Cust Name]"
+            },
+            {
+              "id": "fFLJU2z-uo",
+              "formula": "[Transactions with Details & Relationships (5M)/Product Name]"
+            },
+            {
+              "id": "8Iaj-JXXU0",
+              "formula": "[Transactions with Details & Relationships (5M)/Product Type]"
+            },
+            {
+              "id": "JTIJ0XZq1i",
+              "formula": "[Transactions with Details & Relationships (5M)/Product Key]"
+            },
+            {
+              "id": "7yrZG0YhLl",
+              "formula": "[Transactions with Details & Relationships (5M)/Sales Amount]"
+            }
+          ],
+          "name": "<DATA_MODEL_ELEMENT_NAME>",
+          "folders": [
+            {
+              "id": "ejtrqOFhcK",
+              "name": "Store Fields",
+              "items": [
+                "hpfsioDTYs",
+                "NY25gspvxa",
+                "AFvkQF_K7t"
+              ]
+            },
+            {
+              "id": "k1izm3KaL3",
+              "name": "Customer Fields",
+              "items": [
+                "IK5d9k0Mjq",
+                "JDQJrgIvU5"
+              ]
+            },
+            {
+              "id": "rcDbFcFEBq",
+              "name": "Product Fields",
+              "items": [
+                "fFLJU2z-uo",
+                "8Iaj-JXXU0",
+                "JTIJ0XZq1i"
+              ]
+            }
+          ],
+          "order": [
+            "jvIqPnwlrk",
+            "AMz3WIWOND",
+            "H_7AztnjTT",
+            "5pQMQbBbze",
+            "aUlnKC6t5i",
+            "ejtrqOFhcK",
+            "k1izm3KaL3",
+            "rcDbFcFEBq",
+            "7yrZG0YhLl"
+          ],
+          "visibleAsSource": false
+        }
+      ]
+    }
+  ],
+  "layout": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<Page type=\"grid\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\" id=\"HB8mkmuyLQ\">\n  <LayoutElement elementId=\"V0BcadPyEPcon\" gridColumn=\"1 / 5\" gridRow=\"1 / 4\"/>\n  <LayoutElement elementId=\"MyKxo56bPscon\" gridColumn=\"5 / 10\" gridRow=\"1 / 4\"/>\n  <LayoutElement elementId=\"Nf-TyDowNVcon\" gridColumn=\"10 / 13\" gridRow=\"1 / 4\"/>\n  <LayoutElement elementId=\"v-enwIJ40Hcon\" gridColumn=\"13 / 19\" gridRow=\"1 / 4\"/>\n  <LayoutElement elementId=\"XNJ41O5Q-Ycon\" gridColumn=\"19 / 25\" gridRow=\"1 / 4\"/>\n  <LayoutElement elementId=\"qmxw_AClg4con\" gridColumn=\"13 / 25\" gridRow=\"4 / 7\"/>\n  <LayoutElement elementId=\"KHt335AdEk\" gridColumn=\"1 / 9\" gridRow=\"7 / 13\"/>\n  <LayoutElement elementId=\"qXtLwkXk40\" gridColumn=\"9 / 17\" gridRow=\"7 / 13\"/>\n  <LayoutElement elementId=\"YU0fZTRT38\" gridColumn=\"17 / 25\" gridRow=\"7 / 13\"/>\n  <LayoutElement elementId=\"A1zp6efFzW\" gridColumn=\"1 / 13\" gridRow=\"13 / 29\"/>\n  <LayoutElement elementId=\"uLwqxpjcRX\" gridColumn=\"13 / 25\" gridRow=\"13 / 29\"/>\n  <LayoutElement elementId=\"LEsdoBZqtp\" gridColumn=\"1 / 25\" gridRow=\"29 / 32\"/>\n  <LayoutElement elementId=\"woTaO2B0q7\" gridColumn=\"1 / 13\" gridRow=\"32 / 48\"/>\n  <LayoutElement elementId=\"eJJCs_kzhF\" gridColumn=\"13 / 25\" gridRow=\"32 / 48\"/>\n  <LayoutElement elementId=\"6YyrqyUNfB\" gridColumn=\"1 / 25\" gridRow=\"51 / 67\"/>\n  <LayoutElement elementId=\"q5lej1uYSj\" gridColumn=\"1 / 25\" gridRow=\"67 / 87\"/>\n  <LayoutElement elementId=\"bq_qweRhcx\" gridColumn=\"1 / 25\" gridRow=\"87 / 107\"/>\n  <LayoutElement elementId=\"nkAxuQcdtM\" gridColumn=\"1 / 25\" gridRow=\"107 / 127\"/>\n</Page>\n"
+}

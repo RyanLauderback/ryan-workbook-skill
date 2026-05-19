@@ -1,0 +1,1236 @@
+{
+  "workbookId": "0d1616ab-eff2-4447-9084-4b64edb2d17d",
+  "name": "Sales Performance (Eval-1)",
+  "url": "https://app.sigmacomputing.com/papercrane/workbook/Sales-Performance-Eval-1-oGZFP7xYXAdzeMdL6EvLv",
+  "documentVersion": 10,
+  "latestDocumentVersion": 10,
+  "ownerId": "A2OaQREZJNo3lA5bjAiX7C7uSmH0T",
+  "folderId": "7b3fb23e-9873-4046-ab91-6fe8daa7ac3d",
+  "createdBy": "A2OaQREZJNo3lA5bjAiX7C7uSmH0T",
+  "updatedBy": "A2OaQREZJNo3lA5bjAiX7C7uSmH0T",
+  "createdAt": "2026-05-18T00:33:24.805Z",
+  "updatedAt": "2026-05-19T02:36:25.240Z",
+  "schemaVersion": 1,
+  "pages": [
+    {
+      "id": "page-overview",
+      "name": "Sales Performance",
+      "elements": [
+        {
+          "id": "ctr-header",
+          "kind": "container",
+          "style": {
+            "backgroundColor": "#FFFFFF",
+            "borderRadius": "round",
+            "borderColor": "#ce785c",
+            "borderWidth": 3
+          }
+        },
+        {
+          "id": "txt-title",
+          "kind": "text",
+          "body": "## <span style=\"color: #3A2E26\">**Sales Performance**</span>\n\n<span style=\"color: #8A7864\">*A walk through revenue, profitability, and where the business is winning.*</span>",
+          "verticalAlign": "middle"
+        },
+        {
+          "kind": "control",
+          "controlId": "DateRange",
+          "id": "ctrl-date",
+          "name": "Date",
+          "filters": [
+            {
+              "source": {
+                "kind": "table",
+                "elementId": "tbl-tx"
+              },
+              "columnId": "col-date"
+            }
+          ],
+          "style": {
+            "backgroundColor": "#FAF7F2",
+            "borderRadius": "round"
+          },
+          "controlType": "date-range",
+          "mode": "between",
+          "includeNulls": "when-no-value-is-selected"
+        },
+        {
+          "kind": "control",
+          "controlId": "StoreRegion",
+          "id": "ctrl-region",
+          "name": "Region",
+          "filters": [
+            {
+              "source": {
+                "kind": "table",
+                "elementId": "tbl-tx"
+              },
+              "columnId": "col-store-region"
+            }
+          ],
+          "style": {
+            "backgroundColor": "#FAF7F2",
+            "borderRadius": "round"
+          },
+          "controlType": "list",
+          "mode": "include",
+          "selectionMode": "multiple",
+          "values": [],
+          "source": {
+            "kind": "source",
+            "source": {
+              "kind": "table",
+              "elementId": "tbl-tx"
+            },
+            "columnId": "col-store-region"
+          }
+        },
+        {
+          "kind": "control",
+          "controlId": "ProductType",
+          "id": "ctrl-product-type",
+          "name": "Product type",
+          "filters": [
+            {
+              "source": {
+                "kind": "table",
+                "elementId": "tbl-tx"
+              },
+              "columnId": "col-product-type"
+            }
+          ],
+          "style": {
+            "backgroundColor": "#FAF7F2",
+            "borderRadius": "round"
+          },
+          "controlType": "list",
+          "mode": "include",
+          "selectionMode": "multiple",
+          "values": [],
+          "source": {
+            "kind": "source",
+            "source": {
+              "kind": "table",
+              "elementId": "tbl-tx"
+            },
+            "columnId": "col-product-type"
+          }
+        },
+        {
+          "id": "T5H6LQqM8J",
+          "kind": "container",
+          "style": {
+            "borderColor": "#898989",
+            "borderWidth": 3
+          }
+        },
+        {
+          "id": "txt-section-kpi",
+          "kind": "text",
+          "body": "### <span style=\"color: #CC785C\">━━</span>   <span style=\"color: #3A2E26\">**Performance at a glance**</span>\n\n<span style=\"color: #8A7864\">Headline metrics for the selected period, with month-over-month change.</span>",
+          "verticalAlign": "middle"
+        },
+        {
+          "id": "ctr-kpi",
+          "kind": "container",
+          "style": {
+            "backgroundColor": "#F5F0E8",
+            "borderRadius": "round",
+            "borderColor": "#ce785c",
+            "borderWidth": 3
+          }
+        },
+        {
+          "id": "kpi-revenue",
+          "kind": "kpi-chart",
+          "source": {
+            "elementId": "tbl-tx",
+            "kind": "table"
+          },
+          "columns": [
+            {
+              "id": "kpi-rev-value",
+              "formula": "[Metrics/Total Revenue]",
+              "name": "Revenue",
+              "format": {
+                "kind": "number",
+                "formatString": "$.2~S",
+                "decimalSymbol": ".",
+                "digitGroupingSymbol": ",",
+                "digitGroupingSize": [
+                  3
+                ],
+                "currencySymbol": "$"
+              }
+            },
+            {
+              "id": "kpi-rev-month",
+              "formula": "DateTrunc(\"month\", [Plugs Transactions/Date])",
+              "name": "Month"
+            },
+            {
+              "id": "kpi-rev-date",
+              "formula": "[Plugs Transactions/Date]",
+              "name": "Date"
+            },
+            {
+              "id": "kpi-rev-quantity",
+              "formula": "[Plugs Transactions/Quantity]"
+            },
+            {
+              "id": "kpi-rev-price",
+              "formula": "[Plugs Transactions/Price]"
+            },
+            {
+              "id": "kpi-rev-cost",
+              "formula": "[Plugs Transactions/Unit Cost]"
+            },
+            {
+              "id": "kpi-rev-region",
+              "formula": "[Plugs Transactions/Store Region]"
+            },
+            {
+              "id": "kpi-rev-type",
+              "formula": "[Plugs Transactions/Product Type]"
+            }
+          ],
+          "value": {
+            "id": "kpi-rev-value"
+          },
+          "name": {
+            "text": "Total Revenue",
+            "color": "#8A7864",
+            "fontWeight": "bold",
+            "fontSize": 32
+          },
+          "style": {
+            "borderRadius": "round",
+            "borderColor": "#E8DFD3",
+            "borderWidth": 1
+          }
+        },
+        {
+          "id": "kpi-profit",
+          "kind": "kpi-chart",
+          "source": {
+            "elementId": "tbl-tx",
+            "kind": "table"
+          },
+          "columns": [
+            {
+              "id": "kpi-pf-value",
+              "formula": "[Metrics/Total Profit]",
+              "name": "Profit",
+              "format": {
+                "kind": "number",
+                "formatString": "$.2~S",
+                "decimalSymbol": ".",
+                "digitGroupingSymbol": ",",
+                "digitGroupingSize": [
+                  3
+                ],
+                "currencySymbol": "$"
+              }
+            },
+            {
+              "id": "kpi-pf-month",
+              "formula": "DateTrunc(\"month\", [Plugs Transactions/Date])",
+              "name": "Month"
+            },
+            {
+              "id": "kpi-pf-date",
+              "formula": "[Plugs Transactions/Date]",
+              "name": "Date"
+            },
+            {
+              "id": "kpi-pf-quantity",
+              "formula": "[Plugs Transactions/Quantity]"
+            },
+            {
+              "id": "kpi-pf-price",
+              "formula": "[Plugs Transactions/Price]"
+            },
+            {
+              "id": "kpi-pf-cost",
+              "formula": "[Plugs Transactions/Unit Cost]"
+            },
+            {
+              "id": "kpi-pf-region",
+              "formula": "[Plugs Transactions/Store Region]"
+            },
+            {
+              "id": "kpi-pf-type",
+              "formula": "[Plugs Transactions/Product Type]"
+            }
+          ],
+          "value": {
+            "id": "kpi-pf-value"
+          },
+          "name": {
+            "text": "Total Profit",
+            "color": "#8A7864",
+            "fontWeight": "bold",
+            "fontSize": 32
+          },
+          "style": {
+            "borderRadius": "round",
+            "borderColor": "#E8DFD3",
+            "borderWidth": 1
+          }
+        },
+        {
+          "id": "kpi-margin",
+          "kind": "kpi-chart",
+          "source": {
+            "elementId": "tbl-tx",
+            "kind": "table"
+          },
+          "columns": [
+            {
+              "id": "kpi-mg-value",
+              "formula": "[Metrics/Total Profit Margin]",
+              "name": "Margin"
+            },
+            {
+              "id": "kpi-mg-month",
+              "formula": "DateTrunc(\"month\", [Plugs Transactions/Date])",
+              "name": "Month"
+            },
+            {
+              "id": "kpi-mg-date",
+              "formula": "[Plugs Transactions/Date]",
+              "name": "Date"
+            },
+            {
+              "id": "kpi-mg-quantity",
+              "formula": "[Plugs Transactions/Quantity]"
+            },
+            {
+              "id": "kpi-mg-price",
+              "formula": "[Plugs Transactions/Price]"
+            },
+            {
+              "id": "kpi-mg-cost",
+              "formula": "[Plugs Transactions/Unit Cost]"
+            },
+            {
+              "id": "kpi-mg-region",
+              "formula": "[Plugs Transactions/Store Region]"
+            },
+            {
+              "id": "kpi-mg-type",
+              "formula": "[Plugs Transactions/Product Type]"
+            }
+          ],
+          "value": {
+            "id": "kpi-mg-value"
+          },
+          "name": {
+            "text": "Profit Margin",
+            "color": "#8A7864",
+            "fontWeight": "bold",
+            "fontSize": 32
+          },
+          "style": {
+            "borderRadius": "round",
+            "borderColor": "#E8DFD3",
+            "borderWidth": 1
+          }
+        },
+        {
+          "id": "kpi-aov",
+          "kind": "kpi-chart",
+          "source": {
+            "elementId": "tbl-tx",
+            "kind": "table"
+          },
+          "columns": [
+            {
+              "id": "kpi-aov-value",
+              "formula": "[Metrics/AOV]",
+              "name": "AOV"
+            },
+            {
+              "id": "kpi-aov-month",
+              "formula": "DateTrunc(\"month\", [Plugs Transactions/Date])",
+              "name": "Month"
+            },
+            {
+              "id": "kpi-aov-date",
+              "formula": "[Plugs Transactions/Date]",
+              "name": "Date"
+            },
+            {
+              "id": "kpi-aov-order",
+              "formula": "[Plugs Transactions/Order Number]"
+            },
+            {
+              "id": "kpi-aov-quantity",
+              "formula": "[Plugs Transactions/Quantity]"
+            },
+            {
+              "id": "kpi-aov-price",
+              "formula": "[Plugs Transactions/Price]"
+            },
+            {
+              "id": "kpi-aov-region",
+              "formula": "[Plugs Transactions/Store Region]"
+            },
+            {
+              "id": "kpi-aov-type",
+              "formula": "[Plugs Transactions/Product Type]"
+            }
+          ],
+          "value": {
+            "id": "kpi-aov-value"
+          },
+          "name": {
+            "text": "Average Order Value",
+            "color": "#8A7864",
+            "fontWeight": "bold",
+            "fontSize": 32
+          },
+          "style": {
+            "borderRadius": "round",
+            "borderColor": "#E8DFD3",
+            "borderWidth": 1
+          }
+        },
+        {
+          "id": "DMvNTBriJJ",
+          "kind": "container",
+          "style": {
+            "backgroundColor": "#B4B4B4",
+            "borderColor": "#FFFFFF",
+            "borderWidth": 3
+          }
+        },
+        {
+          "id": "HRz_VAxGJc",
+          "kind": "container",
+          "style": {
+            "backgroundColor": "#f5f0e8",
+            "borderColor": "#cd785c",
+            "borderWidth": 3
+          }
+        },
+        {
+          "id": "txt-section-trend",
+          "kind": "text",
+          "body": "### <span style=\"color: #CC785C\">━━</span>   <span style=\"color: #3A2E26\">**Revenue trend**</span>\n\n<span style=\"color: #8A7864\">Weekly revenue with profit margin overlaid as a line — watch where margin diverges from revenue.</span>",
+          "verticalAlign": "middle"
+        },
+        {
+          "id": "chart-trend",
+          "kind": "combo-chart",
+          "source": {
+            "elementId": "tbl-tx",
+            "kind": "table"
+          },
+          "columns": [
+            {
+              "id": "tr-week",
+              "formula": "DateTrunc(\"week\", [Plugs Transactions/Date])",
+              "name": "Week"
+            },
+            {
+              "id": "tr-revenue",
+              "formula": "[Metrics/Total Revenue]",
+              "name": "Revenue"
+            },
+            {
+              "id": "tr-margin",
+              "formula": "[Metrics/Total Profit Margin]",
+              "name": "Profit Margin"
+            },
+            {
+              "id": "tr-date",
+              "formula": "[Plugs Transactions/Date]",
+              "name": "Date"
+            },
+            {
+              "id": "tr-order",
+              "formula": "[Plugs Transactions/Order Number]"
+            },
+            {
+              "id": "tr-quantity",
+              "formula": "[Plugs Transactions/Quantity]"
+            },
+            {
+              "id": "tr-price",
+              "formula": "[Plugs Transactions/Price]"
+            },
+            {
+              "id": "tr-cost",
+              "formula": "[Plugs Transactions/Unit Cost]"
+            },
+            {
+              "id": "tr-region",
+              "formula": "[Plugs Transactions/Store Region]"
+            },
+            {
+              "id": "tr-type",
+              "formula": "[Plugs Transactions/Product Type]"
+            }
+          ],
+          "yAxis": [
+            {
+              "id": "tr-revenue"
+            },
+            {
+              "id": "tr-margin",
+              "type": "line"
+            }
+          ],
+          "xAxis": {
+            "id": "tr-week",
+            "sort": {
+              "by": "tr-week",
+              "direction": "ascending"
+            }
+          },
+          "name": {
+            "visibility": "hidden"
+          },
+          "legend": {
+            "position": "top"
+          },
+          "style": {
+            "backgroundColor": "#FFFFFF",
+            "borderRadius": "round",
+            "borderColor": "#E8DFD3",
+            "borderWidth": 1
+          }
+        },
+        {
+          "id": "eV7mOr4Nwp",
+          "kind": "container",
+          "style": {
+            "backgroundColor": "#B4B4B4",
+            "borderColor": "#FFFFFF",
+            "borderWidth": 3
+          }
+        },
+        {
+          "id": "zZU8fg9HJM",
+          "kind": "container",
+          "style": {
+            "backgroundColor": "#f5f0e8",
+            "borderColor": "#cd785c",
+            "borderWidth": 3
+          }
+        },
+        {
+          "id": "txt-section-mix",
+          "kind": "text",
+          "body": "### <span style=\"color: #CC785C\">━━</span>   <span style=\"color: #3A2E26\">**Where revenue comes from**</span>\n\n<span style=\"color: #8A7864\">Revenue concentration by store region and product type — the shape of the business.</span>",
+          "verticalAlign": "middle"
+        },
+        {
+          "id": "chart-region",
+          "kind": "bar-chart",
+          "source": {
+            "elementId": "tbl-tx",
+            "kind": "table"
+          },
+          "columns": [
+            {
+              "id": "rg-region",
+              "formula": "[Plugs Transactions/Store Region]",
+              "name": "Region"
+            },
+            {
+              "id": "rg-revenue",
+              "formula": "[Metrics/Total Revenue]",
+              "name": "Revenue"
+            },
+            {
+              "id": "7q3KDx5DWu",
+              "formula": "[Metrics/AOV]"
+            },
+            {
+              "id": "oDJBWvIT45",
+              "formula": "[Metrics/AOV]"
+            },
+            {
+              "id": "SHxzjAMJ4c",
+              "formula": "[Plugs Transactions/Store Region]",
+              "name": "Region (1)"
+            },
+            {
+              "id": "rg-profit",
+              "formula": "[Metrics/Total Profit]",
+              "name": "Profit"
+            },
+            {
+              "id": "rg-date",
+              "formula": "[Plugs Transactions/Date]"
+            },
+            {
+              "id": "rg-order",
+              "formula": "[Plugs Transactions/Order Number]"
+            },
+            {
+              "id": "rg-quantity",
+              "formula": "[Plugs Transactions/Quantity]"
+            },
+            {
+              "id": "rg-price",
+              "formula": "[Plugs Transactions/Price]"
+            },
+            {
+              "id": "rg-cost",
+              "formula": "[Plugs Transactions/Unit Cost]"
+            },
+            {
+              "id": "rg-store-name",
+              "formula": "[Plugs Transactions/Store Name]"
+            },
+            {
+              "id": "rg-type",
+              "formula": "[Plugs Transactions/Product Type]"
+            },
+            {
+              "id": "rg-product",
+              "formula": "[Plugs Transactions/Product Name]"
+            }
+          ],
+          "yAxis": [
+            {
+              "id": "rg-revenue"
+            }
+          ],
+          "xAxis": {
+            "id": "rg-region",
+            "sort": {
+              "by": "rg-revenue",
+              "direction": "descending"
+            }
+          },
+          "orientation": "horizontal",
+          "color": {
+            "by": "scale",
+            "column": "7q3KDx5DWu"
+          },
+          "name": {
+            "text": "Revenue by Store Region",
+            "color": "#3A2E26",
+            "fontWeight": "bold",
+            "fontSize": 14
+          },
+          "legend": {
+            "visibility": "hidden"
+          },
+          "style": {
+            "borderRadius": "round",
+            "borderColor": "#E8DFD3",
+            "borderWidth": 1
+          }
+        },
+        {
+          "id": "chart-type-donut",
+          "kind": "donut-chart",
+          "source": {
+            "elementId": "tbl-tx",
+            "kind": "table"
+          },
+          "columns": [
+            {
+              "id": "dn-type",
+              "formula": "[Plugs Transactions/Product Type]",
+              "name": "Product Type"
+            },
+            {
+              "id": "dn-revenue",
+              "formula": "[Metrics/Total Revenue]",
+              "name": "Revenue"
+            },
+            {
+              "id": "dn-date",
+              "formula": "[Plugs Transactions/Date]"
+            },
+            {
+              "id": "dn-order",
+              "formula": "[Plugs Transactions/Order Number]"
+            },
+            {
+              "id": "dn-quantity",
+              "formula": "[Plugs Transactions/Quantity]"
+            },
+            {
+              "id": "dn-price",
+              "formula": "[Plugs Transactions/Price]"
+            },
+            {
+              "id": "dn-cost",
+              "formula": "[Plugs Transactions/Unit Cost]"
+            },
+            {
+              "id": "dn-region",
+              "formula": "[Plugs Transactions/Store Region]"
+            },
+            {
+              "id": "dn-store-name",
+              "formula": "[Plugs Transactions/Store Name]"
+            },
+            {
+              "id": "dn-product",
+              "formula": "[Plugs Transactions/Product Name]"
+            }
+          ],
+          "color": {
+            "id": "dn-type"
+          },
+          "value": {
+            "id": "dn-revenue"
+          },
+          "name": {
+            "text": "Revenue by Product Type",
+            "color": "#3A2E26",
+            "fontWeight": "bold",
+            "fontSize": 14
+          },
+          "legend": {
+            "position": "bottom"
+          },
+          "style": {
+            "borderRadius": "round",
+            "borderColor": "#E8DFD3",
+            "borderWidth": 1
+          }
+        },
+        {
+          "id": "rLXycHSALM",
+          "kind": "container",
+          "style": {
+            "backgroundColor": "#B4B4B4",
+            "borderColor": "#FFFFFF",
+            "borderWidth": 3
+          }
+        },
+        {
+          "id": "Kf3pyEFi5s",
+          "kind": "container",
+          "style": {
+            "backgroundColor": "#f5f0e8",
+            "borderColor": "#cd785c",
+            "borderWidth": 3
+          }
+        },
+        {
+          "id": "txt-section-top",
+          "kind": "text",
+          "body": "### <span style=\"color: #CC785C\">━━</span>   <span style=\"color: #3A2E26\">**Top performers**</span>\n\n<span style=\"color: #8A7864\">Leaders by profit dollars — the products and customers driving the bottom line.</span>",
+          "verticalAlign": "middle"
+        },
+        {
+          "id": "tbl-top-products",
+          "kind": "table",
+          "source": {
+            "elementId": "tbl-tx",
+            "kind": "table"
+          },
+          "columns": [
+            {
+              "id": "tp-product",
+              "formula": "[Plugs Transactions/Product Name]",
+              "name": "Product"
+            },
+            {
+              "id": "tp-revenue",
+              "formula": "[Metrics/Total Revenue]",
+              "name": "Revenue"
+            },
+            {
+              "id": "tp-profit",
+              "formula": "[Metrics/Total Profit]",
+              "name": "Profit"
+            },
+            {
+              "id": "tp-margin",
+              "formula": "[Metrics/Total Profit Margin]",
+              "name": "Margin"
+            },
+            {
+              "id": "tp-units",
+              "formula": "[Metrics/Total Units Sold]",
+              "name": "Units"
+            },
+            {
+              "id": "tp-type",
+              "formula": "[Plugs Transactions/Product Type]",
+              "name": "Type"
+            },
+            {
+              "id": "tp-date",
+              "formula": "[Plugs Transactions/Date]"
+            },
+            {
+              "id": "tp-quantity",
+              "formula": "[Plugs Transactions/Quantity]"
+            },
+            {
+              "id": "tp-price",
+              "formula": "[Plugs Transactions/Price]"
+            },
+            {
+              "id": "tp-cost",
+              "formula": "[Plugs Transactions/Unit Cost]"
+            },
+            {
+              "id": "tp-region",
+              "formula": "[Plugs Transactions/Store Region]"
+            }
+          ],
+          "name": "Top Products by Profit",
+          "groupings": [
+            {
+              "id": "grp-product",
+              "groupBy": [
+                "tp-product"
+              ],
+              "calculations": [
+                "tp-revenue",
+                "tp-profit",
+                "tp-margin",
+                "tp-units"
+              ],
+              "sort": [
+                {
+                  "columnId": "tp-profit",
+                  "direction": "descending",
+                  "nulls": "connection-default"
+                }
+              ]
+            }
+          ],
+          "order": [
+            "tp-type",
+            "tp-date",
+            "tp-quantity",
+            "tp-price",
+            "tp-cost",
+            "tp-region"
+          ],
+          "visibleAsSource": false,
+          "style": {
+            "backgroundColor": "#FFFFFF",
+            "borderRadius": "round",
+            "borderColor": "#E8DFD3",
+            "borderWidth": 1
+          }
+        },
+        {
+          "id": "tbl-top-customers",
+          "kind": "table",
+          "source": {
+            "elementId": "tbl-tx",
+            "kind": "table"
+          },
+          "columns": [
+            {
+              "id": "tc-cust",
+              "formula": "[Plugs Transactions/Cust Name]",
+              "name": "Customer"
+            },
+            {
+              "id": "tc-orders",
+              "formula": "[Metrics/Distinct Orders]",
+              "name": "Orders"
+            },
+            {
+              "id": "tc-revenue",
+              "formula": "[Metrics/Total Revenue]",
+              "name": "Revenue"
+            },
+            {
+              "id": "tc-profit",
+              "formula": "[Metrics/Total Profit]",
+              "name": "Profit"
+            },
+            {
+              "id": "tc-aov",
+              "formula": "[Metrics/AOV]",
+              "name": "AOV"
+            },
+            {
+              "id": "tc-date",
+              "formula": "[Plugs Transactions/Date]"
+            },
+            {
+              "id": "tc-order-num",
+              "formula": "[Plugs Transactions/Order Number]"
+            },
+            {
+              "id": "tc-quantity",
+              "formula": "[Plugs Transactions/Quantity]"
+            },
+            {
+              "id": "tc-price",
+              "formula": "[Plugs Transactions/Price]"
+            },
+            {
+              "id": "tc-cost",
+              "formula": "[Plugs Transactions/Unit Cost]"
+            },
+            {
+              "id": "tc-region",
+              "formula": "[Plugs Transactions/Store Region]"
+            },
+            {
+              "id": "tc-product",
+              "formula": "[Plugs Transactions/Product Name]"
+            }
+          ],
+          "name": "Top Customers by Profit",
+          "groupings": [
+            {
+              "id": "grp-cust",
+              "groupBy": [
+                "tc-cust"
+              ],
+              "calculations": [
+                "tc-orders",
+                "tc-revenue",
+                "tc-profit",
+                "tc-aov"
+              ],
+              "sort": [
+                {
+                  "columnId": "tc-profit",
+                  "direction": "descending",
+                  "nulls": "connection-default"
+                }
+              ]
+            }
+          ],
+          "order": [
+            "tc-date",
+            "tc-order-num",
+            "tc-quantity",
+            "tc-price",
+            "tc-cost",
+            "tc-region",
+            "tc-product"
+          ],
+          "visibleAsSource": false,
+          "style": {
+            "backgroundColor": "#FFFFFF",
+            "borderRadius": "round",
+            "borderColor": "#E8DFD3",
+            "borderWidth": 1
+          }
+        },
+        {
+          "id": "Gz0XAGf8qp",
+          "kind": "container",
+          "style": {
+            "backgroundColor": "#B4B4B4",
+            "borderColor": "#FFFFFF",
+            "borderWidth": 3
+          }
+        },
+        {
+          "id": "EmC2ag0V2J",
+          "kind": "container",
+          "style": {
+            "backgroundColor": "#f5f0e8",
+            "borderColor": "#cd785c",
+            "borderWidth": 3
+          }
+        },
+        {
+          "id": "txt-section-stores",
+          "kind": "text",
+          "body": "### <span style=\"color: #CC785C\">━━</span>   <span style=\"color: #3A2E26\">**Store economics**</span>\n\n<span style=\"color: #8A7864\">Each store on revenue vs. profit margin — the upper-right is winning on both axes; the lower-left is at risk.</span>",
+          "verticalAlign": "middle"
+        },
+        {
+          "id": "chart-stores-scatter",
+          "kind": "scatter-chart",
+          "source": {
+            "elementId": "tbl-store-econ",
+            "kind": "table",
+            "groupingId": "grp-store"
+          },
+          "columns": [
+            {
+              "id": "sc-region",
+              "formula": "[Store Economics/Region]",
+              "name": "Region"
+            },
+            {
+              "id": "sc-revenue",
+              "formula": "[Store Economics/Revenue]",
+              "name": "Revenue"
+            },
+            {
+              "id": "sc-margin",
+              "formula": "[Store Economics/Margin]",
+              "name": "Margin"
+            },
+            {
+              "id": "sc-units",
+              "formula": "[Store Economics/Units]",
+              "name": "Units"
+            },
+            {
+              "id": "sc-store",
+              "formula": "[Store Economics/Store]",
+              "name": "Store"
+            }
+          ],
+          "yAxis": [
+            {
+              "id": "sc-margin"
+            }
+          ],
+          "xAxis": {
+            "id": "sc-revenue"
+          },
+          "size": {
+            "id": "sc-units"
+          },
+          "color": {
+            "by": "category",
+            "column": "sc-region",
+            "scheme": [
+              "#CC785C",
+              "#7E8A6E",
+              "#D4A85C",
+              "#6B7A8F",
+              "#A05E6E",
+              "#B8835A",
+              "#5C7A6B",
+              "#C49A8B"
+            ]
+          },
+          "name": {
+            "text": "Stores: Revenue vs Profit Margin",
+            "color": "#3A2E26",
+            "fontWeight": "bold",
+            "fontSize": 14
+          },
+          "legend": {
+            "position": "top"
+          },
+          "style": {
+            "backgroundColor": "#FFFFFF",
+            "borderRadius": "round",
+            "borderColor": "#E8DFD3",
+            "borderWidth": 1
+          }
+        },
+        {
+          "id": "tbl-store-econ",
+          "kind": "table",
+          "source": {
+            "elementId": "tbl-tx",
+            "kind": "table"
+          },
+          "columns": [
+            {
+              "id": "st-store",
+              "formula": "[Plugs Transactions/Store Name]",
+              "name": "Store"
+            },
+            {
+              "id": "st-region",
+              "formula": "[Plugs Transactions/Store Region]",
+              "name": "Region"
+            },
+            {
+              "id": "st-revenue",
+              "formula": "[Metrics/Total Revenue]",
+              "name": "Revenue"
+            },
+            {
+              "id": "st-profit",
+              "formula": "[Metrics/Total Profit]",
+              "name": "Profit"
+            },
+            {
+              "id": "st-margin",
+              "formula": "[Metrics/Total Profit Margin]",
+              "name": "Margin"
+            },
+            {
+              "id": "st-units",
+              "formula": "[Metrics/Total Units Sold]",
+              "name": "Units"
+            },
+            {
+              "id": "st-orders",
+              "formula": "[Metrics/Distinct Orders]",
+              "name": "Orders"
+            },
+            {
+              "id": "st-date",
+              "formula": "[Plugs Transactions/Date]"
+            },
+            {
+              "id": "st-quantity",
+              "formula": "[Plugs Transactions/Quantity]"
+            },
+            {
+              "id": "st-price",
+              "formula": "[Plugs Transactions/Price]"
+            },
+            {
+              "id": "st-cost",
+              "formula": "[Plugs Transactions/Unit Cost]"
+            }
+          ],
+          "name": "Store Economics",
+          "groupings": [
+            {
+              "id": "grp-store",
+              "groupBy": [
+                "st-store",
+                "st-region"
+              ],
+              "calculations": [
+                "st-revenue",
+                "st-profit",
+                "st-margin",
+                "st-units",
+                "st-orders"
+              ],
+              "sort": [
+                {
+                  "columnId": "st-revenue",
+                  "direction": "descending",
+                  "nulls": "connection-default"
+                }
+              ]
+            }
+          ],
+          "order": [
+            "st-date",
+            "st-quantity",
+            "st-price",
+            "st-cost"
+          ],
+          "visibleAsSource": false,
+          "style": {
+            "backgroundColor": "#FFFFFF",
+            "borderRadius": "round",
+            "borderColor": "#E8DFD3",
+            "borderWidth": 1
+          }
+        },
+        {
+          "id": "txt-section-detail",
+          "kind": "text",
+          "body": "### <span style=\"color: #CC785C\">━━</span>   <span style=\"color: #3A2E26\">**Transaction detail**</span>\n\n<span style=\"color: #8A7864\">Line-item view — every transaction in the selected period, filterable by the controls above.</span>",
+          "verticalAlign": "middle"
+        },
+        {
+          "id": "tbl-tx",
+          "kind": "table",
+          "source": {
+            "dataModelId": "3889b3c3-4657-4d9e-b568-5d2388cf4b4c",
+            "elementId": "GwiskXBx0S",
+            "kind": "data-model"
+          },
+          "columns": [
+            {
+              "id": "col-date",
+              "formula": "[Transactions with Details & Relationships (5M)/Date]",
+              "name": "Date"
+            },
+            {
+              "id": "col-order",
+              "formula": "[Transactions with Details & Relationships (5M)/Order Number]",
+              "name": "Order Number"
+            },
+            {
+              "id": "col-cust-name",
+              "formula": "[Transactions with Details & Relationships (5M)/Cust Name]",
+              "name": "Cust Name"
+            },
+            {
+              "id": "col-cust-key",
+              "formula": "[Transactions with Details & Relationships (5M)/Cust Key]",
+              "name": "Cust Key"
+            },
+            {
+              "id": "col-product-name",
+              "formula": "[Transactions with Details & Relationships (5M)/Product Name]",
+              "name": "Product Name"
+            },
+            {
+              "id": "col-product-type",
+              "formula": "[Transactions with Details & Relationships (5M)/Product Type]",
+              "name": "Product Type"
+            },
+            {
+              "id": "col-product-key",
+              "formula": "[Transactions with Details & Relationships (5M)/Product Key]",
+              "name": "Product Key"
+            },
+            {
+              "id": "col-store-name",
+              "formula": "[Transactions with Details & Relationships (5M)/Store Name]",
+              "name": "Store Name"
+            },
+            {
+              "id": "col-store-region",
+              "formula": "[Transactions with Details & Relationships (5M)/Store Region]",
+              "name": "Store Region"
+            },
+            {
+              "id": "col-store-key",
+              "formula": "[Transactions with Details & Relationships (5M)/Store Key]",
+              "name": "Store Key"
+            },
+            {
+              "id": "col-quantity",
+              "formula": "[Transactions with Details & Relationships (5M)/Quantity]",
+              "name": "Quantity"
+            },
+            {
+              "id": "col-price",
+              "formula": "[Transactions with Details & Relationships (5M)/Price]",
+              "name": "Price"
+            },
+            {
+              "id": "col-cost",
+              "formula": "[Transactions with Details & Relationships (5M)/Unit Cost]",
+              "name": "Unit Cost"
+            },
+            {
+              "id": "col-sales-amount",
+              "formula": "[Transactions with Details & Relationships (5M)/Sales Amount]",
+              "name": "Sales Amount"
+            }
+          ],
+          "name": "Plugs Transactions",
+          "order": [
+            "col-date",
+            "col-order",
+            "col-cust-name",
+            "col-cust-key",
+            "col-product-name",
+            "col-product-type",
+            "col-product-key",
+            "col-store-name",
+            "col-store-region",
+            "col-store-key",
+            "col-quantity",
+            "col-price",
+            "col-cost",
+            "col-sales-amount"
+          ],
+          "style": {
+            "backgroundColor": "#FFFFFF",
+            "borderRadius": "round",
+            "borderColor": "#E8DFD3",
+            "borderWidth": 1
+          }
+        }
+      ]
+    }
+  ],
+  "layout": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<Page type=\"grid\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\" id=\"page-overview\">\n  <GridContainer elementId=\"ctr-header\" type=\"grid\" gridColumn=\"1 / 25\" gridRow=\"1 / 5\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n    <LayoutElement elementId=\"txt-title\" gridColumn=\"1 / 13\" gridRow=\"1 / 5\"/>\n    <LayoutElement elementId=\"ctrl-date\" gridColumn=\"13 / 18\" gridRow=\"1 / 5\"/>\n    <LayoutElement elementId=\"ctrl-region\" gridColumn=\"18 / 22\" gridRow=\"1 / 5\"/>\n    <LayoutElement elementId=\"ctrl-product-type\" gridColumn=\"22 / 25\" gridRow=\"1 / 5\"/>\n  </GridContainer>\n  <GridContainer elementId=\"T5H6LQqM8J\" type=\"grid\" gridColumn=\"1 / 25\" gridRow=\"5 / 17\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n    <LayoutElement elementId=\"txt-section-kpi\" gridColumn=\"1 / 25\" gridRow=\"1 / 3\"/>\n    <GridContainer elementId=\"ctr-kpi\" type=\"grid\" gridColumn=\"1 / 25\" gridRow=\"3 / 13\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n      <LayoutElement elementId=\"kpi-revenue\" gridColumn=\"1 / 7\" gridRow=\"1 / 11\"/>\n      <LayoutElement elementId=\"kpi-profit\" gridColumn=\"7 / 13\" gridRow=\"1 / 11\"/>\n      <LayoutElement elementId=\"kpi-margin\" gridColumn=\"13 / 19\" gridRow=\"1 / 11\"/>\n      <LayoutElement elementId=\"kpi-aov\" gridColumn=\"19 / 25\" gridRow=\"1 / 11\"/>\n    </GridContainer>\n  </GridContainer>\n  <GridContainer elementId=\"DMvNTBriJJ\" type=\"grid\" gridColumn=\"1 / 25\" gridRow=\"17 / 32\" gridTemplateColumns=\"repeat(12, 1fr)\" gridTemplateRows=\"auto\">\n    <GridContainer elementId=\"HRz_VAxGJc\" type=\"grid\" gridColumn=\"1 / 13\" gridRow=\"1 / 16\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n      <LayoutElement elementId=\"txt-section-trend\" gridColumn=\"1 / 25\" gridRow=\"1 / 3\"/>\n      <LayoutElement elementId=\"chart-trend\" gridColumn=\"1 / 25\" gridRow=\"3 / 16\"/>\n    </GridContainer>\n  </GridContainer>\n  <GridContainer elementId=\"eV7mOr4Nwp\" type=\"grid\" gridColumn=\"1 / 25\" gridRow=\"32 / 47\" gridTemplateColumns=\"repeat(12, 1fr)\" gridTemplateRows=\"auto\">\n    <GridContainer elementId=\"zZU8fg9HJM\" type=\"grid\" gridColumn=\"1 / 13\" gridRow=\"1 / 16\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n      <LayoutElement elementId=\"txt-section-mix\" gridColumn=\"1 / 25\" gridRow=\"1 / 3\"/>\n      <LayoutElement elementId=\"chart-region\" gridColumn=\"1 / 13\" gridRow=\"3 / 16\"/>\n      <LayoutElement elementId=\"chart-type-donut\" gridColumn=\"13 / 25\" gridRow=\"3 / 16\"/>\n    </GridContainer>\n  </GridContainer>\n  <GridContainer elementId=\"rLXycHSALM\" type=\"grid\" gridColumn=\"1 / 25\" gridRow=\"47 / 62\" gridTemplateColumns=\"repeat(12, 1fr)\" gridTemplateRows=\"auto\">\n    <GridContainer elementId=\"Kf3pyEFi5s\" type=\"grid\" gridColumn=\"1 / 13\" gridRow=\"1 / 16\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n      <LayoutElement elementId=\"txt-section-top\" gridColumn=\"1 / 25\" gridRow=\"1 / 3\"/>\n      <LayoutElement elementId=\"tbl-top-products\" gridColumn=\"1 / 13\" gridRow=\"3 / 16\"/>\n      <LayoutElement elementId=\"tbl-top-customers\" gridColumn=\"13 / 25\" gridRow=\"3 / 16\"/>\n    </GridContainer>\n  </GridContainer>\n  <GridContainer elementId=\"Gz0XAGf8qp\" type=\"grid\" gridColumn=\"1 / 25\" gridRow=\"62 / 80\" gridTemplateColumns=\"repeat(12, 1fr)\" gridTemplateRows=\"auto\">\n    <GridContainer elementId=\"EmC2ag0V2J\" type=\"grid\" gridColumn=\"1 / 13\" gridRow=\"1 / 19\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n      <LayoutElement elementId=\"txt-section-stores\" gridColumn=\"1 / 25\" gridRow=\"1 / 3\"/>\n      <LayoutElement elementId=\"chart-stores-scatter\" gridColumn=\"1 / 13\" gridRow=\"3 / 19\"/>\n      <LayoutElement elementId=\"tbl-store-econ\" gridColumn=\"13 / 25\" gridRow=\"3 / 19\"/>\n    </GridContainer>\n  </GridContainer>\n  <LayoutElement elementId=\"txt-section-detail\" gridColumn=\"1 / 25\" gridRow=\"80 / 82\"/>\n  <LayoutElement elementId=\"tbl-tx\" gridColumn=\"1 / 25\" gridRow=\"82 / 101\"/>\n</Page>\n"
+}

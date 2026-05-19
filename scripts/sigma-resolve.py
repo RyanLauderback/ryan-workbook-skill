@@ -28,6 +28,8 @@ from __future__ import annotations
 import json
 import os
 import re
+import shlex
+import subprocess
 import sys
 import urllib.error
 import urllib.parse
@@ -37,6 +39,43 @@ from typing import Any
 
 
 # ---------- env / api ----------
+
+def _bootstrap_env() -> None:
+    """Self-bootstrap SIGMA_BASE_URL + SIGMA_API_TOKEN if missing, by sourcing
+    scripts/api/_env.sh and reading back the resulting env.
+
+    Why this exists: bash scripts under scripts/api/ already self-bootstrap by
+    sourcing _env.sh. Python scripts (this one) historically required the user
+    to run `eval "$(scripts/load-env.sh)"` first, which is easy to forget.
+    Forgetting it produces a cryptic "missing env SIGMA_API_TOKEN" error mid-
+    session. This helper closes that gap so the failure mode disappears: if
+    the env vars aren't already set, source _env.sh once and pick them up.
+
+    No-op if both vars are already exported (env var still wins — backward-
+    compatible). Silent fallback if _env.sh isn't found (rare in this repo);
+    the original _env() will surface the missing-var error in that case."""
+    if os.environ.get("SIGMA_BASE_URL") and os.environ.get("SIGMA_API_TOKEN"):
+        return
+    repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    env_sh = os.path.join(repo_root, "scripts", "api", "_env.sh")
+    if not os.path.exists(env_sh):
+        return
+    try:
+        result = subprocess.run(
+            ["bash", "-c",
+             f"source {shlex.quote(env_sh)} && "
+             "printf 'SIGMA_BASE_URL=%s\\nSIGMA_API_TOKEN=%s\\n' "
+             "\"$SIGMA_BASE_URL\" \"$SIGMA_API_TOKEN\""],
+            capture_output=True, text=True, check=True, timeout=30,
+        )
+    except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
+        return
+    for line in result.stdout.strip().splitlines():
+        if "=" in line:
+            k, _, v = line.partition("=")
+            if v and not os.environ.get(k):
+                os.environ[k] = v
+
 
 def _env(k: str) -> str:
     v = os.environ.get(k)
@@ -317,6 +356,7 @@ def main() -> None:
     if len(sys.argv) < 2:
         sys.stderr.write("usage: sigma-resolve.py <freeform-input>\n")
         sys.exit(2)
+    _bootstrap_env()
     text = " ".join(sys.argv[1:])
     entries, prose = parse_input(text)
     hints = extract_hints(prose)

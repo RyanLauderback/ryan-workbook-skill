@@ -18,7 +18,45 @@ returns HTTP 200 for specs whose cross-element column references can't be
 resolved at render time — the workbook still gets created, but elements
 silently fail to render. Trusting HTTP 200 alone produces broken dashboards.
 
+## Session start (build mode)
+
+Before the per-attempt protocol runs, a build-mode session opens with a
+3-question `AskUserQuestion` gate (full spec in
+`.claude/skills/sigma-workbook-conventions/SKILL.md` → "Session modes"):
+
+- **Q1: Is your `.env` set up?**
+  - Yes → run `bash scripts/api/_env.sh` to warm the token cache, then
+    `scripts/api/whoami.sh` to actively validate the token against
+    `/v2/files`. If `whoami` fails, surface the Sigma error and abort —
+    don't continue into Recon with broken auth.
+  - No → walk the user through `.env.example` + Sigma's "Administration →
+    Developer Access" OAuth client setup, then re-prompt.
+- **Q2: What data source?** (data model URL/slug / warehouse path / mixed)
+- **Q3: What would you like to build, and where in Sigma?** (verbatim
+  prompt + destination folder — written to the timestamped prompt file)
+
+The gate captures raw inputs; the per-attempt protocol below picks up at
+Step 1 (Recon).
+
 ## Per-attempt protocol
+
+### 0. Required reading (HARD GATE before any spec authoring)
+
+Before drafting a plan or writing any spec JSON, `Read` the chunk files
+mapped to the task type. This is not optional and not satisfied by reading
+the SKILL.md index alone.
+
+| Task type | Required chunks |
+|---|---|
+| Every build | `.claude/skills/sigma-workbook-conventions/reference/layout-and-cross-element.md` |
+| Viz-heavy build | + `.claude/skills/sigma-workbook-conventions/reference/element-shapes.md` |
+| Formula-heavy build | + `.claude/skills/sigma-workbook-conventions/reference/function-reference.md` |
+| Round-trip / edge-case work | + `.claude/skills/sigma-workbook-conventions/reference/scope-and-edge-cases.md` |
+
+The plan in step 2 must include a `Chunks Read:` line listing files
+consulted. Plans without it are not approvable. This gate was added 2026-05-19
+after the cold-start test session ran 2 builds without reading any chunk
+file — see `reference/history.md` → "2026-05-19 — Cold-start test session."
 
 ### 1. Recon (do this BEFORE writing any spec)
 
@@ -74,8 +112,12 @@ approved plan from step 2.
 
 ### 4. Draft the spec
 
-`workbooks/<name>/iterations/<YYYYMMDD-HHMM>.json`. Apply the rules in
-[`.claude/skills/sigma-workbook-conventions/reference/workbook-spec-api.md`](../.claude/skills/sigma-workbook-conventions/reference/workbook-spec-api.md):
+`workbooks/<name>/iterations/<YYYYMMDD-HHMM>.json`. Apply the rules in the
+appropriate `reference/*.md` chunk
+([function-reference](../.claude/skills/sigma-workbook-conventions/reference/function-reference.md),
+[element-shapes](../.claude/skills/sigma-workbook-conventions/reference/element-shapes.md),
+[layout-and-cross-element](../.claude/skills/sigma-workbook-conventions/reference/layout-and-cross-element.md),
+[scope-and-edge-cases](../.claude/skills/sigma-workbook-conventions/reference/scope-and-edge-cases.md)):
 
 - Declare every column you'll reference downstream, with stable readable ids
   (`col-date`, `col-store-region`) — no implicit inheritance.
@@ -95,7 +137,9 @@ scripts/api/publish-workbook.sh post workbooks/<name>/iterations/<file>.json
 
 The wrapper:
 - Runs `validate-spec.py` first (fail-fast on per-page layout, unplaced
-  elements, empty containers, column `format`, duplicate `controlId`).
+  elements, empty containers, malformed column `format` shape, duplicate
+  `controlId`, passthrough collapse on charts/pivots, and controlId/column
+  collision on filtered elements).
 - POSTs to `/v2/workbooks/spec` via the `sigma_curl` helper, which auto-
   injects `Authorization` and `Accept: application/json` headers and
   retries once on HTTP 401 (cache eviction + refetch). No env-prelude,
@@ -190,7 +234,10 @@ Where to put it:
 | Lesson type | Destination |
 |-------------|-------------|
 | Naming / layout / general workbook conventions | `.claude/skills/sigma-workbook-conventions/reference/naming.md` |
-| Workbook spec API mechanics, kinds, formula namespaces | `.claude/skills/sigma-workbook-conventions/reference/workbook-spec-api.md` |
+| Function signatures / formula namespaces | `.claude/skills/sigma-workbook-conventions/reference/function-reference.md` |
+| Element shape mechanics (KPI/bar/pie/scatter/pivot/controls) | `.claude/skills/sigma-workbook-conventions/reference/element-shapes.md` |
+| Layout XML, cross-element formulas, groupings, summary-bar | `.claude/skills/sigma-workbook-conventions/reference/layout-and-cross-element.md` |
+| Scope-of-code limits, edge cases, format field, fallbacks | `.claude/skills/sigma-workbook-conventions/reference/scope-and-edge-cases.md` |
 | Pattern-specific (e.g. financial recon variance formula) | `.claude/skills/<pattern-skill>/reference/<topic>.md` |
 | A whole spec that exemplifies a pattern | `workbooks/_exemplars/<pattern>-<shape>.json` |
 | Account-specific (folder IDs, broken helpers, staging quirks) | Memory only — these don't belong in a shareable skill |
