@@ -29,7 +29,20 @@ limitations, not bugs to fix):
   `columns` array. The actual comparison period Sigma renders from that
   column is UI-side state and isn't surfaced in the GET response. If a user
   needs a specific comparison period, configure it in the UI; don't try to
-  set it in the spec.
+  set it in the spec. **Narrowed 2026-05-19:** KPI title color, font size,
+  weight, and the element frame (border) ARE spec-able via the styled-name
+  object and the `style` field — see
+  `reference/element-shapes.md` → "Element-level styling fields." Only the
+  comparison-period and sparkline-toggle remain UI-only on KPIs.
+- **Chart series colors** (bar fill, line stroke, donut slice palette,
+  scatter point colors): not spec-able per-chart. Series colors come from
+  the workbook theme's Categorical/Sequential/Diverging color palettes,
+  configured in Administration → Branding Settings → Workbook Themes and
+  applied via Workbook Settings → Theme. The chart's spec `color` field
+  controls *which column drives the breakout* (categorical or scale), not
+  the actual color values. To rebrand chart colors, edit the workbook
+  theme; to change per-chart series colors, that's UI-only as well (Format
+  panel on each chart).
 - **Pivot-table cell-color conditional formatting (heatmap visual)**: the
   pivot structure (`rowsBy`, `columnsBy`, `values`) goes through the
   spec, but cell-color conditional formatting that produces the "heatmap"
@@ -203,10 +216,47 @@ Sigma columns accept a `format` object that controls display formatting in the r
 ```
 
 - `kind`: format category. **Verified values: `"number"`.** Other kinds (e.g., `"date"`, `"percent"`, `"text"`) almost certainly exist — discover via UI-toggle + GET-back diff.
-- `formatString`: Python-style format spec for `kind: "number"`:
+- `formatString`: D3/Python-style format spec for `kind: "number"`. Verified shapes:
   - `"$,.2f"` — currency with thousands separator, 2 decimals → `$1,234.56`
+  - `"$.2~S"` — currency with D3 SI prefix, 2 significant digits → `$1.2M`,
+    `$8.4K`. Verified 2026-05-19 on the reference exemplar
+    (`reference/history.md` → "2026-05-19 — Styled-name + style.borderColor
+    discovered"). The `~S` suffix is D3's SI-prefix mode (engineering
+    notation with K/M/G/T suffixes); the `~` strips trailing insignificant
+    zeros.
   - `"0.0%"` — percent with 1 decimal (untested; verify via UI roundtrip)
   - `",d"` — integer with thousands separator (untested)
+
+### Richer format-object fields
+
+The reference exemplar carries additional sibling fields on currency
+columns that aren't strictly required (Sigma falls back to locale defaults
+without them) but DO round-trip cleanly when present:
+
+```json
+{
+  "format": {
+    "kind":                "number",
+    "formatString":        "$.2~S",
+    "decimalSymbol":       ".",
+    "digitGroupingSymbol": ",",
+    "digitGroupingSize":   [3],
+    "currencySymbol":      "$"
+  }
+}
+```
+
+- `decimalSymbol` — character for the decimal point (`"."` for US/UK,
+  `","` for many European locales).
+- `digitGroupingSymbol` — character between digit groups (`","` for US/UK).
+- `digitGroupingSize` — array; first entry is the size of digit groups
+  (`[3]` for thousands). Multi-entry forms (e.g. `[3, 2]` for the
+  Indian numbering system) are untested.
+- `currencySymbol` — currency glyph prefix (`"$"`, `"€"`, `"£"`).
+
+These fields are mostly redundant when the `formatString` already encodes
+the locale conventions, but include them when you want explicit control or
+when round-tripping a UI-configured format.
 
 ### Discovering new format shapes
 

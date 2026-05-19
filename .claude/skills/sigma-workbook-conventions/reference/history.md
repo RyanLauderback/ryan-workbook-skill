@@ -88,6 +88,73 @@ The claim was refuted in the same session minutes later when the agent observed 
 
 Rule going forward: before promoting any notes.md observation, audit the iteration log for refutation. `reference/scope-and-edge-cases.md` → "Notes-promotion guardrail." Slash-in-metric-name caveat now documented in `SKILL.md` → "Load-bearing rules" → rule #2 and `reference/scope-and-edge-cases.md` → "Metric resolution semantics" → "Slash-in-name caveat."
 
+## 2026-05-19 — Styled-name + `style.borderColor` discovered
+
+User asked for a "red themed" workbook on the plugs-store-state-performance
+build. Initial attempt mapped to what the skill said was possible —
+markdown body changes + emoji prefixes — because `element-shapes.md`
+carried a "Field-name TODO" comment claiming KPI title styling fields were
+"not documented in Sigma's public help docs (UI-level docs only)."
+
+User pushed back with a concrete probe: *"pull down the code representation
+of [Sales-Performance-Eval-1] to compare formatting"*. GET-spec on that
+workbook (a UI-themed reference exemplar in the same folder) surfaced
+four spec features the skill didn't document:
+
+1. **`name` polymorphism.** Every viz element's `name` field accepts
+   either a plain string OR a styled object:
+   `{text, color, fontWeight, fontSize}` — and `{visibility: "hidden"}`
+   to suppress the title bar entirely. Resolves the long-standing
+   `Field-name TODO` in `element-shapes.md`.
+2. **Top-level `style` field.** Viz elements take
+   `style: {borderRadius, borderColor, borderWidth}` for the element
+   frame. Per-element override of the workbook theme's data-element
+   defaults.
+3. **`legend` object.** `legend: {visibility: "hidden"}` or
+   `legend: {position: "bottom"}` on charts.
+4. **Inline HTML in text element `body`.** Sigma's text renderer honors
+   `<span style="color:#RRGGBB">…</span>` — verified round-trip.
+
+Additionally, the reference exemplar uses `color: {by: "scale", column:
+"<numeric-id>"}` on a bar chart — a second verified mode alongside the
+documented `{by: "category"}` shape. And currency `format` carries
+`"$.2~S"` (D3 SI prefix → `$1.2M`) with sibling fields `decimalSymbol`,
+`digitGroupingSymbol`, `digitGroupingSize`, `currencySymbol`.
+
+**Rename-cascade failure mode (same session).** Before the diff, the
+agent attempted to red-theme element titles by prefixing every element's
+`name` string with a red emoji. Two of those names were source-of-truth
+table names (`"Transactions Detail"` → `"🔴 Transactions Detail"`,
+`"D Store Lookup"` → `"🔴 D Store Lookup"`). PUT rejected with
+`Cannot resolve columns ... dependency not found: formula reference
+'transactions detail/date'` — 14 sibling chart/KPI formulas referenced
+the old table name. The styled-name object form makes this a non-issue:
+restyle the visible header without touching the display-name handle that
+formulas resolve against.
+
+Rules going forward:
+
+- `reference/element-shapes.md` → new "Element-level styling fields"
+  section documenting the verified shapes. KPI Field-name TODO marked
+  RESOLVED.
+- `reference/scope-and-edge-cases.md` → "Scope of the code representation"
+  narrowed: KPI period-comparison stays UI-only; title styling and
+  borders are now spec-able. New bullet for chart series colors (theme
+  palette, still UI-only).
+- `reference/scope-and-edge-cases.md` → "Column `format` field"
+  augmented with the D3 SI prefix verified shape and sibling fields.
+- `reference/layout-and-cross-element.md` → "Rename-cascade corollary"
+  added to the explicit-`name` rule.
+
+**Discovery technique worth keeping.** When the skill claims a property
+is UI-only and the user wants it spec-able, ask whether there's a
+reference workbook in the same workspace that has the property
+configured. `scripts/api/find-file-by-urlid.sh <url-slug>` →
+`publish-workbook.sh get-spec <id>` → diff against the current spec.
+That's how this round of fields was found, and it's reusable for the
+remaining UI-only properties (axis label styling, comparison-period,
+table cell formatting).
+
 ## 2026-05-19 — Control/column ID collision (sales-performance attempt 2)
 
 Sales-performance v3 spec declared `controlId: "Date"` for a date-range filter on the PLUGS Transactions Detail element, which has a `Date` column. Sigma's formula resolver shadowed the column with the control: `Month([Date])` and `Year([Date])` errored at render because the resolver returned the control's selection (a date-range scalar), not the column.

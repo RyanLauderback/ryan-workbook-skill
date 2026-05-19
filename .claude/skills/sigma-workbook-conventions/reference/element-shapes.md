@@ -6,6 +6,7 @@ Per-kind spec shape for every workbook element (charts, KPIs, pivots, controls, 
 
 - [Element source kinds](#element-source-kinds)
 - [Element kinds — verified against the API](#element-kinds-verified-against-the-api)
+- [Element-level styling fields (`name`, `style`, `legend`)](#element-level-styling-fields-name-style-legend)
 - [KPI element shape](#kpi-element-shape)
 - [Series breakout / color-by on charts](#series-breakout-color-by-on-charts)
 - [Bar / line / area / combo chart shape](#bar-line-area-combo-chart-shape)
@@ -54,6 +55,10 @@ example specs live in `examples/`.
 | Markdown text / heading | `text` | `body` (markdown), `verticalAlign` (`top \| middle \| bottom`) | Used for page titles, section headers, narrative blocks. |
 
 When the docs and the API disagree, trust the API error and update this table.
+
+Every viz kind above also accepts the element-level styling fields documented
+in [Element-level styling fields](#element-level-styling-fields-name-style-legend)
+below — styled `name`, top-level `style`, and (for charts) `legend`.
 
 ### Unsupported element kinds (do not attempt at POST)
 
@@ -167,6 +172,110 @@ Don't chase kind-name variants until you've ruled out an extraneous or
 misshapen field.
 
 
+## Element-level styling fields (`name`, `style`, `legend`)
+
+Three fields control element framing and title rendering. All apply to viz
+kinds (KPI, bar/line/area/combo, scatter, donut/pie, pivot, table). Verified
+2026-05-19 via GET-back of a UI-themed reference workbook
+(`reference/history.md` → "2026-05-19 — Styled-name + style.borderColor
+discovered"). Existing exemplars in `examples/` use the simpler string-name
+shape — both forms POST cleanly; you can mix them in a single workbook.
+
+### `name` — string OR styled object
+
+`name` is polymorphic. The string form names the element. The object form
+adds title styling (color, font weight, size) and supports a visibility
+override:
+
+```json
+"name": "Total Revenue"
+```
+
+```json
+"name": {
+  "text":       "Total Revenue",
+  "color":      "#DC2626",
+  "fontWeight": "bold",
+  "fontSize":   32
+}
+```
+
+```json
+"name": { "visibility": "hidden" }
+```
+
+Verified fields on the object form:
+
+- `text` — the title string. Required when not using `visibility`.
+- `color` — hex color (`"#RRGGBB"`).
+- `fontWeight` — observed values: `"bold"`. Other CSS-style weights
+  (`"normal"`, `"600"`) likely accepted — verify via UI-toggle + GET-back.
+- `fontSize` — pixel size as a number (32 for KPIs, 14 for chart titles in
+  the reference exemplar).
+- `visibility` — observed: `"hidden"` hides the title bar entirely. Use on
+  vizs where the surrounding text element already labels the chart.
+
+The styled-name form supersedes the earlier "Field-name TODO" placeholder
+in the KPI section (which asked whether title styling was spec-able).
+Comparison period and sparkline configuration remain UI-only — see
+`reference/scope-and-edge-cases.md` → "Scope of the code representation."
+
+### `style` — element frame
+
+A top-level `style` object on the viz element controls the outer frame:
+
+```json
+"style": {
+  "borderRadius": "round",
+  "borderColor":  "#DC2626",
+  "borderWidth":  2
+}
+```
+
+Verified fields:
+
+- `borderRadius` — observed: `"round"`. Other values (`"square"`, `"pill"`)
+  are visible in the workbook-theme docs and likely accepted here too;
+  verify via UI-toggle + GET-back.
+- `borderColor` — hex color.
+- `borderWidth` — pixels as a number.
+
+`style` is the spec field for element framing. The workbook-level theme's
+"Data element style" settings (Administration → Branding) provide defaults;
+the per-element `style` overrides for that element only.
+
+### `legend` — chart legend
+
+Bar/line/area/combo/scatter/donut/pie charts accept a `legend` object:
+
+```json
+"legend": { "visibility": "hidden" }
+```
+
+```json
+"legend": { "position": "bottom" }
+```
+
+Verified fields:
+
+- `visibility` — observed: `"hidden"` hides the legend. Use on single-series
+  charts where the legend adds no information.
+- `position` — observed: `"bottom"`. Other positions (`"top"`, `"left"`,
+  `"right"`) likely accepted — verify via UI-toggle + GET-back.
+
+### What this section does NOT cover
+
+- **Chart series colors** (bar fill, line color, donut palette) — not
+  per-element-spec-able. Comes from the workbook theme's "Categorical /
+  Sequential / Diverging colors" palette (Administration → Branding
+  Settings → Workbook Themes). See
+  `reference/scope-and-edge-cases.md` → "Scope of the code representation."
+- **Chart axis label styling** — UI-only.
+- **Cell-color conditional formatting on pivot tables** — UI-only AND
+  breaks GET-spec when applied; see "GET-spec can 500 when UI features
+  aren't representable" above.
+
+
 ## KPI element shape
 
 Minimal (number only):
@@ -235,9 +344,14 @@ Correct shape (verified via GET-back from a UI-configured line chart):
 }
 ```
 
-- `by`: the breakout mode. `"category"` for discrete-dimension series
-  (one line per region, one bar series per family, etc.). Other values
-  likely exist for continuous gradients — discover via GET-back.
+- `by`: the breakout mode. Two verified values:
+  - `"category"` — discrete-dimension series (one line per region, one
+    bar series per family). Use with a categorical column id.
+  - `"scale"` — continuous color scale driven by a numeric column.
+    Verified 2026-05-19 on a bar chart in the reference exemplar
+    (`reference/history.md` → "2026-05-19 — Styled-name + style.borderColor
+    discovered"). Use with a numeric column id; Sigma maps values to the
+    workbook theme's sequential-color palette.
 - `column`: the column **id** (string), NOT an object. This is one of
   the few places in the spec where a column reference is a bare id
   rather than `{id: "..."}`.
@@ -446,6 +560,25 @@ Layout below.
 the page title — the workbook's `name` field is metadata only and isn't
 rendered as a visible heading.
 
+**Inline HTML in `body` is supported.** Sigma's text renderer honors
+`<span style="color: #RRGGBB">…</span>` for inline color overrides — useful
+for accenting parts of a title without theming the whole workbook. Verified
+2026-05-19 via the reference exemplar (`reference/history.md` →
+"2026-05-19 — Styled-name + style.borderColor discovered"):
+
+```json
+{
+  "id": "text-title",
+  "kind": "text",
+  "body": "## <span style=\"color: #3A2E26\">**Sales Performance**</span>\n\n<span style=\"color: #8A7864\">*A walk through revenue, profitability, and where the business is winning.*</span>",
+  "verticalAlign": "middle"
+}
+```
+
+Other inline HTML attributes (font, size, weight via inline `style`) likely
+work too; verify via UI-toggle + GET-back. Block-level HTML (`<div>`,
+`<table>`) is untested.
+
 ## Visualization clarity (REQUIRED for any chart/KPI)
 
 Every visualization must give the reader enough context to interpret it
@@ -460,7 +593,11 @@ For every chart, KPI, or pivot in a workbook, configure at minimum:
    as a visible heading.
 2. **A descriptive title (the element's `name` field)** on every chart/KPI/
    table that names the metric and the slice (e.g. `Total Revenue` not
-   `Revenue`; `Revenue by Month` not `Revenue`).
+   `Revenue`; `Revenue by Month` not `Revenue`). `name` is polymorphic — it
+   accepts a plain string OR the styled-object form
+   (`{text, color, fontWeight, fontSize}`) documented in
+   [Element-level styling fields](#element-level-styling-fields-name-style-legend).
+   Use whichever fits the workbook's theme.
 3. **A comparison or context** that lets the reader judge whether the value
    is good/bad/normal:
    - **KPIs**: include a date-dimension column in the KPI's `columns` array
@@ -481,11 +618,16 @@ For every chart, KPI, or pivot in a workbook, configure at minimum:
 The CREATE endpoint accepts a KPI with no title or comparison — it just
 won't be useful. The skill's job is to refuse to ship one.
 
-**Field-name TODO** — the exact JSON spec fields for KPI title visibility,
-comparison period, and sparkline are not documented in Sigma's public help
-docs (UI-level docs only). Discover them by configuring a KPI in the UI,
-then `GET /v2/workbooks/{id}/spec` and diff against the previous spec.
-Update this section with the field names once known.
+**Title styling — RESOLVED 2026-05-19.** KPI title color, font size, and weight
+are spec-able via the styled-name object form documented in
+[Element-level styling fields](#element-level-styling-fields-name-style-legend)
+above. The reference exemplar uses `fontSize: 32` with `color: "#3A2E26"` and
+`fontWeight: "bold"` on KPI titles.
+
+**Still UI-only.** Comparison period (vs prior month/quarter/year), sparkline
+toggle, and number-format display preferences below the headline value are
+not represented in the spec. The spec carries the date-dimension column that
+enables comparison-mode; the specific period rendered is UI-side state.
 
 
 ## Control catalog (`controlType` values)

@@ -134,6 +134,44 @@ charts, or controls will reference via `[<TableDisplayName>/<ColumnName>]`.
 For internal-only columns (e.g. an aggregation result that only the
 element itself uses) `name` is still good practice but not load-bearing.
 
+### Rename-cascade corollary
+
+The flip side of the explicit-`name` rule: **renaming a source-of-truth
+table's `name` field breaks every sibling formula that references it as
+`[<OldName>/Column]`.** The cross-element resolver looks up by display
+name; once the display name changes, the old reference no longer
+resolves. POST/PUT will fail with:
+
+```
+Cannot resolve columns on table '<chart-id>': dependency not found:
+formula reference '<old-table-name>/<column-name>'
+```
+
+Verified 2026-05-19 during a styling pass: prefixing the parent table's
+`name` from `"Transactions Detail"` → `"🔴 Transactions Detail"` left 14
+sibling chart/KPI formula references (`[Transactions Detail/Date]`,
+`[Transactions Detail/Store Name]`, …) pointing at a name that no longer
+existed. PUT rejected the spec.
+See `reference/history.md` → "2026-05-19 — Styled-name + style.borderColor
+discovered" for the full incident.
+
+**The rule.** Either:
+
+1. **Leave source-of-truth table names alone** — they're an internal API
+   surface for every sibling on the page. Restyle the *element title*
+   instead (via the styled-name object — see
+   `reference/element-shapes.md` → "Element-level styling fields"), which
+   is rendered as the visible header WITHOUT changing the table's
+   display-name handle that formulas reference.
+2. **OR cascade the rename** — when the table name MUST change, also
+   update every sibling formula `[<OldName>/X]` → `[<NewName>/X]` in the
+   same edit. Validation won't catch missed references; the resolver
+   will at POST/PUT time.
+
+The styled-name object form is almost always the right tool for "I want
+the title to look different" — it changes what the user sees without
+touching what formulas resolve against.
+
 
 ## Cross-element joins via `Lookup()`
 
