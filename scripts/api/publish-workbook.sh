@@ -5,6 +5,7 @@
 #
 # Usage:
 #   scripts/api/publish-workbook.sh post     <spec-file>
+#   scripts/api/publish-workbook.sh put      <workbook-id> <spec-file>
 #   scripts/api/publish-workbook.sh get-spec <workbook-id>
 #   scripts/api/publish-workbook.sh get-meta <workbook-id>
 #
@@ -31,6 +32,20 @@ case "$cmd" in
       --data-binary "@$spec" \
       "$SIGMA_BASE_URL/v2/workbooks/spec"
     ;;
+  put)
+    wb_id="${2:?usage: publish-workbook.sh put <workbook-id> <spec-file>}"
+    spec="${3:?usage: publish-workbook.sh put <workbook-id> <spec-file>}"
+    if [ ! -f "$spec" ]; then
+      echo "publish-workbook: spec file not found: $spec" >&2
+      exit 2
+    fi
+    repo_root="$(cd "$(dirname "$0")/../.." && pwd)"
+    python3 "$repo_root/scripts/validate-spec.py" "$spec"
+    sigma_curl -X PUT \
+      -H "Content-Type: application/json" \
+      --data-binary "@$spec" \
+      "$SIGMA_BASE_URL/v2/workbooks/$wb_id/spec"
+    ;;
   get-spec)
     wb_id="${2:?usage: publish-workbook.sh get-spec <workbook-id>}"
     sigma_curl "$SIGMA_BASE_URL/v2/workbooks/$wb_id/spec"
@@ -43,6 +58,7 @@ case "$cmd" in
     cat >&2 <<'USAGE'
 usage:
   publish-workbook.sh post     <spec-file>
+  publish-workbook.sh put      <workbook-id> <spec-file>
   publish-workbook.sh get-spec <workbook-id>
   publish-workbook.sh get-meta <workbook-id>
 USAGE

@@ -36,19 +36,28 @@ The wrapper:
 it triggers the `ask` pattern in `.claude/settings.json`. See
 `reference/workflows/plan.md` → "Approval model" for the rationale.
 
-## Direct curl (when the wrapper doesn't fit — PUT, DELETE)
+## PUT — use the wrapper
 
 ```bash
-# PUT — full-replacement update
-curl -sS -X PUT -H "Authorization: Bearer $SIGMA_API_TOKEN" \
-  -H "Content-Type: application/json" \
-  --data-binary @workbooks/<name>/spec.json \
-  "$SIGMA_BASE_URL/v2/workbooks/<workbook-id>/spec"
+scripts/api/publish-workbook.sh put <workbook-id> workbooks/<name>/spec.json
+```
 
-# DELETE — surfaces a permission prompt (intentional)
+Validates first (fail-fast), then PUTs via `sigma_curl` (auth-injected,
+401-retrying). Same shape as `post` plus the workbook id. Strip the
+response-only fields from a GET-back first — see "Response-only fields to
+strip on PUT" below.
+
+## DELETE — direct curl (intentional)
+
+```bash
 curl -sS -X DELETE -H "Authorization: Bearer $SIGMA_API_TOKEN" \
   "$SIGMA_BASE_URL/v2/workbooks/<workbook-id>"
 ```
+
+DELETE stays on the direct-curl path so it hits the `ask` pattern in
+`.claude/settings.json` (`Bash(curl * -X DELETE *)`). Any deletion wrapper
+must be named `scripts/api/delete-*` so the corresponding `ask` rule
+catches it — see `reference/workflows/plan.md` → "Approval model."
 
 The API accepts both `application/json` and `application/yaml`. This
 skill's exemplars are JSON for tooling consistency with

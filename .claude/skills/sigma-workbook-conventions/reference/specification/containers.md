@@ -146,6 +146,24 @@ heading, sharp corners for clean alignment:
 "style": {"backgroundColor": "#B4B4B4", "borderColor": "#FFFFFF", "borderWidth": 3}
 ```
 
+**Layout placement for spacer containers.** A spacer container must
+have a matching `<GridContainer>` (with children) in the layout XML
+— placing it as a `<LayoutElement>` leaf fails `validate-spec`'s
+`containers-have-children` check. Two valid patterns:
+
+1. **Wrap pattern** — nest the next section's container inside the
+   spacer's `<GridContainer>`. The spacer's `gridRow` spans both
+   the visible band region AND the nested section, giving a
+   concentric two-color frame. `examples/styled-card-dashboard.json`
+   uses this for every section break on page 1.
+
+2. **Drop pattern** — skip the spacer container element entirely.
+   Rely on a small `gridRow` gap between adjacent sections for
+   whitespace.
+
+Pick wrap when you want a visible colored band; pick drop when grid
+whitespace is enough.
+
 **Transparent grouping** — invisible container for layout-only
 grouping (no visual frame):
 

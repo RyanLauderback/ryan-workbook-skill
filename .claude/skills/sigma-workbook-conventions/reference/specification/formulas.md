@@ -130,6 +130,12 @@ The prefix depends on the source type:
   field (returned by `mcp-describe.sh datamodel-element`).
   - DM element named "Transactions with Details" →
     `[Transactions with Details/Date]`.
+  - **Special characters in the name are safe.** `&`, `(`, `)`, and
+    spaces all parse correctly inside the brackets — verified against
+    `[Transactions with Details & Relationships (5M)/...]`. The
+    bracket scopes the whole name; the `/` between source and column
+    is the only parse hazard (see "Data-model metrics" → slash-in-name
+    caveat).
 
 - Column names must match exactly what the describe endpoint
   returns. **Never invent column names.**

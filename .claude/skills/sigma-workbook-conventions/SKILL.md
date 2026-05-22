@@ -529,18 +529,21 @@ violated, ship a broken workbook.
 ## Publishing — use `publish-workbook.sh`
 
 ```bash
-scripts/api/publish-workbook.sh post     workbooks/<name>/spec.json   # POST (auto-validates first)
+scripts/api/publish-workbook.sh post     workbooks/<name>/spec.json                # POST (auto-validates first)
+scripts/api/publish-workbook.sh put      <workbookId> workbooks/<name>/spec.json   # PUT  (auto-validates first)
 scripts/api/publish-workbook.sh get-spec <workbookId> | jq . > workbooks/<name>/spec.json
-scripts/api/publish-workbook.sh get-meta <workbookId>                  # url, name, path, folderId
+scripts/api/publish-workbook.sh get-meta <workbookId>                              # url, name, path, folderId
 ```
 
-The wrapper runs `validate-spec.py` before POST (fail-fast on silent-rewrite
-gotchas) and uses `sigma_curl` for auth-injected, 401-retrying requests. No
-`delete` subcommand — DELETE goes direct-curl so it hits the `ask` pattern in
-`.claude/settings.json`.
+The wrapper runs `validate-spec.py` before POST and PUT (fail-fast on
+silent-rewrite gotchas) and uses `sigma_curl` for auth-injected, 401-retrying
+requests. No `delete` subcommand — DELETE goes direct-curl so it hits the
+`ask` pattern in `.claude/settings.json`.
 
-PUT (full-spec update of an existing workbook) is not in the wrapper; use
-direct curl with the same headers and run `validate-spec.py` manually first.
+Response-only fields (`workbookId`, `url`, `documentVersion`,
+`latestDocumentVersion`, `ownerId`, `createdBy`, `updatedBy`, `createdAt`,
+`updatedAt`) must be stripped from a GET-back spec before PUT — see
+`reference/workflows/crud.md` → "Response-only fields to strip on PUT."
 
 ## Reference and examples
 
