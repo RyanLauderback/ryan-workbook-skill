@@ -51,24 +51,31 @@ PAGE_KEYS = {"id", "name", "elements", "hidden", "visibility", "description"}
 # COMMON_KEYS apply to every element kind; per-kind sets layer on top.
 COMMON_KEYS = {"id", "kind", "name", "source", "style", "description"}
 
+# Cartesian-chart-specific keys (refMarks/trendlines/dataLabel/seriesDataLabel)
+# verified 2026-05-21 from the upstream sigma-workbooks skill — applies to
+# bar/line/area/combo/scatter.
+CARTESIAN_EXTRAS = {
+    "refMarks", "trendlines", "dataLabel", "seriesDataLabel",
+}
+
 ELEMENT_KEYS = {
     "kpi-chart": COMMON_KEYS | {
         "columns", "value", "filters", "format", "comparison",
         "trend", "sparkline", "legend",
     },
-    "bar-chart": COMMON_KEYS | {
+    "bar-chart": COMMON_KEYS | CARTESIAN_EXTRAS | {
         "columns", "xAxis", "yAxis", "color", "orientation",
         "stacking", "filters", "legend", "axis", "format",
     },
-    "line-chart": COMMON_KEYS | {
+    "line-chart": COMMON_KEYS | CARTESIAN_EXTRAS | {
         "columns", "xAxis", "yAxis", "color", "filters", "legend",
         "axis", "format",
     },
-    "area-chart": COMMON_KEYS | {
+    "area-chart": COMMON_KEYS | CARTESIAN_EXTRAS | {
         "columns", "xAxis", "yAxis", "color", "stacking",
         "filters", "legend", "axis", "format",
     },
-    "combo-chart": COMMON_KEYS | {
+    "combo-chart": COMMON_KEYS | CARTESIAN_EXTRAS | {
         "columns", "xAxis", "yAxis", "color", "filters", "legend",
         "axis", "format",
     },
@@ -77,44 +84,64 @@ ELEMENT_KEYS = {
     },
     "donut-chart": COMMON_KEYS | {
         "columns", "color", "value", "filters", "legend", "format",
+        "holeValue",  # references a column by id for the donut hole label
     },
-    "scatter-chart": COMMON_KEYS | {
+    "scatter-chart": COMMON_KEYS | CARTESIAN_EXTRAS | {
         "columns", "xAxis", "yAxis", "color", "size",
         "filters", "legend", "axis", "format",
     },
     "pivot-table": COMMON_KEYS | {
         "columns", "rowsBy", "columnsBy", "values", "filters",
-        "conditionalFormatting", "totals", "format",
+        "conditionalFormatting",  # legacy key
+        "conditionalFormats",     # current key per upstream (4 variants)
+        "totals", "format",
     },
     "table": COMMON_KEYS | {
         "columns", "groupings", "order", "filters",
-        "conditionalFormatting", "format",
-        "visibleAsSource",  # bool — whether this table is exposed as a source
-        "summary",          # list[col-id] — summary-bar pattern
-        "folders",          # list[{id, name, items?}] — column-folder groupings
+        "conditionalFormatting",  # legacy key
+        "conditionalFormats",     # current key per upstream (4 variants)
+        "format",
+        "visibleAsSource",        # bool — whether table is exposed as a source
+        "summary",                # list[col-id] — summary-bar pattern
+        "folders",                # list[{id, name, items?}] — column-folder groupings
+        "noDataText",             # string — empty-state caption
     },
     "container": COMMON_KEYS | {
-        "backgroundImage", "backgroundColor",
+        "backgroundImage",        # object {url, style: {fit, align, tiling}}
+        "backgroundColor",        # legacy — newer specs nest under `style`
     },
     "text": COMMON_KEYS | {
-        "body", "verticalAlign", "horizontalAlign", "format",
+        "body", "verticalAlign", "horizontalAlign", "overflow", "format",
     },
     "control": COMMON_KEYS | {
         "controlId", "controlType", "filters", "mode", "selectionMode",
         "values", "value", "showOperators", "showClearLabel",
         "includeNulls", "case", "min", "max", "step", "defaultValue",
         "options", "label", "placeholder",
+        # Date-range mode-specific fields:
+        "startDate", "endDate", "date", "unit", "includeToday",
     },
+    # Net-new element kinds documented in the upstream sigma-workbooks skill.
+    "divider": COMMON_KEYS,                  # minimal: {id, kind}
+    "image":   COMMON_KEYS | {"url"},        # url supports {{formula}} interpolation
 }
 
 # Per-controlType recognized keys layered on top of the base "control" set.
+# `text-area`, `toggle`, `checkbox`, `dropdown`, `radio` documented in the
+# upstream sigma-workbooks skill 2026-05-21.
 CONTROL_TYPE_KEYS = {
-    "list": {"selectionMode", "values", "mode", "source"},
-    "date-range": {"mode", "includeNulls"},
-    "text": {"mode", "value", "includeNulls", "case", "showOperators"},
-    "segmented": {"showClearLabel", "source", "value"},
-    "number": {"value", "min", "max", "step"},
-    "number-range": {"mode", "min", "max", "step"},
+    "list":         {"selectionMode", "values", "mode", "source"},
+    "date-range":   {"mode", "includeNulls", "startDate", "endDate",
+                     "date", "unit", "value", "includeToday"},
+    "text":         {"mode", "value", "includeNulls", "case", "showOperators"},
+    "text-area":    {"mode", "value", "includeNulls", "case", "showOperators"},
+    "segmented":    {"showClearLabel", "source", "value"},
+    "number":       {"value", "min", "max", "step"},
+    "number-range": {"mode", "min", "max", "step", "values"},
+    "toggle":       {"value"},
+    "checkbox":     {"value"},
+    "dropdown":     {"selectionMode", "values", "mode", "source"},
+    "radio":        {"selectionMode", "values", "mode", "source"},
 }
 
 CHART_KINDS = {
@@ -514,8 +541,30 @@ def split_layout_xml(layout_xml: str) -> dict[str, str]:
     return by_pid
 
 
+def _load_spec(spec_path: Path) -> dict:
+    """Load a workbook spec from JSON or YAML.
+
+    Detects format by file extension. YAML loading requires PyYAML; if it's
+    not installed the script emits a helpful install hint rather than a
+    cryptic ImportError. JSON loading uses stdlib only.
+    """
+    text = spec_path.read_text()
+    suffix = spec_path.suffix.lower()
+    if suffix in (".yaml", ".yml"):
+        try:
+            import yaml
+        except ImportError:
+            sys.exit(
+                "workbook-manifest: YAML input requires PyYAML. "
+                "Install with `pip install PyYAML`, or convert the spec "
+                "to JSON with `yq -o=json . spec.yaml > spec.json`."
+            )
+        return yaml.safe_load(text)
+    return json.loads(text)
+
+
 def manifest(spec_path: Path) -> str:
-    spec = json.loads(spec_path.read_text())
+    spec = _load_spec(spec_path)
     lines: list[str] = []
     lines.extend(top_level_summary(spec))
 
@@ -540,7 +589,7 @@ def manifest(spec_path: Path) -> str:
 
 def main() -> int:
     p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument("spec", type=Path, help="Path to workbook spec.json")
+    p.add_argument("spec", type=Path, help="Path to workbook spec (.json, .yaml, or .yml)")
     p.add_argument("--out", type=Path, help="Write to file instead of stdout")
     args = p.parse_args()
 
