@@ -162,8 +162,8 @@ bash plumbing.
 
 For Sigma **function references** and **REST API endpoint shapes**
 (not workspace discovery), use the native `mcp__claude_ai_Sigma_Docs__*`
-tools — no bash, no auth, no `WebFetch`. See `reference/function-reference.md`
-→ "Looking up Sigma functions."
+tools — no bash, no auth, no `WebFetch`. See
+`reference/specification/formulas.md` → "Looking up Sigma functions."
 
 Route by what the prompt actually contains:
 
@@ -257,29 +257,98 @@ resolver also returns the table inventory it found via
 `probe-schema-tables.sh`; if the intended tables aren't there, ask the
 user to name the missing ones so the resolver can re-probe.
 
+## Sources of truth
+
+This skill is verified-from-incident recipes + gotchas layered on top of
+two authoritative sources:
+
+1. **Sigma OpenAPI** — canonical schema for every request/response shape
+   and field. `https://help.sigmacomputing.com/openapi/sigma-computing-public-rest-api.json`
+2. **Existing workbooks on the user's org** — concrete working specs,
+   accessible via `GET /v2/workbooks/{id}/spec` (or via
+   `scripts/api/publish-workbook.sh get-spec <wb-id>`).
+
+**When this skill and the OpenAPI disagree, the OpenAPI wins.** When a
+feature exists in the OpenAPI but isn't covered here, fetch the OpenAPI
+and use what it documents. Skill content lags the API; the API ships
+new fields and element variants regularly.
+
+### Consulting the OpenAPI
+
+Fetch once per session and inspect with `jq`:
+
+```bash
+curl -sf https://help.sigmacomputing.com/openapi/sigma-computing-public-rest-api.json > /tmp/sigma-api.json
+
+# Workbook spec POST request body
+jq '.paths."/v2/workbooks/spec".post.requestBody.content."application/json".schema' /tmp/sigma-api.json
+
+# A specific element kind's full shape
+jq '.components.schemas.BarChart' /tmp/sigma-api.json
+jq '.components.schemas.KpiChart' /tmp/sigma-api.json
+jq '.components.schemas.Container' /tmp/sigma-api.json
+
+# List every schema name (when you don't know the right one)
+jq -r '.components.schemas | keys[]' /tmp/sigma-api.json | grep -i <hint>
+```
+
+Each `reference/specification/*.md` file opens with the relevant `jq`
+recipe. Use it whenever you suspect a field shape has changed or when
+the skill's coverage doesn't include a feature you need.
+
+### Schema-drift signal
+
+If a POST/PUT fails with `invalid argument`, `unknown field`,
+`unexpected property`, `missing required field`, `unrecognized
+parameter`, or a 400 about request *shape* rather than data — the API
+has evolved since this skill was written. Apply the bounded fallback in
+`reference/workflows/crud.md` → "Schema drift": fetch the OpenAPI, diff
+the live schema vs. what the skill assumed, retry ONCE with the
+corrected shape, surface what changed to the user.
+
+## Spec format — JSON or YAML
+
+The Sigma API accepts both `application/json` and `application/yaml`
+on `POST /v2/workbooks/spec`. **This skill's tooling defaults to JSON**
+— all canonical exemplars in `examples/` are `.json`,
+`scripts/validate-spec.py` reads JSON, `scripts/workbook-manifest.py`
+reads JSON, `scripts/api/publish-workbook.sh` doesn't care.
+
+YAML is fine for hand-authoring and the upstream `sigma-workbooks`
+skill prefers it for human readability. If you receive a YAML spec
+from a user or upstream tool, convert via `yq -o=json` or PyYAML
+before running this skill's validators. Don't migrate existing JSON
+exemplars to YAML — the tooling expects JSON and a mixed-format
+`examples/` directory is harder to maintain.
+
 ## Workflow: propose a plan before building
 
 ### Required reading before authoring (HARD GATE)
 
-Before writing ANY spec JSON, `Read` the chunk files mapped to the task type
-below. This is not optional, and not a "scan the index then proceed." The
-agent must `Read` the actual chunk files in the current session and cite
-chunk + section in the plan.
+Before writing ANY spec content, `Read` the chunk files mapped to the
+task type below. This is not optional, and not a "scan the index then
+proceed." The agent must `Read` the actual chunk files in the current
+session and cite chunk + section in the plan.
 
 | Task type | Required chunks |
 |---|---|
-| Every build (always) | `reference/layout-and-cross-element.md` |
-| Viz-heavy build (>2 chart kinds, KPI rows, pivots) | + `reference/element-shapes.md` |
-| Formula-heavy build (custom calcs, metrics, Lookup, Rollup) | + `reference/function-reference.md` |
-| Round-trip / edge-case work (POST failures, format fields, axis controls) | + `reference/scope-and-edge-cases.md` |
+| Every build (always) | `reference/conventions.md` + `reference/workflows/plan.md` + `reference/specification/schema.md` + `reference/specification/layout.md` |
+| Viz-heavy build (>2 chart kinds, KPI rows, pivots) | + each `reference/specification/<kind>.md` for the kinds in the plan (`charts.md`, `kpis.md`, `tables.md`, etc.) |
+| Formula-heavy build (custom calcs, metrics, Lookup, Rollup) | + `reference/specification/formulas.md` |
+| Conditional-formatting build (table/pivot cell coloring) | + `reference/specification/tables.md` |
+| Container-styling-heavy build | + `reference/specification/containers.md` |
+| Image / divider / dynamic-text build | + `reference/specification/others.md` + `reference/specification/text.md` |
+| Round-trip / edge-case work (POST failures, format fields, axis controls) | + `reference/scope-and-edge-cases.md` + `reference/workflows/validate.md` |
+| From-image build (screenshot / mockup reproduction) | + `reference/workflows/from-image.md` (load BEFORE data discovery) |
 
 If chunks are skipped, the agent is operating on memory of prior sessions —
 which is exactly how the 2026-05-19 regression happened (passthrough collapse +
 metric carryover across DM switch). See `reference/history.md`.
 
-The plan output (per the next section) must include a "Chunks Read"
+The plan output (per the next section) must include a `Chunks Read:`
 line listing the files consulted. A plan without that line is incomplete
-and not approvable.
+and not approvable. Full plan-first methodology in
+`reference/workflows/plan.md`.
 
 ### Plan content
 
@@ -423,95 +492,39 @@ authoritative spec and use it as the new baseline.
 ## Load-bearing rules — always-loaded summary
 
 Four rules carry most of the round-trip failures from prior sessions.
-Inline here because they are too important to live only in chunks. Each
-links to the chunk for full edge cases. **Read the chunks anyway** per
-the hard gate above — these summaries are insurance, not substitutes.
-**Always visually verify** the workbook in the UI after a POST/PUT —
-the API doesn't validate cross-element column resolution or visualization
-quality.
+Inline here as one-line summaries because they're too important to live
+only in chunks. **Read `reference/conventions.md` for the full versions**
+— required on every build per the hard gate above. These summaries are
+insurance, not substitutes. **Always visually verify** the workbook in
+the UI after a POST/PUT — the API doesn't validate cross-element column
+resolution or visualization quality.
 
-### 1. Passthrough is mandatory; the only carve-out is Lookup-derived columns
+1. **Passthrough is mandatory.** Every viz element declares the FULL
+   passthrough column set from its source table. The only carve-out is
+   stripping a `Lookup`-derived column that produces a phantom series
+   from THAT viz only — it NEVER generalizes to "no passthroughs."
+   `reference/conventions.md` → "Passthrough mandate."
+2. **`[Metrics/<Name>]` resolution + DM-switch hard rule.** Metrics
+   resolve against the data-model element a spec sources from. On any
+   data-model switch mid-session, re-derive every `[Metrics/...]` from
+   the new recon — NEVER carry metrics forward from a previous DM's
+   plan. `reference/conventions.md` → "`[Metrics/<Name>]` resolution +
+   DM-switch hard rule."
+3. **Inference anchor — every formula traces to recon.** Every formula
+   in a plan must trace to a `[Metrics/X]` in the recon catalog OR a
+   column declared on the recon-confirmed source. "Reasonable
+   assumption" formulas are forbidden; missing fields surface as Open
+   Decisions. `reference/conventions.md` → "Inference anchor."
+4. **Control/column ID collision.** A control's `controlId` must NOT
+   match any column `name` or `id` on filtered elements. `[Date]`
+   resolves to the control before the column when names collide;
+   downstream `Month([Date])` silently breaks.
+   `reference/conventions.md` → "Control/column ID collision."
 
-Every viz element (chart, KPI, pivot) declares the FULL passthrough column
-set from its source table. Default is passthrough-all. Right-click drill in
-the Sigma UI surfaces ONLY columns the viz declares — a 2-column chart has
-a 2-column drill, period.
-
-The ONLY exception: if the source table contains a `Lookup(...)`-derived
-column that produces a phantom series in a specific viz (e.g. a chart
-plotting `Sum([Metric])` accidentally splits by the Lookup column), strip
-**that specific Lookup column** from **that specific viz** only.
-
-This carve-out NEVER generalizes:
-- It does not apply to base data-model columns.
-- It does not apply to other vizs on the same page.
-- It does not justify "no chart passthroughs beyond x/y axes" — that
-  phrasing is the 2026-05-19 regression mode and is wrong.
-
-Full rule + recipe: `reference/layout-and-cross-element.md` → "Drill-down corollary."
-
-### 2. `[Metrics/<Name>]` resolution + hard rule on DM switch
-
-`[Metrics/<Name>]` references resolve against the data-model element a
-spec sources from. `mcp-describe.sh datamodel-element <dm> <el>` returns
-the metric catalog FOR THAT ELEMENT. Treat that catalog as the source of
-truth — if a metric isn't listed there, do not reference it from a spec
-that sources off that element.
-
-Slashes within metric names (`Cost/Member/Month`) are not safely
-encodable as `[Metrics/Cost/Member/Month]`. Either rename the metric in
-the data model, or fall back to a hand-derived formula. Never assume
-slash-name references parse — and never claim "round-tripped through
-GET" as evidence that they do; round-trip preserves strings, it does
-not validate them at render.
-
-**On data-model switch mid-session: re-derive every `[Metrics/...]`
-reference from the new recon. Never carry metric names forward from a
-previous DM's plan.** The 2026-05-19 regression was caused by carrying
-`[Metrics/Cost per Unit] * [Metrics/Encounter Volume]` from the original
-DM's plan into a spec sourced against a different DM that did not
-contain those metrics.
-
-Full rule: `reference/function-reference.md` → "Use data-model metrics" + `reference/scope-and-edge-cases.md` → "Metric resolution semantics."
-
-### 3. Inference anchor — every formula traces to recon
-
-Every formula in a proposed plan must trace to one of:
-- a `[Metrics/X]` confirmed in `mcp-describe` output for the source element, OR
-- a column declared on the source table that recon confirmed exists.
-
-"Reasonable assumption" formulas are forbidden. If recon doesn't show the
-field the user's prompt implies, the plan surfaces it as an Open Decision
-(item 6 in the plan structure), it does NOT silently assume the field
-exists. The cost of one extra clarification turn is far lower than the
-cost of a plan + spec that fails at render time.
-
-This applies equally to vague prompts ("build me a cost analysis") and
-specific ones ("show NIM by region"). For vague prompts, the agent's job
-is to lean into the recon and propose what's actually computable — not to
-imagine a dashboard and hope the data supports it.
-
-### 4. Control/column ID collision
-
-A control's `controlId` MUST NOT match any column `name` or `id` on the
-elements it filters. When names collide, Sigma resolves `[Date]` (and
-similar bare references) to the control, not the column. Downstream
-formulas like `Month([Date])` or `Year([Date])` silently break.
-
-Always prefix controls or use a distinct name: `DateRange`, `StoreFilter`,
-`PlanTypeCtrl`. When in doubt, fully-qualify column references in formulas:
-`[<ElementName>/Date]` instead of `[Date]`.
-
-Full rule: `reference/scope-and-edge-cases.md` → "Control/column ID collision."
-
----
-
-The deeper edge-case checklist (column-declaration, explicit-`name`,
-control wiring, visualization clarity, containers, `format` field shape,
-summary-bar pattern, bar-chart `orientation` rule) lives in the chunks
-linked from "Reference and examples" below. The 4 rules in this section
-are the ones that, when violated, ship a broken workbook — so they're
-inline.
+The deeper edge-case checklist (explicit-`name`, rename-cascade,
+bar-chart orientation, summary-bar, two-tier sourcing) lives in
+`reference/conventions.md`. The 4 rules above are the ones that, when
+violated, ship a broken workbook.
 
 ## Publishing — use `publish-workbook.sh`
 
@@ -531,15 +544,83 @@ direct curl with the same headers and run `validate-spec.py` manually first.
 
 ## Reference and examples
 
-`reference/` is split into 5 focused files, all one level deep. Load only what
-the current task needs:
+`reference/` is split into three groups. Load only what the current task
+needs — see "Required reading before authoring" above for the hard-gate
+mapping.
 
-- `reference/naming.md` — naming rubric (columns, metrics, controls, pages).
-- `reference/function-reference.md` — function quick-reference (date / aggregate / scalar / numeric guards / strings / casting / column-reference syntax) + formula namespaces + `[Metrics/<Name>]` usage + Sigma_Docs MCP lookup convention for functions not listed here.
-- `reference/element-shapes.md` — per-kind spec shape for every element (KPI, bar/line/area/combo, pie/donut, scatter, pivot, container, text, controls), the **bar-chart `orientation` rule**, series breakout / color-by (`category` + `scale` modes), **element-level styling fields** (styled `name` object, `style` border, `legend`), inline HTML in text bodies, visualization clarity, the misleading-`Invalid kind` error pattern.
-- `reference/layout-and-cross-element.md` — layout XML (24-col grid, `<GridContainer>`, `<LayoutElement>`), the page-structure pattern, the column-declaration rule + drill-down corollary, the explicit-`name` rule + **rename-cascade corollary**, `Lookup` / `Rollup` patterns, table `groupings`, summary-bar pattern, two-tier sourcing, the canonical recipe.
-- `reference/scope-and-edge-cases.md` — what the code spec does NOT represent (KPI period-comparison, chart series colors / theme palette, pivot heatmap, axis-label rotation), GET-spec 500 cases, the `format` field (verified shapes incl. D3 SI prefix), warehouse-table fallback, verifying via generated SQL, twells89-adopted patterns (schema-drift fallback, persist-spec).
-- `reference/history.md` — dated incident log. Inline rules in the chunks are evergreen; this file carries when each rule was verified and the incident that surfaced it.
+**Top-level orchestration:**
+
+- `reference/conventions.md` — the ryan-specific cross-cutting rules
+  (passthrough mandate, drill-down corollary, explicit-`name` rule,
+  rename-cascade corollary, `[Metrics/<Name>]` resolution + DM-switch
+  hard rule, control/column ID collision, bar-chart orientation,
+  summary-bar pattern, two-tier sourcing, notes-promotion guardrail).
+  **Required on every build.**
+- `reference/scope-and-edge-cases.md` — what the code spec does NOT
+  represent (KPI period-comparison, chart series colors / theme
+  palette, pivot heatmap status, axis-label rotation), GET-spec 500
+  cases, warehouse-table fallback, verifying via generated SQL.
+- `reference/history.md` — dated incident log. Inline rules in the
+  chunks are evergreen; this file carries when each rule was verified
+  and the incident that surfaced it.
+- `reference/naming.md` — naming rubric (columns, metrics, controls,
+  pages) — style guide, not load-bearing.
+
+**Workflow files (`reference/workflows/`):**
+
+- `plan.md` — the 6-section plan format, `Chunks Read:` requirement,
+  plan-is-the-only-gate approval model. **Required on every build.**
+- `crud.md` — POST/GET/PUT mechanics + ID-remapping trap + the
+  `publish-workbook.sh` wrapper.
+- `discover.md` — `mcp-search.sh` / `mcp-describe.sh` sequencing,
+  REST fallbacks, friendly-vs-raw warehouse name normalization.
+- `validate.md` — `validate-spec.py` (pre-submit, 8 checks) +
+  `verify-workbook.sh` (post-create compilation check) + cryptic-error
+  decoding table.
+- `from-image.md` — image-to-spec workflow (screenshot, mockup,
+  PDF, BI-tool export). Load BEFORE data discovery when the user
+  supplies a target image.
+
+**Specification files (`reference/specification/`):**
+
+Per-element-kind recipes + gotchas. Each file opens with the relevant
+OpenAPI `jq` recipe.
+
+- `schema.md` — top-level workbook spec shape, response-only fields,
+  ID rules, minimal working example.
+- `formulas.md` — formula DSL: column-reference rules,
+  `[Metrics/<X>]`, boolean operators trap (`Not` requires space),
+  JSON dot notation, window functions, `&` for string concat.
+- `formatting.md` — d3-format + strftime cheat sheets, SI prefix
+  currency.
+- `layout.md` — top-level layout XML (24-col grid),
+  `<GridContainer>` vs `<LayoutElement>` silent failure,
+  `gridTemplateRows` normalization quirk, page-structure pattern.
+- `containers.md` — `kind: container` + `style` (bg + border) +
+  `backgroundImage` (object with fit/align/tiling), 5-recipe catalog.
+- `charts.md` — bar/line/area/combo/scatter/pie/donut + canonical
+  `columnId`/`columnIds` axis shape + `refMarks` + `trendlines` +
+  `dataLabel`/`seriesDataLabel` + 3-variant `color` channel
+  (single/category/scale).
+- `kpis.md` — `kpi-chart` shape, sparkline via date dimension,
+  styled-name object form, no-delta limitation.
+- `tables.md` — `table` + `pivot-table` + `conditionalFormats` (4
+  variants: single / backgroundScale / fontScale / dataBars) +
+  styled-name + `noDataText` + `summary` bar reference.
+- `controls.md` — 7 controlTypes + 8 date-range modes + slider as
+  `number-range` + multi-binding patterns + control/column collision
+  reference.
+- `text.md` — Markdown subset + inline HTML + `{{formula}}` dynamic
+  text embeds with d3 format suffix.
+- `others.md` — `divider` + `image` elements + `{{formula}}` in URLs +
+  maps/buttons/modals unsupported note.
+- `sources-warehouse.md` — path formats per warehouse + formula
+  prefixes + friendly-name normalization.
+- `sources.md` — `table` / `data-model` / `join` / `union` / `sql` /
+  `transpose` source kinds + two-tier sourcing pattern reference.
+- `example-full.yaml` — verbatim multi-page reference spec from the
+  upstream skill (KPIs, charts, join sources, controls, custom
+  layout). Read this when in doubt about overall shape.
 
 `examples/` — known-good specs to seed generation. Treat as immutable
 references; clone-and-modify rather than editing in place. Each `.json`
