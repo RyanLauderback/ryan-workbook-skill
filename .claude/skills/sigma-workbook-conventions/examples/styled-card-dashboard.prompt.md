@@ -61,7 +61,7 @@ style).
 ## Element-styling rules (Capability 1 demo)
 
 The exemplar is built around five `style` recipes — all documented in
-`reference/element-shapes.md` § "Common style recipes":
+`reference/specification/containers.md` § "Common style recipes":
 
 | Recipe | `style` body | Used by |
 |---|---|---|
@@ -92,9 +92,9 @@ expecting to find:
 - **DM-inherited controls** (Capability 6). Controls here are workbook-
   level.
 - **Net-new chart-type fields** (Capability 7). The chart axis shape
-  uses `xAxis: {columnId: "..."}` / `yAxis: {columnIds: [...]}` — a
-  variant of the shape documented in `reference/element-shapes.md`
-  that this exemplar surfaces but doesn't formally encode.
+  uses `xAxis: {columnId: "..."}` / `yAxis: {columnIds: [...]}` — the
+  canonical form documented in `reference/specification/charts.md`
+  → "Axis shape — canonical." This exemplar surfaces it via harvest.
 - **Maps** (Capability 8 — and currently documented as unsupported in
   workbooks-as-code).
 

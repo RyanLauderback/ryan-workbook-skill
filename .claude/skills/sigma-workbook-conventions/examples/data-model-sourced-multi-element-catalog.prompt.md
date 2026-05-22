@@ -34,9 +34,9 @@ organized as a visualization reference:
 - `segmented` × 2 (Product-Type-1, date-part)
 
 ## Gaps — patterns NOT exemplified here
-- `combo-chart` — see legacy exemplar `additional-workbook-features-chart-and-control-catalog.json` or `reference/element-shapes.md` → "Bar / line / area / combo chart shape."
+- `combo-chart` — see legacy exemplar `additional-workbook-features-chart-and-control-catalog.json` or `reference/specification/charts.md` → "Combo chart."
 - `pie-chart` — see legacy exemplar `additional-workbook-features-chart-and-control-catalog.json` (donut and pie share a shape; pie example lives there).
-- `control` of `controlType: "number-range"` — documented in `reference/element-shapes.md` → "Control catalog → `number-range`" only.
+- `control` of `controlType: "number-range"` — documented in `reference/specification/controls.md` → "number-range" only.
 - `container` element — see existing `data-model-sourced-kpi-overview-with-containers.json` for the canonical container + GridContainer pattern.
 
 ## Templated placeholders

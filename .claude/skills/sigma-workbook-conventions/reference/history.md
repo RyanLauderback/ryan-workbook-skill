@@ -5,6 +5,18 @@ Dated incident notes from past iterations. The inline rules in the
 the **when** and the incident that surfaced it. Useful for git-archaeology and
 to flag "this rule was once unverified and bit us — treat it as load-bearing."
 
+> **2026-05-21 reorganization note.** Pre-2026-05-21 entries reference
+> chunk files that have since been split: `element-shapes.md` →
+> `reference/specification/{tables,charts,kpis,controls,containers,text,others}.md`
+> (per-element shapes) and `reference/conventions.md` (cross-cutting
+> rules); `function-reference.md` → `reference/specification/formulas.md`
+> + `reference/conventions.md`; `layout-and-cross-element.md` →
+> `reference/specification/layout.md` + `reference/conventions.md`. The
+> old file names in older entries below are historical — read the
+> incident narrative and find the equivalent section in the new files
+> if you need the current rule wording. See the migration commits
+> (`e0eec01`–`c765c1d`) for the full mapping.
+
 ## 2026-05-11 — Per-page `layout` field silently discarded
 
 POSTing a workbook spec with `layout` placed under `pages[i]` (rather than at

@@ -123,13 +123,13 @@ filename prefix**:
 ```
 .claude/skills/sigma-workbook-conventions/
 ├── reference/
-│   ├── naming.md                          # canonical
-│   ├── function-reference.md              # canonical
-│   ├── element-shapes.md                  # canonical
-│   ├── layout-and-cross-element.md        # canonical
-│   ├── scope-and-edge-cases.md            # canonical
-│   ├── history.md                         # canonical
-│   └── local-tableau-migration.md         # session-local — added in training mode
+│   ├── conventions.md                      # canonical (cross-cutting rules)
+│   ├── scope-and-edge-cases.md             # canonical
+│   ├── history.md                          # canonical
+│   ├── naming.md                           # canonical
+│   ├── specification/<various>.md          # canonical per-element
+│   ├── workflows/<various>.md              # canonical per-workflow
+│   └── local-tableau-migration.md          # session-local — added in training mode
 └── examples/
     ├── data-model-sourced-overview.json        # canonical
     └── local-cohort-tableau-port.json          # session-local
