@@ -34,6 +34,7 @@ CHECKS = [
     "control-id-unique",
     "passthrough-coverage",
     "controlid-collision",
+    "bare-ref-resolution",
 ]
 
 
@@ -312,6 +313,97 @@ def issues_controlid_collision(spec: dict) -> list[tuple[str, str]]:
     return issues
 
 
+def _inferred_column_name(col: dict) -> str | None:
+    """Return the display name Sigma's resolver uses for a column.
+
+    Explicit `name` wins. Otherwise, when the formula is a single qualified
+    ref `[<Source>/<Column>]`, Sigma auto-infers `<Column>` as the display
+    name. (`reference/conventions.md` → "Explicit-`name` rule" recommends
+    setting `name` explicitly to avoid resolver lookups failing for
+    downstream sibling references — but most exemplars omit it on
+    passthrough columns and Sigma's auto-inference fills the gap.)
+    """
+    if col.get("name"):
+        return col["name"]
+    formula = (col.get("formula") or "").strip()
+    m = re.fullmatch(r"\[([^/\]]+)/([^/\]]+)\]", formula)
+    if m:
+        return m.group(2)
+    return None
+
+
+def _collect_control_ids(spec: dict) -> set[str]:
+    """Every `controlId` on the spec — valid bare-ref targets for formulas."""
+    ids: set[str] = set()
+    for page in spec.get("pages", []):
+        for el in page.get("elements", []):
+            cid = el.get("controlId")
+            if cid:
+                ids.add(cid)
+    return ids
+
+
+def issues_bare_ref_resolution(spec: dict) -> list[tuple[str, str]]:
+    """Flag bare bracketed refs that don't resolve to a sibling column or control.
+
+    Catches the #1 Sigma spec error: `[column_name]` without a `/` inside a
+    formula when the referenced column actually lives on the source element,
+    not the current one, and therefore needs the source prefix (e.g.
+    `[<SourceName>/column_name]`).
+
+    A bare `[X]` is valid when `X` matches one of:
+    - The explicit `name` of a sibling column in this element's `columns[]`.
+    - The column auto-inferred from a sibling's single qualified
+      `[<Source>/<Column>]` formula.
+    - A `controlId` anywhere on the spec.
+
+    Limitations:
+    - Regex-based; can false-positive on bracketed text inside string
+      literals (e.g. `DateFormat([Date], "[MM] %Y")` — the `[MM]` is a
+      strftime token, not a column ref).
+    - Sigma's auto-disambiguator can create phantom column names like
+      `Store Region (1)` for cross-element references; bare refs to those
+      will false-positive too. Inspect flagged cases before fixing.
+
+    Ported from the upstream sigma-workbooks skill's `validate-spec.sh`
+    2026-05-21.
+    """
+    control_ids = _collect_control_ids(spec)
+    issues = []
+    for page in spec.get("pages", []):
+        for element in page.get("elements", []):
+            cols = element.get("columns") or []
+            sibling_names = {n for n in (_inferred_column_name(c) for c in cols) if n}
+            valid_targets = sibling_names | control_ids
+            for col in cols:
+                formula = col.get("formula") or ""
+                if not formula:
+                    continue
+                # Find all bare [name] refs (no slash inside the brackets).
+                bare_refs = re.findall(r"\[([^/\]]+)\]", formula)
+                unresolved = [r for r in bare_refs if r not in valid_targets]
+                if unresolved:
+                    el_label = element.get("name") or element.get("id") or "(unnamed)"
+                    col_label = col.get("name") or col.get("id") or "(unnamed)"
+                    refs_str = ", ".join(repr(r) for r in unresolved)
+                    # WARN-level (not fail) because Sigma auto-infers some
+                    # column names this check can't predict — e.g.
+                    # `DateTrunc("week", [Date])` becomes "Week of Date",
+                    # and cross-element references can produce phantom
+                    # `(N)`-suffix names. Inspect each flagged case; if it's
+                    # a real bare ref to a non-sibling, add the source
+                    # prefix. If it's an auto-inferred name, the flag is
+                    # noise.
+                    issues.append((
+                        "warn",
+                        f"element '{el_label}' / column '{col_label}': "
+                        f"bare bracketed refs don't match any sibling column or controlId: {refs_str}. "
+                        f"Add the source prefix (e.g. [<source-name>/{unresolved[0]}]) "
+                        f"or rename a sibling. Formula: {formula}"
+                    ))
+    return issues
+
+
 def main() -> None:
     if len(sys.argv) != 2:
         sys.stderr.write("usage: validate-spec.py <spec.json>\n")
@@ -330,6 +422,7 @@ def main() -> None:
         ("control-id-unique",         lambda: issues_control_id_unique(spec)),
         ("passthrough-coverage",      lambda: issues_passthrough_coverage(spec)),
         ("controlid-collision",       lambda: issues_controlid_collision(spec)),
+        ("bare-ref-resolution",       lambda: issues_bare_ref_resolution(spec)),
     ]:
         for level, msg in fn():
             all_issues.append((level, tag, msg))

@@ -27,7 +27,7 @@ scripts/validate-spec.py workbooks/<name>/spec.json
 | 2 | `controlid-collision` | Controls whose `controlId` matches a column `name` or `id` on the filtered element. See `reference/conventions.md` → "Control/column ID collision." |
 | 3 | `name-required-on-passthrough` | Passthrough columns missing explicit `name` field. See `reference/conventions.md` → "Explicit-`name` rule." |
 | 4 | `id-uniqueness` | Duplicate element IDs or column IDs within scope. |
-| 5 | `bare-ref-resolution` | Bare `[column_name]` references (no `/`) that don't match any sibling column in the same element's `columns[]` array. **Added 2026-05-21 — ported from upstream `validate-spec.sh`.** See `reference/specification/formulas.md` → "The #1 formula mistake." |
+| 5 | `bare-ref-resolution` | Bare `[column_name]` references (no `/`) that don't match any sibling column or controlId. **WARN-level** — Sigma auto-infers some column names (e.g. `DateTrunc("week", [Date])` → "Week of Date") that this regex-based check can't predict, so flags require inspection. Added 2026-05-21 — ported from upstream `validate-spec.sh`. See `reference/specification/formulas.md` → "The #1 formula mistake." |
 | 6 | `schema-keys` | Unknown top-level keys (warns when GET-spec metadata wasn't stripped before PUT). |
 | 7 | `layout-element-ids` | Layout XML `elementId` attrs that don't match any element on the page (silent-drop trap). |
 | 8 | `metrics-existence` | `[Metrics/<X>]` references that aren't in the data model's recon catalog (best-effort — requires recon JSON in `workbooks/<name>/recon/`). |
