@@ -162,3 +162,83 @@ Sales-performance v3 spec declared `controlId: "Date"` for a date-range filter o
 Fixed in v4 by renaming `controlId` to `DateRange` and fully-qualifying downstream column references as `[Transactions Detail/Date]`. This was the second observed instance of the pattern (cf. similar collision on a less-prominent control in a prior unrecorded session), warranting a dedicated rule.
 
 Rule going forward: `controlId` must not match a column `name` or `id` on the filtered element. `validate-spec.py`'s new `controlid-collision` check (Phase 9) catches this pre-POST. See `SKILL.md` → "Load-bearing rules" → rule #4 and `reference/scope-and-edge-cases.md` → "Control/column ID collision."
+
+## 2026-05-21 — `style.backgroundColor` + container/control styling discovered
+
+Capability-1 training-mode harvest of `Sales-Performance-Eval-1`
+(saved at `workbooks/harvest/retail-sales-performance/` — gitignored)
+surfaced three spec fields the skill didn't yet document:
+
+1. **`style.backgroundColor`** — fourth `style` key alongside the
+   `borderRadius/borderColor/borderWidth` triple discovered 2026-05-19.
+   Hex string. Verified across viz, container, and control elements.
+2. **`style` applies to `container` and `control`** — not just viz.
+   Containers in the retail-sales spec carry `style` objects with
+   `backgroundColor + borderColor + borderWidth`; controls carry
+   `backgroundColor + borderRadius`. Earlier skill text saying
+   "container body is `{id, kind}` only" superseded.
+3. **Partial styling is accepted.** Any subset of the four `style` keys
+   is valid. Spacer containers omit `borderRadius`; KPI tiles omit
+   `backgroundColor` so the container behind shows through.
+
+**Negative finding — UI-only, doesn't round-trip.** The retail-sales
+design spec (`prompts/library/train_format_retail_sales_performance.md`)
+mentions `padding`, `ContainerSpacing`, and `gap` but none appear in the
+JSON or layout XML on GET-back. These are UI-side toggles only. Layout
+XML attributes remain limited to `gridColumn`, `gridRow`,
+`gridTemplateColumns`, `gridTemplateRows`, `elementId`, `type`, `id`.
+
+**Co-harvest blockers — same failure mode reproduced 4×.** Four other
+Capability-1 candidate workbooks all returned `service_error` on
+GET-spec — `Claims-Command-Center-vREL-updated`,
+`Sales-MBR-Sentinel-Services-Co` (original + two strip passes), and
+`Healthcare-Aesthetic-Dashboard-v2_REL`. Version rollback via
+`?version=N` query param confirmed unhelpful (all 4 versions of the
+MBR returned the same error). Each design spec mentions features
+documented as not supported in workbooks-as-code:
+
+- Maps (`Healthcare-Aesthetic`, `Claims-Command-Center`)
+- Pivot cell-color conditional formatting (suspected on MBR)
+- Buttons (`Healthcare-Aesthetic`)
+- Modal/overlay pages (`Healthcare-Aesthetic`)
+
+This confirms the failure mode documented at
+`reference/element-shapes.md` → "GET-spec can 500 when UI features
+aren't representable." All four blocked workbooks were omitted from
+this capability's encoding.
+
+**Out-of-scope finding (deferred to Capability 7 — chart-type updates).**
+The retail-sales spec uses a chart-axis shape that diverges from
+existing exemplars: `xAxis: {columnId: "..."}` / `yAxis: {columnIds:
+[...]}` (vs. the existing `xAxis: {id}` / `yAxis: [{id}]` form). Both
+POST cleanly per existing exemplars round-tripping fine, but GET-back
+returns the `columnId` form. Decision deferred — encode in Capability
+7. The exemplar uses the new form so future authoring against it
+inherits the modern shape automatically.
+
+**Out-of-scope finding (deferred to Capability 7).** The retail-sales
+spec uses two color-by modes that extend the documented `{by, column}`:
+`color: {by: "scale", column: "..."}` (continuous heat-map color, new
+for bar-chart) and `color: {by: "category", column: "...", scheme:
+["#hex", ...]}` (custom palette array on scatter). Existing skill text
+("Chart series colors ... not per-element-spec-able") is partially
+contradicted by `scheme`; updating that claim is also deferred to
+Capability 7.
+
+Rules going forward:
+
+- `reference/element-shapes.md` → `style` section augmented with
+  `backgroundColor`, partial-style note, container/control scope, and
+  Common style recipes subsection.
+- `reference/element-shapes.md` → Container element shape + Element-
+  kinds table updated to remove "`{id, kind}` only" claim.
+- `reference/element-shapes.md` → new "What `style` does NOT capture"
+  subsection covering padding/spacing/gap UI-only.
+- New exemplar `examples/styled-card-dashboard.json` +
+  `.prompt.md` added to SKILL.md catalog.
+- `scripts/workbook-manifest.py` → recognized name-object keys expanded
+  to `{text, color, fontSize, fontWeight, visibility}`; dynamic-text
+  heuristic narrowed to Sigma template syntax (`{{...}}`) so inline
+  HTML stops triggering false positives.
+- `scripts/api/harvest-workbook.sh` → fail-fast on `service_error`
+  responses with diagnostic message + cleanup of bogus spec.json.

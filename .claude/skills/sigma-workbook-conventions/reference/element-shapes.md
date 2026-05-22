@@ -51,7 +51,7 @@ example specs live in `examples/`.
 | Pivot table | `pivot-table` | `rowsBy: [{id}]`, `columnsBy: [{id}]`, `values: ["<col-id>", ...]` | **Only this exact shape — `rows`/`cols`/`values`-as-objects is rejected.** See "Pivot-table element shape." Cell-color conditional formatting is UI-only and breaks GET-spec when present. |
 | Table | `table` | `columns: [...]`, optional `groupings`, optional `order` | Plain detail table by default; multi-level aggregating table when `groupings` carries `groupBy` + `calculations`. See "Table groupings." |
 | Control | `control` (with `controlType: ...`) | `controlType` + type-specific fields | Catalog of `controlType` values in the "Control catalog" section. |
-| Layout container | `container` | (element body is `{id, kind}` only) | Child placement happens in the layout XML via `<GridContainer>`. |
+| Layout container | `container` | `{id, kind}` + optional `style` (bg + border) | Child placement happens in the layout XML via `<GridContainer>`. |
 | Markdown text / heading | `text` | `body` (markdown), `verticalAlign` (`top \| middle \| bottom`) | Used for page titles, section headers, narrative blocks. |
 
 When the docs and the API disagree, trust the API error and update this table.
@@ -174,12 +174,15 @@ misshapen field.
 
 ## Element-level styling fields (`name`, `style`, `legend`)
 
-Three fields control element framing and title rendering. All apply to viz
-kinds (KPI, bar/line/area/combo, scatter, donut/pie, pivot, table). Verified
-2026-05-19 via GET-back of a UI-themed reference workbook
-(`reference/history.md` → "2026-05-19 — Styled-name + style.borderColor
-discovered"). Existing exemplars in `examples/` use the simpler string-name
-shape — both forms POST cleanly; you can mix them in a single workbook.
+Three fields control element framing and title rendering. `name`, `style`,
+and `legend` apply to viz kinds (KPI, bar/line/area/combo, scatter, donut/
+pie, pivot, table). **`style` ALSO applies to `container` and `control`
+elements** (verified 2026-05-21 — see "2026-05-21 — `style.backgroundColor`
++ container/control styling discovered" in `reference/history.md`). The
+2026-05-19 discovery of styled-name + `style.borderColor` against a UI-
+themed reference workbook anchored this section initially. Existing
+exemplars in `examples/` mix the simpler string-name shape with the styled
+form — both POST cleanly; you can mix them in a single workbook.
 
 ### `name` — string OR styled object
 
@@ -222,27 +225,110 @@ Comparison period and sparkline configuration remain UI-only — see
 
 ### `style` — element frame
 
-A top-level `style` object on the viz element controls the outer frame:
+A top-level `style` object controls the outer frame — border, corner
+radius, and (since 2026-05-21) background fill:
 
 ```json
 "style": {
-  "borderRadius": "round",
-  "borderColor":  "#DC2626",
-  "borderWidth":  2
+  "backgroundColor": "#FFFFFF",
+  "borderRadius":    "round",
+  "borderColor":     "#E8DFD3",
+  "borderWidth":     1
 }
 ```
 
 Verified fields:
 
-- `borderRadius` — observed: `"round"`. Other values (`"square"`, `"pill"`)
-  are visible in the workbook-theme docs and likely accepted here too;
-  verify via UI-toggle + GET-back.
+- `backgroundColor` — hex color. Sets the element's fill behind charts/
+  tables/KPI tiles. Verified 2026-05-21 via the retail-sales-performance
+  harvest (`examples/styled-card-dashboard.json`).
+- `borderRadius` — observed: `"round"`, `"pill"`. Absence renders sharp
+  corners. (`"round"` verified in the retail-sales harvest; `"pill"` per
+  the claims-command-center design spec.)
 - `borderColor` — hex color.
-- `borderWidth` — pixels as a number.
+- `borderWidth` — integer pixels. Observed: `1` for card-style framing,
+  `3` for accent headers / control panels.
+
+**Applies to:** every viz kind (KPI, bar/line/area/combo, scatter,
+donut/pie, pivot, table) AND `container` AND `control` elements.
+Verified 2026-05-21 — both container and control elements in the
+retail-sales harvest carry their own `style` object. (Supersedes the
+earlier "viz kinds only" scope on this section, and the
+"container body is `{id, kind}` only" claim that previously appeared
+under "Container element shape" below.)
+
+**Partial styling is accepted.** Any subset of the four keys is valid.
+Controls in the retail-sales harvest use only
+`{backgroundColor, borderRadius}` (no border); spacer containers omit
+`borderRadius` (sharp corners); KPI tiles omit `backgroundColor` so the
+container behind shows through.
 
 `style` is the spec field for element framing. The workbook-level theme's
-"Data element style" settings (Administration → Branding) provide defaults;
-the per-element `style` overrides for that element only.
+"Data element style" settings (Administration → Branding) provide
+defaults; the per-element `style` overrides for that element only.
+
+#### What `style` does NOT capture (UI-only, doesn't round-trip)
+
+Some styling controls in the Sigma UI **do not appear in the code spec**
+on GET-back. Verified 2026-05-21 against the retail-sales harvest, whose
+design spec mentions all three but none survive into the JSON:
+
+- `padding` / "padding enabled" toggle
+- `ContainerSpacing` / inter-element gap
+- `gap` between grid cells
+
+Do not promise these in plans, do not template them in code specs.
+Layout XML attributes are limited to `gridColumn`, `gridRow`,
+`gridTemplateColumns`, `gridTemplateRows`, `elementId`, `type`, `id`.
+
+#### Common `style` recipes
+
+Clone the recipe whose purpose matches the element you're authoring.
+All extracted from `examples/styled-card-dashboard.json`.
+
+**Card style** — default for viz + tables:
+
+```json
+"style": {"backgroundColor": "#FFFFFF", "borderRadius": "round", "borderColor": "#E8DFD3", "borderWidth": 1}
+```
+
+**Accent header / control-panel container** — signals "interactive zone"
+(filter bar, page header):
+
+```json
+"style": {"backgroundColor": "#FFFFFF", "borderRadius": "round", "borderColor": "#ce785c", "borderWidth": 3}
+```
+
+**Section title container** — tinted background behind a section
+heading, sharp corners for clean alignment with content below:
+
+```json
+"style": {"backgroundColor": "#f5f0e8", "borderColor": "#cd785c", "borderWidth": 3}
+```
+
+**Spacer / divider container** — visible horizontal band between
+sections:
+
+```json
+"style": {"backgroundColor": "#B4B4B4", "borderColor": "#FFFFFF", "borderWidth": 3}
+```
+
+**Control with subtle fill, no border:**
+
+```json
+"style": {"backgroundColor": "#FAF7F2", "borderRadius": "round"}
+```
+
+**KPI tile — border only, transparent fill so container shows through:**
+
+```json
+"style": {"borderRadius": "round", "borderColor": "#E8DFD3", "borderWidth": 1}
+```
+
+Text elements (titles, narrative, dividers) **do not carry a `style`
+field** in the verified exemplars — inline HTML in the `body` (e.g.
+`<span style="color: #RRGGBB">`) handles text styling. See "Text element
+shape" below.
 
 ### `legend` — chart legend
 
@@ -535,11 +621,17 @@ Critical field-shape rules:
 
 Containers group other elements into a logical visual block (header bar,
 KPI row, etc.) and let layout coordinates be expressed relative to the
-container's own grid. The element body is intentionally minimal:
+container's own grid. Minimal body:
 
 ```json
 { "id": "container-header", "kind": "container" }
 ```
+
+Containers also accept a top-level `style` object for background fill +
+border framing — see
+[Element-level styling fields](#element-level-styling-fields-name-style-legend)
+and "Common style recipes" for the verified shapes. The verified
+container styles are: accent header, section title, spacer.
 
 All child placement is in the layout XML using `<GridContainer>` — see
 Layout below.
@@ -633,7 +725,9 @@ enables comparison-mode; the specific period rendered is UI-side state.
 ## Control catalog (`controlType` values)
 
 Every control has `kind: "control"`, a workbook-unique `controlId`,
-and a type-specific shape. Verified types:
+and a type-specific shape. Like viz elements, controls also accept a
+top-level `style` object — see "Common style recipes" → "Control with
+subtle fill, no border." Verified types:
 
 ### `date-range`
 
