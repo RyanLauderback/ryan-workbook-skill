@@ -230,6 +230,64 @@ detail.
 
 ---
 
+## Basket / co-occurrence / self-join patterns
+
+"Which products are frequently purchased together?" — the classic
+market-basket ask — needs a self-join of the transaction table on
+`Order Number` to produce (Product A, Product B) pairs.
+
+**Sigma's `join` source is warehouse-only** — it operates on warehouse
+tables, not workbook elements. Workbook-element self-joins on the fact
+table are not directly supported at the spec layer today.
+
+### Three practical approaches
+
+**1. Warehouse-side prep (recommended for true basket analysis).**
+Build a materialized view or dbt model that emits `(Order Number,
+Product A, Product B, Attach Count)` tuples with `Product A != Product
+B`. Source a workbook table from that view. Pivot Product A × Product
+B with `Sum([Attach Count])` in `values`.
+
+**2. Lookup-based attach rate (workbook-only, single-anchor).**
+Pick one anchor category. Add a `Contains-Anchor?` boolean to a raw
+transaction table via `Lookup()` on Order Number. Aggregate other
+product types conditional on the anchor being in the order:
+
+```
+Attach Count for Peer =
+  CountDistinct(If([Order Has Anchor] And [Product Type] = "<peer>",
+                    [Order Number], Null))
+```
+
+This gives attach rates for one fixed anchor at a time. Multiple
+anchors = multiple derived tables. Doesn't scale beyond a few anchors
+but works purely at the workbook layer.
+
+**3. Order-cardinality diagonal (fastest to build, weakest signal).**
+Aggregate orders by (Product Type, other-dimension) with
+`CountDistinct(Order Number)`. Pivot Product Type × Product Type
+(same column aliased in two `columns[]` entries with different names)
+shows only the DIAGONAL — how many orders per single category — not
+true cross-sell. Ship this as a placeholder if the warehouse work
+isn't scoped yet, but be explicit in the workbook description that
+it's not a true co-occurrence view.
+
+Verified 2026-07-02 against `Product-and-Basket-Performance` build,
+which shipped approach (3) as an honest simplification. True
+basket analysis in that data model requires approach (1).
+
+### When to ship a workaround vs push back
+
+If the user asks for basket analysis and:
+- The warehouse already has an orders-x-orders view → source from it
+  (approach 1).
+- The warehouse doesn't → surface the constraint in the plan's Open
+  Decisions and propose either warehouse prep OR the single-anchor
+  attach-rate pattern (approach 2). Approach 3 is only appropriate
+  as an interim visualization with explicit caveating.
+
+---
+
 ## Choosing the right source kind
 
 | Need | Source kind | Notes |

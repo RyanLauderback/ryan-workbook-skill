@@ -1,0 +1,433 @@
+{
+  "name": "Inventory Health Dashboard",
+  "folderId": "dfd574ca-7299-4ef7-9d75-00952009b92b",
+  "description": "Single-page inventory health triage dashboard: KPI cards for inventory value, stockout count, overstock count + item-level table with conditional formatting. Filter by Store and Category.",
+  "schemaVersion": 1,
+  "pages": [
+    {
+      "id": "page-inventory-health",
+      "name": "Inventory Health",
+      "elements": [
+        {
+          "id": "container-header",
+          "kind": "container"
+        },
+        {
+          "id": "text-title",
+          "kind": "text",
+          "body": "## **Inventory Health Dashboard**\n\n*Morning triage: value at risk, low-velocity (stockout) SKUs, and high-velocity (overstock) SKUs*",
+          "verticalAlign": "middle"
+        },
+        {
+          "kind": "control",
+          "controlId": "StoreFilter",
+          "id": "ctrl-store",
+          "name": "Store",
+          "filters": [
+            {
+              "source": {
+                "kind": "table",
+                "elementId": "tbl-inv"
+              },
+              "columnId": "col-store-name"
+            },
+            {
+              "source": {
+                "kind": "table",
+                "elementId": "tbl-item-health"
+              },
+              "columnId": "col-ih-store-name"
+            }
+          ],
+          "controlType": "list",
+          "mode": "include",
+          "selectionMode": "multiple",
+          "values": [],
+          "source": {
+            "kind": "source",
+            "source": {
+              "kind": "table",
+              "elementId": "tbl-inv"
+            },
+            "columnId": "col-store-name"
+          }
+        },
+        {
+          "kind": "control",
+          "controlId": "CategoryFilter",
+          "id": "ctrl-category",
+          "name": "Category",
+          "filters": [
+            {
+              "source": {
+                "kind": "table",
+                "elementId": "tbl-inv"
+              },
+              "columnId": "col-product-type"
+            },
+            {
+              "source": {
+                "kind": "table",
+                "elementId": "tbl-item-health"
+              },
+              "columnId": "col-ih-product-type"
+            }
+          ],
+          "controlType": "list",
+          "mode": "include",
+          "selectionMode": "multiple",
+          "values": [],
+          "source": {
+            "kind": "source",
+            "source": {
+              "kind": "table",
+              "elementId": "tbl-inv"
+            },
+            "columnId": "col-product-type"
+          }
+        },
+        {
+          "id": "container-kpis",
+          "kind": "container"
+        },
+        {
+          "id": "kpi-inventory-value",
+          "kind": "kpi-chart",
+          "source": {
+            "elementId": "tbl-inv",
+            "kind": "table"
+          },
+          "columns": [
+            {
+              "id": "kpi-iv-value",
+              "formula": "Sum([Inventory Detail/Quantity] * [Inventory Detail/Price])",
+              "name": "Inventory Value",
+              "format": {
+                "kind": "number",
+                "formatString": "$,.0f"
+              }
+            },
+            {
+              "id": "kpi-iv-month",
+              "formula": "DateTrunc(\"month\", [Inventory Detail/Date])",
+              "name": "Month"
+            },
+            {
+              "id": "kpi-iv-date",
+              "formula": "[Inventory Detail/Date]",
+              "name": "Date"
+            },
+            {
+              "id": "kpi-iv-qty",
+              "formula": "[Inventory Detail/Quantity]",
+              "name": "Quantity"
+            },
+            {
+              "id": "kpi-iv-price",
+              "formula": "[Inventory Detail/Price]",
+              "name": "Price"
+            }
+          ],
+          "value": {
+            "columnId": "kpi-iv-value"
+          },
+          "name": "Inventory Value"
+        },
+        {
+          "id": "kpi-stockouts",
+          "kind": "kpi-chart",
+          "source": {
+            "elementId": "tbl-inv",
+            "kind": "table"
+          },
+          "columns": [
+            {
+              "id": "kpi-so-value",
+              "formula": "CountDistinct(If(Sum([Inventory Detail/Quantity]) < 100, [Inventory Detail/Product Key], Null))",
+              "name": "Stockout SKUs",
+              "format": {
+                "kind": "number",
+                "formatString": ",.0f"
+              }
+            },
+            {
+              "id": "kpi-so-pkey",
+              "formula": "[Inventory Detail/Product Key]",
+              "name": "Product Key"
+            },
+            {
+              "id": "kpi-so-qty",
+              "formula": "[Inventory Detail/Quantity]",
+              "name": "Quantity"
+            }
+          ],
+          "value": {
+            "columnId": "kpi-so-value"
+          },
+          "name": "Stockouts (Low Velocity)"
+        },
+        {
+          "id": "kpi-overstocks",
+          "kind": "kpi-chart",
+          "source": {
+            "elementId": "tbl-inv",
+            "kind": "table"
+          },
+          "columns": [
+            {
+              "id": "kpi-os-value",
+              "formula": "CountDistinct(If(Sum([Inventory Detail/Quantity]) > 5000, [Inventory Detail/Product Key], Null))",
+              "name": "Overstock SKUs",
+              "format": {
+                "kind": "number",
+                "formatString": ",.0f"
+              }
+            },
+            {
+              "id": "kpi-os-pkey",
+              "formula": "[Inventory Detail/Product Key]",
+              "name": "Product Key"
+            },
+            {
+              "id": "kpi-os-qty",
+              "formula": "[Inventory Detail/Quantity]",
+              "name": "Quantity"
+            }
+          ],
+          "value": {
+            "columnId": "kpi-os-value"
+          },
+          "name": "Overstocks (High Velocity)"
+        },
+        {
+          "id": "tbl-item-health",
+          "kind": "table",
+          "source": {
+            "elementId": "tbl-inv",
+            "kind": "table"
+          },
+          "columns": [
+            {
+              "id": "col-ih-product-key",
+              "formula": "[Inventory Detail/Product Key]",
+              "name": "Product Key"
+            },
+            {
+              "id": "col-ih-product-name",
+              "formula": "[Inventory Detail/Product Name]",
+              "name": "Product Name"
+            },
+            {
+              "id": "col-ih-product-type",
+              "formula": "[Inventory Detail/Product Type]",
+              "name": "Product Type"
+            },
+            {
+              "id": "col-ih-store-name",
+              "formula": "[Inventory Detail/Store Name]",
+              "name": "Store Name"
+            },
+            {
+              "id": "col-ih-store-region",
+              "formula": "[Inventory Detail/Store Region]",
+              "name": "Store Region"
+            },
+            {
+              "id": "col-ih-units",
+              "formula": "Sum([Inventory Detail/Quantity])",
+              "name": "Units Sold",
+              "format": {
+                "kind": "number",
+                "formatString": ",.0f"
+              }
+            },
+            {
+              "id": "col-ih-revenue",
+              "formula": "Sum([Inventory Detail/Quantity] * [Inventory Detail/Price])",
+              "name": "Revenue",
+              "format": {
+                "kind": "number",
+                "formatString": "$,.0f"
+              }
+            },
+            {
+              "id": "col-ih-avg-price",
+              "formula": "Avg([Inventory Detail/Price])",
+              "name": "Avg Price",
+              "format": {
+                "kind": "number",
+                "formatString": "$,.2f"
+              }
+            },
+            {
+              "id": "col-ih-status",
+              "formula": "If([Units Sold] < 100, \"Stockout\", [Units Sold] > 5000, \"Overstock\", \"Healthy\")",
+              "name": "Status"
+            }
+          ],
+          "name": "Item-Level Inventory Status",
+          "groupings": [
+            {
+              "id": "grp-sku-store",
+              "groupBy": [
+                "col-ih-product-key",
+                "col-ih-product-name",
+                "col-ih-product-type",
+                "col-ih-store-name",
+                "col-ih-store-region"
+              ],
+              "calculations": [
+                "col-ih-units",
+                "col-ih-revenue",
+                "col-ih-avg-price",
+                "col-ih-status"
+              ]
+            }
+          ],
+          "conditionalFormats": [
+            {
+              "type": "single",
+              "columnIds": [
+                "col-ih-status"
+              ],
+              "condition": "=",
+              "value": "Stockout",
+              "style": {
+                "backgroundColor": "#fee2e2",
+                "color": "#991b1b",
+                "bold": true
+              }
+            },
+            {
+              "type": "single",
+              "columnIds": [
+                "col-ih-status"
+              ],
+              "condition": "=",
+              "value": "Overstock",
+              "style": {
+                "backgroundColor": "#dcfce7",
+                "color": "#166534",
+                "bold": true
+              }
+            },
+            {
+              "type": "single",
+              "columnIds": [
+                "col-ih-units"
+              ],
+              "condition": "<",
+              "value": 100,
+              "style": {
+                "backgroundColor": "#fee2e2",
+                "color": "#991b1b"
+              }
+            },
+            {
+              "type": "single",
+              "columnIds": [
+                "col-ih-units"
+              ],
+              "condition": ">",
+              "value": 5000,
+              "style": {
+                "backgroundColor": "#dcfce7",
+                "color": "#166534"
+              }
+            }
+          ],
+          "tableStyle": {
+            "banding": "shown"
+          }
+        },
+        {
+          "id": "tbl-inv",
+          "kind": "table",
+          "source": {
+            "dataModelId": "3889b3c3-4657-4d9e-b568-5d2388cf4b4c",
+            "elementId": "GwiskXBx0S",
+            "kind": "data-model"
+          },
+          "columns": [
+            {
+              "id": "col-date",
+              "formula": "[Transactions with Details & Relationships (5M)/Date]",
+              "name": "Date"
+            },
+            {
+              "id": "col-order-number",
+              "formula": "[Transactions with Details & Relationships (5M)/Order Number]",
+              "name": "Order Number"
+            },
+            {
+              "id": "col-product-key",
+              "formula": "[Transactions with Details & Relationships (5M)/Product Key]",
+              "name": "Product Key"
+            },
+            {
+              "id": "col-product-name",
+              "formula": "[Transactions with Details & Relationships (5M)/Product Name]",
+              "name": "Product Name"
+            },
+            {
+              "id": "col-product-type",
+              "formula": "[Transactions with Details & Relationships (5M)/Product Type]",
+              "name": "Product Type"
+            },
+            {
+              "id": "col-store-key",
+              "formula": "[Transactions with Details & Relationships (5M)/Store Key]",
+              "name": "Store Key"
+            },
+            {
+              "id": "col-store-name",
+              "formula": "[Transactions with Details & Relationships (5M)/Store Name]",
+              "name": "Store Name"
+            },
+            {
+              "id": "col-store-region",
+              "formula": "[Transactions with Details & Relationships (5M)/Store Region]",
+              "name": "Store Region"
+            },
+            {
+              "id": "col-quantity",
+              "formula": "[Transactions with Details & Relationships (5M)/Quantity]",
+              "name": "Quantity"
+            },
+            {
+              "id": "col-price",
+              "formula": "[Transactions with Details & Relationships (5M)/Price]",
+              "name": "Price"
+            },
+            {
+              "id": "col-unit-cost",
+              "formula": "[Transactions with Details & Relationships (5M)/Unit Cost]",
+              "name": "Unit Cost"
+            },
+            {
+              "id": "col-sales-amount",
+              "formula": "[Transactions with Details & Relationships (5M)/Sales Amount]",
+              "name": "Sales Amount"
+            }
+          ],
+          "name": "Inventory Detail",
+          "order": [
+            "col-date",
+            "col-order-number",
+            "col-product-key",
+            "col-product-name",
+            "col-product-type",
+            "col-store-key",
+            "col-store-name",
+            "col-store-region",
+            "col-quantity",
+            "col-price",
+            "col-unit-cost",
+            "col-sales-amount"
+          ]
+        }
+      ]
+    }
+  ],
+  "layout": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<Page type=\"grid\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\" id=\"page-inventory-health\">\n  <GridContainer elementId=\"container-header\" type=\"grid\" gridColumn=\"1 / 25\" gridRow=\"1 / 5\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n    <LayoutElement elementId=\"text-title\" gridColumn=\"1 / 13\" gridRow=\"1 / 5\"/>\n    <LayoutElement elementId=\"ctrl-store\" gridColumn=\"13 / 19\" gridRow=\"1 / 5\"/>\n    <LayoutElement elementId=\"ctrl-category\" gridColumn=\"19 / 25\" gridRow=\"1 / 5\"/>\n  </GridContainer>\n  <GridContainer elementId=\"container-kpis\" type=\"grid\" gridColumn=\"1 / 25\" gridRow=\"5 / 14\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n    <LayoutElement elementId=\"kpi-inventory-value\" gridColumn=\"1 / 9\" gridRow=\"1 / 9\"/>\n    <LayoutElement elementId=\"kpi-stockouts\" gridColumn=\"9 / 17\" gridRow=\"1 / 9\"/>\n    <LayoutElement elementId=\"kpi-overstocks\" gridColumn=\"17 / 25\" gridRow=\"1 / 9\"/>\n  </GridContainer>\n  <LayoutElement elementId=\"tbl-item-health\" gridColumn=\"1 / 25\" gridRow=\"14 / 34\"/>\n  <LayoutElement elementId=\"tbl-inv\" gridColumn=\"1 / 25\" gridRow=\"34 / 50\"/>\n</Page>\n"
+}

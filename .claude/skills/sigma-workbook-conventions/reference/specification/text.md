@@ -34,8 +34,8 @@ title bar to style.
 
 ## Markdown subset
 
-The `body` field supports a deliberate subset of Markdown plus a few
-inline-HTML tags:
+The `body` field supports a subset of Markdown plus inline HTML for
+styling:
 
 - Paragraphs and soft / hard line breaks
 - Headings: `#`, `##`, `###`
@@ -44,14 +44,28 @@ inline-HTML tags:
 - `[links](https://example.com)`
 - Inline HTML: `<u>`, `<sub>`, `<sup>`
 - Inline color: `<span style="color: #hex">…</span>` and
-  `<span style="background-color: #hex">…</span>`
+  `<span style="background-color: #hex">…</span>` (hex only — `#rgb`
+  or `#rrggbb`)
+- Font size: `<span style="font-size: 24px">…</span>`
+- Font family: `<span style="font-family: Georgia">…</span>` — a
+  **single family name only** (letters, digits, spaces, underscores,
+  or dashes). Comma-separated fallback lists like
+  `"Georgia, serif"` are rejected by the API.
+- Paragraph block classes: `<p class="p-large">…</p>` and
+  `<p class="p-small">…</p>`
+- Paragraph alignment: `<p style="text-align: center">…</p>` (also
+  `left` / `right`)
 - Embedded formulas in `{{double curly braces}}` with optional d3
   formatting via pipe — see "Dynamic text" below
 
-UI-authored features outside this subset (paragraph alignment, font
-size, font family, list-item color) round-trip as their closest
-supported neighbor — they don't error, but they may render differently
-than the UI showed.
+A single `<span>` can combine properties (e.g. color + font-size). If a
+value violates its rule (e.g. a comma-list font family), the API
+rejects the whole `body` with an error naming the field.
+
+Font-size, font-family, and paragraph-alignment shapes documented by
+upstream eng skill (2026-06-11); not exercised in this skill's
+harvested exemplars yet. Verify with a small round-trip before relying
+on them in a production build.
 
 ## Inline color + bold ordering
 

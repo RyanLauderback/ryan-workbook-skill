@@ -1,14 +1,46 @@
 # Tables
 
-The `table` and `pivot-table` element kinds.
+The `table`, `pivot-table`, and `input-table` element kinds.
 
 ```bash
-jq '.components.schemas.Table, .components.schemas.PivotTable' /tmp/sigma-api.json
+jq '.components.schemas.Table, .components.schemas.PivotTable, .components.schemas.InputTable' /tmp/sigma-api.json
 ```
 
 The `table` element is the most common element kind and the primary way
 data enters a workbook — charts, KPIs, and other elements usually point
 their `source` at a table.
+
+## Table of contents
+
+Table element:
+
+- [Basic shape](#basic-shape)
+- [Styled `name` + `description` + `noDataText`](#styled-name--description--nodatatext)
+- [Common optional fields](#common-optional-fields):
+  - [`order`](#order)
+  - [`groupings` — multi-level aggregation](#groupings--multi-level-aggregation)
+  - [`summary` — summary-bar pattern](#summary--summary-bar-pattern)
+  - [`filters` — top-N, element-level row filters](#filters--top-n-element-level-row-filters)
+  - [`visibleAsSource`](#visibleassource)
+  - [`folders` — column folder groupings](#folders--column-folder-groupings)
+  - [`tableStyle` — banding + presets + header styling](#tablestyle--banding--presets--header-styling)
+  - [`tableComponents` — collapsed columns](#tablecomponents--collapsed-columns)
+- [Conditional formatting — `conditionalFormats`](#conditional-formatting--conditionalformats) (single, backgroundScale, fontScale, dataBars)
+
+Pivot tables:
+
+- [Shape](#shape)
+- [Round-trip quirks](#round-trip-quirks)
+- [Pivot conditional formatting — status](#pivot-conditional-formatting--status)
+- [Cohort pivot pattern](#cohort-pivot-pattern)
+
+Input tables:
+
+- [Input tables](#input-tables) (minimal — value limited until actions land)
+
+- [Cross-references](#cross-references)
+
+---
 
 ## Basic shape
 
@@ -58,6 +90,22 @@ Tables also accept optional `description` and `noDataText`:
 
 The shape mirrors chart titles; fetch `TitleSection` from the
 OpenAPI for the full styling enum.
+
+**`description` must be an object on tables (and KPIs).** POST
+rejects a plain-string `description` with `Invalid object: string`.
+Even if you just want a plain caption, wrap it:
+
+```json
+"description": { "text": "Distinct SKUs with < 100 units sold" }
+```
+
+To hide the description entirely:
+
+```json
+"description": { "visibility": "hidden" }
+```
+
+Verified 2026-07-02 against `inventory-health` build (1 POST retry).
 
 ## Common optional fields
 
@@ -112,6 +160,16 @@ Use cases: median/mean/percentile thresholds for downstream
 bucketing columns. Full pattern + rationale in
 `reference/conventions.md` → "Summary-bar pattern."
 
+**`summary` × `groupings.calculations` are mutually exclusive.** A
+column id in `summary` MUST NOT also appear in any grouping's
+`calculations` list. POST rejects with
+`Duplicate column or folder reference: '<col-id>'`. Verified
+2026-07-02 against `exec-scorecard` v1 (blocked mid-build).
+
+If you need both the summary-bar view AND the per-group aggregation,
+define **two separate columns** with distinct ids and the same
+formula. Put one in `summary`, the other in `calculations`.
+
 ### `filters` — top-N, element-level row filters
 
 ```json
@@ -154,6 +212,46 @@ to `true` for parent tables that downstream KPIs/charts source from.
 UI-side organization for tables with many columns. Doesn't affect
 render or downstream references; just collapses column groups in
 the table header.
+
+### `tableStyle` — banding + presets + header styling
+
+Table-level visual styling:
+
+```json
+"tableStyle": {
+  "banding": "shown",
+  "preset": "presentation",
+  "cellSpacing": "extra-small",
+  "textStyles": {
+    "header": { "backgroundColor": "#e2e2e2" }
+  }
+}
+```
+
+| Field | Observed values | Notes |
+|---|---|---|
+| `banding` | `"shown"` | Row banding on/off |
+| `preset` | `"presentation"` | Named style preset |
+| `cellSpacing` | `"extra-small"` | d3-style enum |
+| `textStyles.header.backgroundColor` | hex color | Header cell background |
+
+Verified 2026-07-02 against `sales-mbr-sentinel`. Full enum values
+live in the OpenAPI:
+
+```bash
+jq '.components.schemas.TableStyle // .. | select(.properties?.banding? or .properties?.preset?)' /tmp/sigma-api.json
+```
+
+### `tableComponents` — collapsed columns
+
+```json
+"tableComponents": {
+  "collapsedColumns": ["col-order-id", "col-cust-key"]
+}
+```
+
+`collapsedColumns` names column IDs whose values should render
+collapsed by default. UI-side hint; doesn't affect data.
 
 ## Conditional formatting — `conditionalFormats`
 
@@ -252,6 +350,10 @@ dimensions.
 
 ## Shape
 
+Pivots need **three explicit fields** on top of `columns`: `rowsBy`,
+`columnsBy`, and `values`. Without `rowsBy` + `columnsBy`, the pivot
+collapses to a single grand-total row — no rows or columns render.
+
 ```json
 {
   "id": "deployments-pivot",
@@ -260,30 +362,53 @@ dimensions.
   "source": { "kind": "table", "elementId": "deployments-source" },
   "columns": [
     { "id": "piv-cloud", "name": "Cloud", "formula": "[Deployments/Cloud]" },
-    { "id": "piv-env", "name": "Environment", "formula": "[Deployments/Environment]" },
+    { "id": "piv-env",   "name": "Environment", "formula": "[Deployments/Environment]" },
     { "id": "piv-count", "name": "Deployments",
       "formula": "CountDistinct([Deployments/Deployment UUID])",
       "format": { "kind": "number", "formatString": ",.0f" } }
   ],
-  "values": ["piv-count"]
+  "rowsBy":    [ { "id": "piv-cloud" } ],
+  "columnsBy": [ { "id": "piv-env" } ],
+  "values":    [ "piv-count" ]
 }
 ```
 
-`values` is the measure column array (the cells of the pivot). The
-remaining columns act as row/column dimensions.
+Field roles:
+
+- **`columns`** — every column referenced by the pivot (dimensions AND
+  measures), each with `id`, `name`, `formula`.
+- **`rowsBy`** — array of `{ id: <column-id> }` entries. Each entry
+  becomes a row-axis dimension. Multiple entries stack (multi-level rows).
+- **`columnsBy`** — array of `{ id: <column-id> }` entries. Each becomes
+  a column-axis dimension. Multi-level columns work the same way.
+- **`values`** — array of column-ID strings. Each is a measure that
+  fills the pivot's cells at each (row, column) intersection.
+
+Both `rowsBy` and `columnsBy` entries accept an optional `sort` field:
+
+```json
+"rowsBy":    [ { "id": "piv-region", "sort": { "by": "piv-current", "direction": "descending" } } ],
+"columnsBy": [ { "id": "piv-quarter", "sort": { "by": "piv-quarter-num", "direction": "ascending" } } ]
+```
+
+**Common trap** — including a dimension in `columns` but forgetting
+to bind it via `rowsBy` or `columnsBy` renders it as a leaf column on
+the source table rather than a pivot axis. The pivot compiles cleanly
+(passes validate + verify) but the UI shows only the grand total for
+the measure. Verified 2026-07-02 against `Product-and-Basket-Performance`
+before a PUT fix added `rowsBy`/`columnsBy` to both pivots.
+
+**Heatmap pattern** (dimension × dimension × measure with cell coloring)
+uses this exact shape plus `conditionalFormats` with the
+`backgroundScale` variant — see below.
 
 ## Round-trip quirks
 
 - **Column reordering.** Sigma reorders the `columns` array on
   round-trip — value columns first, then dimensions — regardless of
   submission order. GET → edit → PUT will show a non-substantive
-  diff in `columns`. The `values` array preserves IDs, so rendered
-  output is unchanged.
-- **Row vs. column dimension placement.** The OpenAPI surfaces only
-  `columns` and `values`; there is no separate `rows` / `pivotRows`
-  / `pivotColumns` field. Sigma infers row vs. column dimensions
-  from the non-`values` columns. To control layout further, today
-  the UI is the path.
+  diff in `columns`. The `rowsBy` / `columnsBy` / `values` bindings
+  preserve IDs, so rendered output is unchanged.
 
 ## Pivot conditional formatting — status
 
@@ -303,6 +428,47 @@ week × age week. Canonical example:
 The pivot's columns include both dimensions (cohort dim + age dim)
 and aggregated values (`Sum([Revenue])`, `CountDistinct([Cust Key])`).
 See `reference/conventions.md` → "Two-tier sourcing."
+
+# Input tables
+
+The `input-table` element is an editable table — users type values
+directly into cells, backed by a provisioned warehouse table.
+
+**Status (2026-07-02):** documented by upstream eng skill; no
+harvested exemplar in this skill's corpus yet. Practical value is
+limited until Sigma exposes actions (buttons that write cell values
+back to the warehouse) via the spec. Keep the docs minimal until
+that lands.
+
+## Shape
+
+Required fields: `id`, `kind: input-table`, `source`, `inputMode`.
+
+```json
+{
+  "id": "input-forecast",
+  "kind": "input-table",
+  "inputMode": "edit",
+  "source": { "kind": "empty" },
+  "columns": [
+    { "id": "col-region",   "name": "Region",   "columnType": "text" },
+    { "id": "col-forecast", "name": "Forecast", "columnType": "number" }
+  ]
+}
+```
+
+- `inputMode`: `"edit"` observed. Inspect the OpenAPI for other modes.
+- `source.kind`: `"empty"` (blank editable table) or `"linked"` (backed
+  by an existing warehouse table).
+- Column shape differs from `table` — includes `columnType` and system
+  columns (audit fields). Pull the full schema before authoring:
+
+```bash
+jq --arg k input-table 'first(.. | objects | select((.allOf? and any(.allOf[]?; .properties?.kind?.enum==[$k])) or .properties?.kind?.enum==[$k]))' /tmp/sigma-api.json
+```
+
+Also supports `filters`, `conditionalFormats` (see above), `sort`,
+`summary`, and the styled title-section `name` / `noDataText`.
 
 ## Cross-references
 

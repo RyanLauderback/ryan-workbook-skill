@@ -17,6 +17,7 @@ The plan's `Chunks Read:` line must list this file.
 - [Explicit-`name` rule + rename-cascade corollary](#explicit-name-rule)
 - [`[Metrics/<Name>]` resolution + DM-switch hard rule](#metrics-resolution)
 - [Control/column ID collision](#control-column-collision)
+- [Channel exclusivity (one column per binding channel)](#channel-exclusivity)
 - [Bar-chart orientation + categorical-axis sort rule](#bar-orientation)
 - [Summary-bar pattern (aggregate-then-categorize)](#summary-bar)
 - [Two-tier sourcing (warehouse → derived)](#two-tier-sourcing)
@@ -278,6 +279,58 @@ renamed to `DateRange` and column references were fully-qualified
 
 ---
 
+## Channel exclusivity
+
+**Rule:** A single column id may appear on at most **one** binding
+channel per element. Reusing the same columnId across two channels
+(e.g., putting the same `col-revenue` on both `value` and `holeValue`
+of a donut, or on both `xAxis` and `color` of a bar chart) is
+**rejected at POST** with a message like `Column '<id>' is referenced
+from both 'X' and 'Y'; a column can only be on one channel at a time`.
+
+**Why:** Sigma binds each channel to at most one distinct column per
+element. If you need two channels to share the same underlying value,
+define **two column entries** (different `id`s, same `formula`) and
+wire one column per channel.
+
+**Per-element channel lists:**
+
+| Element kind | Binding channels (exclusive) |
+|---|---|
+| `bar-chart`, `line-chart`, `area-chart`, `combo-chart` | `xAxis`, `yAxis` (columnIds), `color`, `size` |
+| `scatter-chart` | `xAxis`, `yAxis`, `color`, `size` |
+| `pie-chart`, `donut-chart` | `value`, `color`; donut also `holeValue` |
+| `region-map` | `region`, `color`, `label[]`, `tooltip[]` |
+| `point-map` | `latitude`, `longitude`, `size`, `color`, `label[]`, `tooltip[]` |
+| `geography-map` | `geography`, `color`, `label[]`, `tooltip[]` |
+| `kpi-chart` | `value` |
+| `table`, `pivot-table` | none (channels don't apply — everything is in `columns[]`) |
+
+`label` and `tooltip` on maps are arrays — they accept multiple
+`{id}` entries, but a given column id still must appear on only ONE
+channel per element.
+
+**Fix pattern:** duplicate the column with a distinct id.
+
+```json
+"columns": [
+  { "id": "col-rev-value",  "formula": "Sum([Sales])", "name": "Revenue" },
+  { "id": "col-rev-region", "formula": "[Region]",     "name": "Region" },
+  { "id": "col-orders",     "formula": "CountDistinct([Order Id])", "name": "Orders" }
+],
+"value":     { "id": "col-rev-value" },
+"holeValue": { "id": "col-orders" },       // distinct — Orders, not Revenue
+"color":     { "id": "col-rev-region", "sort": { "by": "col-rev-value", "direction": "descending" } }
+```
+
+Verified 2026-07-02 against `exec-scorecard-v2` (2 POST rejections
+on region-map channel reuse before this rule was formalized).
+
+`validate-spec.py`'s `channel-exclusivity` check catches this
+pre-POST (planned; not yet implemented — see `reference/workflows/validate.md`).
+
+---
+
 ## Bar-chart orientation + categorical-axis sort rule
 
 Bar charts accept `orientation: "horizontal" | "vertical"` (default
@@ -293,6 +346,11 @@ or metric-on-x by design.
 label-rotation (labels read left-aligned on Y axis) AND ranks
 largest→smallest, the conventional categorical read order. Horizontal
 on time-series compresses the time scale.
+
+**`orientation` accepts `"horizontal"` or omit-for-default.** Explicit
+`orientation: "vertical"` is rejected at POST. When you want vertical,
+omit the field; the default IS vertical. Verified 2026-07-02 against
+`exec-scorecard-v2` (1 POST retry on explicit-vertical).
 
 ---
 

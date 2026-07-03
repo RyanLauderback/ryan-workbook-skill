@@ -3,7 +3,7 @@
 Validation runs in three phases:
 
 1. **Pre-submit** — `scripts/validate-spec.py` catches what's visible
-   in the spec text (8 checks).
+   in the spec text (13 checks).
 2. **Post-create** — `scripts/api/verify-workbook.sh` catches what
    Sigma's compiler discovers but the spec parser tolerates.
 3. **Visual** — open the workbook URL and confirm it renders.
@@ -19,7 +19,7 @@ Load this before any POST or PUT.
 scripts/validate-spec.py workbooks/<name>/spec.json
 ```
 
-8 checks (as of 2026-05-21):
+13 checks (as of 2026-07-02):
 
 | # | Check | What it catches |
 |---|---|---|
@@ -31,6 +31,11 @@ scripts/validate-spec.py workbooks/<name>/spec.json
 | 6 | `schema-keys` | Unknown top-level keys (warns when GET-spec metadata wasn't stripped before PUT). |
 | 7 | `layout-element-ids` | Layout XML `elementId` attrs that don't match any element on the page (silent-drop trap). |
 | 8 | `metrics-existence` | `[Metrics/<X>]` references that aren't in the data model's recon catalog (best-effort — requires recon JSON in `workbooks/<name>/recon/`). |
+| 9 | `control-filter-column-exists` | Control `filters[].columnId` values that don't exist on the target element. Catches typos that pass POST but silently break every downstream query on the page. Added 2026-07-02 after a fresh-agent build test surfaced this class of bug. Includes "did you mean" suggestions for near-match column IDs. |
+| 10 | `kpi-value-references-aggregation` | KPI value formulas that bare-ref sibling columns whose formulas contain aggregation functions (`Sum`, `Avg`, `Count*`, etc.). The bare ref evaluates per-row, an aggregation has no per-row value, and the KPI renders `null`. WARN-level — regex-based, so occasional false positives are possible. Fix: inline the aggregation into the value formula, or promote to a data-model metric. Added 2026-07-02 after `Marketing-and-Promotions-Performance`'s Promo Lift KPI rendered null. See `reference/specification/kpis.md` → "Value formula pitfall." |
+| 11 | `summary-calc-collision` | Column IDs that appear in both `summary[]` and a `groupings[].calculations[]` list on the same table. POST rejects with `Duplicate column or folder reference`. Fix: split into two column definitions with distinct IDs. Added 2026-07-02 after `exec-scorecard` v1 hit this mid-build. See `reference/specification/tables.md` → "summary — summary-bar pattern." |
+| 12 | `description-object-on-kpi-and-table` | Plain-string `description` on `kpi-chart`, `table`, `pivot-table`, or `input-table` elements. POST rejects with `Invalid object: string`. Fix: wrap as `{"text": "..."}` or `{"visibility": "hidden"}`. Chart elements accept the string form. Added 2026-07-02 after `inventory-health` build hit this. See `reference/specification/kpis.md` → "Description must be an object." |
+| 13 | `pivot-missing-rows-and-columns` | Pivot-tables that have `values` but neither `rowsBy` nor `columnsBy` — the pivot compiles cleanly (passes POST + verify) but renders as a single grand-total row. Fix: add at least one `rowsBy` or `columnsBy` entry (`[{"id": "<dim-col-id>"}]`). Added 2026-07-02 after `Product-and-Basket-Performance` shipped two pivots that rendered as grand-total-only in the UI. See `reference/specification/tables.md` → "Shape" (pivot section). |
 
 Fix everything reported before continuing. If exit 0, proceed to the
 manual pass.
@@ -146,7 +151,7 @@ check the spec reference file for that feature to compare shapes.
 | `Invalid kind: pages[0].elements[N].columns[M]` | Usually missing `id`, `name`, or `formula`, or `format.kind` mismatched. | `reference/specification/formatting.md`. |
 | `Cannot resolve columns on table '<chart-id>': dependency not found: formula reference '<old-name>/<col>'` | Renamed source-of-truth table broke sibling formulas. | `reference/conventions.md` → "Rename-cascade corollary." |
 | `Column has a recursive formula` | A column references itself via `name` collision, OR a chart formula re-aggregates an already-aggregated metric. | `reference/conventions.md` → "Summary-bar pattern" for the aggregate-then-categorize case. |
-| **Silent bad data** — no error, but the value/element is missing or `null` on readback | (a) A boolean-operator formula written as a function call (`Not(...)` instead of `Not ...`) — parses successfully but evaluates `null` per row; (b) layout XML naming an `elementId` that doesn't exist after CREATE remapped IDs; (c) a control field that doesn't round-trip (e.g., `number-range` `values`). | `reference/specification/formulas.md` for (a), `reference/specification/layout.md` for (b), `reference/specification/controls.md` for (c). |
+| **Silent bad data** — no error, but the value/element is missing or `null` on readback | (a) A boolean-operator formula written as a function call (`Not(...)` instead of `Not ...`) — parses successfully but evaluates `null` per row; (b) layout XML naming an `elementId` that doesn't exist on the page (typo, deleted element, case mismatch); (c) a control field that doesn't round-trip (e.g., `number-range` `values`). | `reference/specification/formulas.md` for (a), `reference/specification/layout.md` for (b), `reference/specification/controls.md` for (c). |
 | `service_error` / 500 on GET-spec | Workbook contains a UI feature the serializer can't represent (confirmed: pivot cell heatmaps; suspected: maps, complex color-by). | `reference/scope-and-edge-cases.md` → "GET-spec can 500 when UI features aren't representable." |
 
 **General strategy:** the error path names the offending field; the

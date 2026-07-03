@@ -50,6 +50,37 @@ Each `<Page id="...">` matches a `pages[].id`. Per-page layout
 placed under `pages[i]` is silently discarded — verified
 2026-05-11. See `reference/history.md`.
 
+## Two flavors: XML layout vs. element-level `layout` object
+
+The top-level `layout` field discussed here is an **XML string** that
+positions elements on the page grid.
+
+Individual elements can **also** carry a `layout` **object** (not
+XML) that controls in-element positioning:
+
+```json
+{
+  "kind": "kpi-chart",
+  "id": "kpi-revenue",
+  "layout": { "anchor": "middle" },
+  ...
+}
+```
+
+Observed values: `anchor: "middle"` on KPIs (verified 2026-07-02
+against `sales-mbr-sentinel`). Presumably `"start"` / `"end"`
+supported too — inspect the OpenAPI to enumerate.
+
+These are two different things using the same key name:
+
+| Where | Value type | Purpose |
+|---|---|---|
+| Top of spec (`spec.layout`) | XML string | Places elements on the page grid |
+| On each element (`element.layout`) | JSON object | Positions content within the element's box |
+
+Both can coexist — the XML places the KPI on the grid; the object
+sets the KPI content's vertical anchor within its allocated cell.
+
 ## Two-tag grammar
 
 ```xml
@@ -129,15 +160,19 @@ Use stacked rows when you want a section header above a row of
 charts inside the same container, instead of moving those elements
 out to the page level.
 
-## After CREATE: IDs reassign
+## After CREATE: IDs are preserved
 
-The server remaps external IDs to internal ones on
-`POST /v2/workbooks/spec`. Before any follow-up `PUT` that touches
-`layout`, **GET the current spec and use the readback IDs**. Layout
-`elementId` references must match exactly (case-sensitive) — a
-mismatch silently drops the element from the page.
+IDs you `POST` are preserved verbatim — pages, elements, columns keep
+the `id` values you sent. You can save the spec, edit it, and `PUT`
+it back directly. Layout `elementId` references stay valid across
+POST/PUT.
 
-See `reference/workflows/crud.md` → "ID remapping on CREATE."
+Layout `elementId` references must match an element `id` on that
+page exactly (case-sensitive) — a mismatch silently drops the
+element from the page.
+
+Verified 2026-07-02 against harvested skill-authored workbooks:
+kebab-case IDs survived POST → GET round-trip unchanged.
 
 ## Page-structure pattern (apply by default)
 

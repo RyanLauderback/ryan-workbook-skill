@@ -27,14 +27,17 @@ aggregated value.
       "format": { "kind": "number", "formatString": "$,.0f" }
     }
   ],
-  "value": { "id": "kpi-val" }
+  "value": { "columnId": "kpi-val" }
 }
 ```
 
 - `columns` — define at least one column (the value to display).
-  More columns are allowed but only `value.id` is rendered as the
-  headline.
-- `value.id` — the column ID to show in the card.
+  More columns are allowed but only `value.columnId` is rendered as
+  the headline.
+- `value.columnId` — the column ID to show in the card.
+  **Verified 2026-07-02 across all harvested KPIs (26 instances):
+  the field is `columnId`, not `id`.** Sending `value.id` will be
+  silently ignored or rejected depending on the server version.
 - `format` on the column controls displayed format. See
   `formatting.md`.
 
@@ -56,14 +59,14 @@ that column:
     { "id": "kpi-rev-month", "formula": "DateTrunc(\"month\", [Date])",
       "name": "Month" }
   ],
-  "value": { "id": "kpi-rev-value" }
+  "value": { "columnId": "kpi-rev-value" }
 }
 ```
 
 **KPIs without a date-dimension column lose the most analytical
 value.** A naked number with no comparison context is hard to
 interpret. Include the date dimension in `columns` even if it's not
-the `value.id`.
+the `value.columnId`.
 
 ## Title styling (styled-name object form)
 
@@ -106,6 +109,43 @@ elements:
 the container behind shows through. See `containers.md` →
 "Common style recipes" for the full recipe catalog.
 
+## Element-level `layout` object
+
+Distinct from the top-level layout XML. On KPIs, a `layout` object
+controls in-tile anchor positioning of the value:
+
+```json
+"layout": { "anchor": "middle" }
+```
+
+Observed values: `"middle"`. Presumably `"start"` / `"end"` supported;
+inspect the OpenAPI. Verified 2026-07-02 across `sales-mbr-sentinel`
+(18 KPIs).
+
+See `layout.md` → "Two flavors: XML layout vs. element-level `layout`
+object" for the distinction.
+
+## Description must be an object
+
+`description` on KPIs is **object-only**. A plain-string
+`description` is rejected at POST with `Invalid object: string`.
+
+Correct shapes:
+
+```json
+"description": { "text": "Current-month bookings from Opps table" }
+```
+
+```json
+"description": { "visibility": "hidden" }
+```
+
+Setting `visibility: "hidden"` removes the description line from the
+tile entirely. Verified 2026-07-02 across `sales-mbr-sentinel` KPIs
+and `inventory-health` build (1 POST retry on string-form rejection).
+Same rule applies to tables — see `tables.md` → "Styled name +
+description + noDataText."
+
 ## Formula qualification
 
 Every KPI sources another element, so the column's formula must use
@@ -121,6 +161,78 @@ in this KPI's own `columns[]` array. This is the single most common
 mistake — see `formulas.md`.
 
 Run `scripts/validate-spec.py` before publishing to catch it.
+
+## Value formula pitfall: can't reference sibling aggregation columns
+
+A `value.columnId` formula that uses bare `[Sibling]` refs to other
+columns in the same KPI **renders as `null`** when those siblings
+themselves contain aggregation functions (`Sum`, `Avg`, `Count`,
+`CountDistinct`, `Median`, `Percentile`, etc.).
+
+**Why it fails:** Sigma evaluates the value formula per-row of the
+source table first, then aggregates. Bare `[Sibling]` refs resolve
+to the sibling's per-row value — but an aggregation column has no
+per-row value, so the ref evaluates to `null` and the whole
+expression collapses to `null`.
+
+### Wrong — silently renders null
+
+```json
+"columns": [
+  { "id": "kpi-lift",
+    "formula": "([Promo AOV] - [Non-Promo AOV]) / [Non-Promo AOV]",
+    "name": "Lift %" },
+  { "id": "kpi-promo-aov",
+    "formula": "Sum(If([Promo Flag]=\"Promo\",[Rev],0)) / CountDistinct(If([Promo Flag]=\"Promo\",[Order],Null))",
+    "name": "Promo AOV" },
+  { "id": "kpi-nonpromo-aov",
+    "formula": "Sum(If([Promo Flag]=\"Non-Promo\",[Rev],0)) / CountDistinct(If([Promo Flag]=\"Non-Promo\",[Order],Null))",
+    "name": "Non-Promo AOV" }
+],
+"value": { "columnId": "kpi-lift" }
+```
+
+Verified 2026-07-02 against `Marketing-and-Promotions-Performance`:
+`Promo Lift vs Non-Promo AOV` KPI rendered `null` because
+`kpi-lift`'s formula referenced two sibling aggregation columns
+via bare refs.
+
+### Right — self-contained value formula
+
+Inline the aggregations directly in the value column's formula so
+it evaluates as a single scalar over the source table:
+
+```json
+"columns": [
+  { "id": "kpi-lift",
+    "formula": "(Sum(If([Promo Flag]=\"Promo\",[Rev],0)) / CountDistinct(If([Promo Flag]=\"Promo\",[Order],Null))) / (Sum(If([Promo Flag]=\"Non-Promo\",[Rev],0)) / CountDistinct(If([Promo Flag]=\"Non-Promo\",[Order],Null))) - 1",
+    "name": "Lift %",
+    "format": { "kind": "number", "formatString": ".1%" } }
+],
+"value": { "columnId": "kpi-lift" }
+```
+
+Verbose but correct — each aggregation evaluates over the whole source
+table, and the ratio computes over the resulting scalars.
+
+### Alternatives when the formula gets unwieldy
+
+- **Promote the ratio to a data-model metric.** Define `Promo Lift %`
+  on the DM element and reference `[Metrics/Promo Lift %]` in the
+  KPI. Keeps the KPI spec small and reuses the definition across
+  workbooks.
+- **Compute upstream in a derived table.** Create a sibling table
+  element with one row per (dimension) and pre-aggregated Promo/
+  Non-Promo columns, then source the KPI from that. The KPI can
+  reference its columns without hitting the aggregation-nesting
+  problem because the source is already at the right grain.
+
+`scripts/validate-spec.py`'s `kpi-value-references-aggregation`
+check (added 2026-07-02) warns pre-POST when a KPI value formula
+uses bare refs to sibling columns whose formulas contain
+aggregation functions. Warn-level, not fail — a false positive is
+possible when the sibling's aggregation happens to evaluate to a
+single valid scalar (rare); inspect flagged cases.
 
 ## Passthrough columns
 

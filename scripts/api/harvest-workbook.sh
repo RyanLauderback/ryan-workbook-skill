@@ -78,7 +78,7 @@ if python3 -c "import json,sys; d=json.load(open('$out_dir/spec.json')); sys.exi
   echo "    $err_msg" >&2
   echo "" >&2
   echo "  Typical cause: the workbook contains a UI feature the spec serializer" >&2
-  echo "  can't represent. See reference/element-shapes.md → \"GET-spec can 500" >&2
+  echo "  can't represent. See reference/scope-and-edge-cases.md → \"GET-spec can 500" >&2
   echo "  when UI features aren't representable\" for the known triggers." >&2
   echo "" >&2
   echo "  Removing spec.json so it doesn't seed downstream work." >&2

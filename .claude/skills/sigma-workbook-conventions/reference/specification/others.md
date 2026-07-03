@@ -1,31 +1,46 @@
-# Other element kinds (divider, image)
+# Other element kinds (divider, image, embed)
 
 Recipes for the smaller polish elements.
 
 ```bash
-jq '.components.schemas.Divider, .components.schemas.Image' /tmp/sigma-api.json
+jq '.components.schemas.Divider, .components.schemas.Image, .components.schemas.Embed' /tmp/sigma-api.json
 ```
-
-Both elements take very little spec; this file documents the
-`{{formula}}`-in-URL pattern for image elements and how they pair with
-layout XML.
 
 ## Divider
 
-A horizontal rule. No data, no source, no styling fields.
+A rule for separating sections. Data-less, source-less.
 
 ```json
-{ "id": "section-rule", "kind": "divider" }
+{
+  "id": "section-rule",
+  "kind": "divider",
+  "direction": "horizontal",
+  "align": "middle",
+  "style": {
+    "color": "#cccccc",
+    "width": 2,
+    "strokeStyle": "solid"
+  }
+}
 ```
 
 | Field | Required | Notes |
 |---|---|---|
 | `id` | yes | Unique on the page |
 | `kind` | yes | Always `"divider"` |
+| `direction` | no | `"horizontal"` (default) or `"vertical"` |
+| `align` | no | e.g., `"middle"` |
+| `style` | no | `{ color, width, strokeStyle }` |
+| `style.color` | no | Hex color (`#cccccc`) |
+| `style.width` | no | Pixel width (integer) |
+| `style.strokeStyle` | no | `"solid"` observed; other d3-style values likely accepted |
 
-Use a divider in the layout to separate sections within a page or
-container. Position it like any other element via `<LayoutElement>`
-with a thin `gridRow` span (e.g., `gridRow="6 / 7"`).
+Verified 2026-07-02 against harvested `element-showcase` workbook —
+both horizontal and vertical dividers with full `style` blocks round-trip
+cleanly through POST/GET.
+
+Position via `<LayoutElement>` with a thin `gridRow` (horizontal) or
+`gridColumn` (vertical) span.
 
 ## Image
 
@@ -46,8 +61,12 @@ supported via the spec.
 | `kind` | yes | Always `"image"` |
 | `url` | yes | Public HTTPS URL. Supports `{{formula}}` references |
 
-`url` is the only data field — there's no `alt`, `width`, or `height`
-in the public spec. Sizing is controlled by the layout grid placement.
+The OpenAPI schema also documents `alt`, `link`, and a `style` block on
+image elements. Neither observed in harvested reference workbooks
+(2026-07-02) — every image in the corpus used only `url`. If you need
+them, inspect the schema via the jq recipe above before writing.
+
+Sizing is controlled by the layout grid placement, not element fields.
 
 ### Dynamic image URL via `{{formula}}`
 
@@ -97,6 +116,37 @@ overlapping with a text element:
   other elements (KPIs, text, charts) sitting on top. See
   `containers.md` → "backgroundImage" for the object shape.
 
+## Embed
+
+Renders an external URL inline — a hosted report, form, video, etc.
+
+```json
+{
+  "id": "embed-report",
+  "kind": "embed",
+  "url": "https://example.com/report"
+}
+```
+
+| Field | Required | Notes |
+|---|---|---|
+| `id` | yes | Unique on the page |
+| `kind` | yes | Always `"embed"` |
+| `url` | yes | Public URL. Supports `{{formula}}` references |
+
+Documented by the upstream eng skill but not observed in harvested
+reference workbooks yet. Inspect the OpenAPI shape before relying on
+additional fields.
+
+Positions via `<LayoutElement>` in layout XML like any other element.
+
+## Maps
+
+Map elements (`geography-map`, `point-map`, `region-map`) live in
+their own reference file — see [`maps.md`](maps.md). Verified
+round-trippable through the spec (2026-07-02) against the harvested
+`element-showcase` workbook.
+
 ## What about buttons and modals?
 
 Per Sigma's official workbooks-as-code limitations
@@ -117,15 +167,3 @@ features aren't representable." When the user asks for one of
 these, surface the gap during the plan step and propose a
 substitute (e.g., navigation via drill-through actions on a KPI, or
 a separate page).
-
-## What about maps?
-
-Per the official skill's `from-image.md`, `geography-map` is listed
-as a valid kind for visual interpretation. Whether it's currently
-round-trippable through the spec is **untested** — every workbook
-with maps observed in training mode through 2026-05-21 has returned
-`service_error` on GET-spec. Treat maps as unsupported unless a
-GET-spec round-trip succeeds on a map-bearing workbook in your org.
-
-See `reference/scope-and-edge-cases.md` → "Map element status" for
-the running observation log.

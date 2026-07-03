@@ -6,6 +6,44 @@ the **formula language itself** (syntax, qualification, operator
 behavior). Field-level shape (where formulas appear in the spec) is in
 the OpenAPI per-element schemas.
 
+## Table of contents
+
+Load-bearing gotchas (read first):
+
+- [⚠️ READ FIRST — The #1 formula mistake](#-read-first--the-1-formula-mistake)
+- [⚠️ READ SECOND — Raw vs. friendly column names](#-read-second--raw-vs-friendly-column-names)
+- [⚠️ READ THIRD — Boolean operators are NOT function calls](#-read-third--boolean-operators-are-not-function-calls)
+
+Reference rules:
+
+- [Column reference rules](#column-reference-rules) (inside vs outside the element)
+- [Data-model metrics — `[Metrics/<Name>]`](#data-model-metrics--metricsname)
+- [Formula namespaces summary](#formula-namespaces-summary)
+- [Common mistakes](#common-mistakes)
+
+Language:
+
+- [Operators](#operators) (arithmetic, boolean, string concat)
+- [Aggregation functions](#aggregation-functions)
+- [Date functions](#date-functions)
+- [Conditional](#conditional)
+- [Text functions](#text-functions)
+- [JSON / struct field access](#json--struct-field-access)
+
+Advanced patterns:
+
+- [Cross-element joins via `Lookup()`](#cross-element-joins-via-lookup) (with verified dimension-passthrough example)
+- [Per-row windowed aggregations — `Rollup`](#per-row-windowed-aggregations--rollup)
+- [Window functions](#window-functions) (`Rank`, `Lead`, `Lag`, `RunningSum`, etc.)
+- [Numeric guards](#numeric-guards) (safe division, `Zn`, DivideSafe hallucination warning)
+
+Troubleshooting:
+
+- [Looking up Sigma functions](#looking-up-sigma-functions) (via Sigma_Docs MCP)
+- [When the formula fails at render](#when-the-formula-fails-at-render)
+
+---
+
 ## ⚠️ READ FIRST — The #1 formula mistake
 
 When an element sources another element (e.g., a KPI or chart
@@ -92,6 +130,22 @@ Right: ([Status] = "Active") And ([Plan] = "Pro")
 grouping), so the failure is silent — null rows, no error. Easy to
 get wrong by analogy with `Sum([X])` / `If(...)`.
 
+### Null tests — `IsNull()` function, not `Is Null` operator
+
+Sigma does NOT accept SQL-style `[Col] Is Null` or `Is Not Null`
+operators. Use the `IsNull()` function form instead:
+
+```
+Wrong: If([Historical Avg] Is Null, Null, ...)          // API rejects: Invalid formula
+Wrong: If([Historical Avg] Is Not Null, ..., Null)
+
+Right: If(IsNull([Historical Avg]), Null, ...)
+Right: If(Not IsNull([Historical Avg]), ..., Null)
+```
+
+Verified 2026-07-02 against `exec-scorecard-v2` PUT rejection.
+Reads naturally to SQL/Python authors; wrong for Sigma.
+
 ## Column reference rules
 
 Every column formula references either a column **outside** the
@@ -157,6 +211,13 @@ This trips up copy-paste: if a column's `name` field matches any
 bracketed reference inside its own `formula`, the server treats it
 as circular even when you meant to reference a different column.
 Rename one side to break the cycle.
+
+**On KPIs specifically:** the value column's formula can't
+reference sibling columns whose formulas contain aggregation
+functions (`Sum`, `Avg`, `Count*`, `Median`, etc.). The bare ref
+resolves per-row, an aggregation has no per-row value, and the KPI
+renders `null`. See `kpis.md` → "Value formula pitfall: can't
+reference sibling aggregation columns" for the correct patterns.
 
 ## Data-model metrics — `[Metrics/<Name>]`
 
@@ -358,6 +419,55 @@ The lookup-source element doesn't have to be the visual focus of
 the page, but it must exist on the page and be placed in the layout
 XML.
 
+### Verified pattern — dimension-passthrough for drill-through
+
+The most common `Lookup()` use is broadcasting a dimension table's
+attributes onto a fact table for drill-through and control targets.
+Verified 2026-07-02 against a 7-column customer-demographics pull
+from `Customers` into `Cust Tx` on `Cust Key`:
+
+```json
+{
+  "id": "tbl-cust-tx",
+  "kind": "table",
+  "name": "Cust Tx",
+  "source": { "kind": "table", "elementId": "tbl-transactions" },
+  "columns": [
+    { "id": "col-cus-key",       "name": "Cust Key",       "formula": "[Transactions/Cust Key]" },
+    { "id": "col-cus-tx-date",   "name": "Date",           "formula": "[Transactions/Date]" },
+    { "id": "col-cus-tx-amt",    "name": "Sales Amount",   "formula": "[Transactions/Sales Amount]" },
+
+    { "id": "col-cus-region",    "name": "Cust Region",    "formula": "Lookup([Customers/Cust Region], [Cust Key], [Customers/Cust Key])" },
+    { "id": "col-cus-state",     "name": "Cust State",     "formula": "Lookup([Customers/Cust State], [Cust Key], [Customers/Cust Key])" },
+    { "id": "col-cus-type",      "name": "Cust Type",      "formula": "Lookup([Customers/Cust Type], [Cust Key], [Customers/Cust Key])" },
+    { "id": "col-cus-gender",    "name": "Cust Gender",    "formula": "Lookup([Customers/Cust Gender], [Cust Key], [Customers/Cust Key])" },
+    { "id": "col-cus-age-group", "name": "Age Group",      "formula": "Lookup([Customers/Age Group], [Cust Key], [Customers/Cust Key])" },
+    { "id": "col-cus-civil",     "name": "Civil Status",   "formula": "Lookup([Customers/Civil Status], [Cust Key], [Customers/Civil Status])" },
+    { "id": "col-cus-loyalty",   "name": "Loyalty Program","formula": "Lookup([Customers/Loyalty Program], [Cust Key], [Customers/Cust Key])" }
+  ]
+}
+```
+
+Rules of thumb from the verified build:
+
+- **Same-page requirement.** The lookup-source element (`Customers`)
+  and the lookup-target element (`Cust Tx`) must live on the same
+  page. Cross-page `Lookup()` fails silently at render.
+- **Local key must be declared with `name`.** The `[Cust Key]` bare
+  reference in the second argument resolves to a sibling column on
+  the target element — so that column needs an explicit `name` field
+  (or an auto-inferable single-qualified-ref formula).
+- **Target key must be qualified.** The third argument uses
+  `[<Source Element Name>/<Key Column>]` — a bare `[Cust Key]` here
+  would resolve to the local key on the same element (infinite loop).
+- **All downstream elements can source from the fact table.** Any
+  chart, KPI, or control filter on the same page can reference the
+  looked-up columns just like native fact columns — no additional
+  `Lookup()` needed downstream.
+- **Passthrough coverage still applies.** Include enough columns on
+  the fact table so charts sourced from it don't fail
+  `validate-spec.py`'s `passthrough-coverage` check.
+
 ## Per-row windowed aggregations — `Rollup`
 
 `Rollup(<aggregate>, <partition-col>, <order-col>)` computes a
@@ -369,6 +479,70 @@ Rollup(Min([Date]), [Cust Key], [Date])
 
 Returns the earliest `Date` per customer (the first-purchase date).
 Canonical example: `examples/data-model-sourced-cohort-pivot.json`.
+
+### Two Rollup traps
+
+**Third argument must be a column reference, not a literal.**
+
+```
+Wrong: Rollup(Sum([Sales]), [Store Key], 1)     // literal → renders null
+Right: Rollup(Sum([Sales]), [Store Key], [Row Month])
+```
+
+The order argument is used when the aggregation is order-dependent
+(`RunningSum`, `Lead`, `Lag`). Even for order-independent aggregations
+(`Sum`, `Avg`), pass any partition-relevant column — a literal is
+rejected semantically and the value comes back null.
+
+**Do NOT combine `Rollup()` with `groupings` on the same table.**
+
+`groupings` already partitions the table at the group grain. Adding
+`Rollup(..., <partition>, ...)` on top double-partitions and the
+values collapse to null. Pattern to use instead — plain conditional
+aggregation under `groupings.calculations`:
+
+```json
+"columns": [
+  { "id": "current-rev",
+    "formula": "Sum(If(DateTrunc(\"month\", [Date]) = DateTrunc(\"month\", Today()), [Sales], 0))" },
+  { "id": "hist-total",
+    "formula": "Sum(If(DateTrunc(\"month\", [Date]) < DateTrunc(\"month\", Today()), [Sales], 0))" },
+  { "id": "hist-avg",
+    "formula": "If([Historical Months] > 0, [Historical Total] / [Historical Months], Null)" }
+],
+"groupings": [{
+  "id": "g-by-store",
+  "groupBy": ["store-name", "store-region"],
+  "calculations": ["current-rev", "hist-total", "hist-avg"]
+}]
+```
+
+Sibling references between calculation columns (`[Historical Total] /
+[Historical Months]`) work at the post-groupings grain — each group
+has scalar values for both. Verified 2026-07-02 against
+`exec-scorecard-v2` post-fix. Full pattern lives in the
+`data-model-sourced-exec-kpi-scorecard.json` exemplar.
+
+### Vs-historical-average recipe (anomaly detection)
+
+To find stores/products whose recent behavior deviates from their own
+historical average, use the pattern from
+`data-model-sourced-exec-kpi-scorecard.json` (page 3, Store Monthly
+derived table):
+
+1. Two-tier source: raw fact table → per-dimension derived table with
+   `groupings`.
+2. Split "current" vs "historical" via `Sum(If(<date-partition>, ...))`
+   pairs, plus a `Historical Months` count for the denominator.
+3. Post-aggregation sibling refs for `Historical Avg`, `Deviation $`,
+   `Deviation %`, `Abs Deviation %`.
+4. Consumer table (chart, scatter) sources from the derived table and
+   applies a `top-n` filter on `Abs Deviation %`.
+
+`Rollup(Avg([Metric]), [Store], [Date])` is the ungrouped-table
+alternative when the base table has no `groupings`, but you'll end up
+with per-row broadcast values (one row per input) — usually messier
+than the `groupings` pattern above.
 
 ## Window functions
 

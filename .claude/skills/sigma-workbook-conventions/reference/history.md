@@ -177,7 +177,7 @@ Rule going forward: `controlId` must not match a column `name` or `id` on the fi
 
 ## 2026-05-21 — `style.backgroundColor` + container/control styling discovered
 
-Capability-1 training-mode harvest of `Sales-Performance-Eval-1`
+Capability-1 harvest of `Sales-Performance-Eval-1`
 (saved at `workbooks/harvest/retail-sales-performance/` — gitignored)
 surfaced three spec fields the skill didn't yet document:
 

@@ -99,11 +99,13 @@ workbook that's otherwise healthy — open-able in the UI, listed in
 
 Suspected triggers (untested):
 
-- Maps (`geography-map`-style elements)
 - Buttons / modal pages / tabbed containers (per Sigma's documented
   unsupported list)
 - Possibly chart series breakout / color-by combined with conditional
   formatting
+
+Maps used to be on this list but were verified round-trippable
+2026-07-02 — see "Map element status" below.
 
 **Cross-workbook scope:** rollback-by-version-param doesn't help.
 Verified 2026-05-21 against Sales MBR stripped — all 4 versions
@@ -128,25 +130,28 @@ that workbook is done. Once they're applied, GET-spec may be dead for
 that workbook until they're removed.
 
 `scripts/api/harvest-workbook.sh` fails fast on `service_error`
-responses with a diagnostic message — added 2026-05-21 after the four
-training-mode harvests all tripped this.
+responses with a diagnostic message — added 2026-05-21 after four
+workbook harvests all tripped this.
 
 ## Map element status
 
-Per Sigma's official workbooks-as-code limitations, map elements are
-**not supported** as code-spec elements. The upstream sigma-workbooks
-skill mentions `geography-map` as a valid kind in its from-image
-workflow, suggesting partial support is being added — but no harvest
-observed on this org has produced a clean map spec.
+**Supported.** Verified 2026-07-02: three map element kinds
+(`geography-map`, `point-map`, `region-map`) round-trip cleanly through
+POST/GET on this org. Harvest of `Element-Showcase-Dashboard`
+(`6DGOTggv4x90Cls7Sq0y0j`) included both a `region-map` (us-state) and
+a `point-map` (bubble by margin), both readable back cleanly.
 
-Treat maps as unsupported until:
+See `reference/specification/maps.md` for the full shape guide,
+including the `regionType` enum for `region-map` and the single-vs-
+array shape gotcha on binding fields.
 
-1. A workbook with maps GET-spec'ed cleanly, AND
-2. POSTing that spec to a fresh workbook produces a working map.
-
-If a user requests a map in their prompt, surface the gap and propose
-a substitute (horizontal bar chart ranked by location, scatter of
-lat/long, region-grouped bar chart by state/country).
+Historical note: prior to the 2026-07-02 validation, every
+map-bearing workbook observed on this org returned `service_error` on
+GET-spec. That's no longer the case — the earlier failures were
+against workbooks that combined maps with a different unsupported
+feature (likely pivot cell heatmaps or an unsupported control kind).
+Author maps freely; only surface a scope caveat if the user's other
+requested features overlap the known-failing feature list above.
 
 ## Falling back to `warehouse-table` source
 

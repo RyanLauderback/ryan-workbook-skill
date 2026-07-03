@@ -4,9 +4,10 @@ POST / GET / PUT against `/v2/workbooks/spec`. Load this when creating,
 retrieving, or updating a workbook.
 
 The endpoints are straightforward; the value is calling out the
-**non-obvious behaviors**: ID-reassignment on POST (which breaks naive
-read-edit-write), PUT being full-replacement, and how ryan's
-`publish-workbook.sh` wrapper layers validation + auth on top of curl.
+**non-obvious behaviors**: PUT being full-replacement, response-only
+fields returned by GET, and how ryan's `publish-workbook.sh` wrapper
+layers validation + auth on top of curl. IDs you send on POST are
+preserved verbatim — see the "ID preservation" section below.
 
 ## OpenAPI reference
 
@@ -111,46 +112,40 @@ flow), strip these before submitting:
 `workbook-manifest.py` recognizes these as response-only and won't
 flag them as unknown keys.
 
-## ID remapping on CREATE — the load-bearing gotcha
+## ID preservation on CREATE
 
-The `id` values you sent in `POST /v2/workbooks/spec` — for pages,
-elements, columns — are **not** preserved verbatim. The server maps
-them to internal IDs and **those internal IDs** are what live
-references (especially the `layout` XML's `elementId` attributes)
-must use on PUT.
+The `id` values you send in `POST /v2/workbooks/spec` — for pages,
+elements, columns — are **preserved verbatim**. Layout `elementId`
+references stay valid across POST/PUT. You can save the spec, edit
+it, and `PUT` it back directly using the same IDs.
 
-**Before any follow-up PUT, always GET the current spec first and
-use the IDs from the readback.** If you PUT a layout XML that
-references your original external IDs, elements will silently not
-appear.
+Verified 2026-07-02 against skill-authored workbooks: kebab-case IDs
+(`page-overview`, `tbl-transactions-master`, `k1-value`) survived
+POST → GET round-trip unchanged in every harvested exemplar.
 
-The same caveat applies to:
-- Control bindings (`filters[].source.elementId`)
-- Element source references (`source.elementId`)
-- Cross-element formulas (those reference by `name`, not `id`, so
-  they survive; but column IDs inside `xAxis`/`yAxis`/`color`/etc
-  get remapped).
+Layout `elementId` references still need to match the actual element
+`id` on that page (case-sensitive). A mismatch silently drops the
+element from the page — but the mismatch comes from typos, not
+server-side remapping.
 
 The canonical iteration pattern:
 
 ```bash
-# 1. Get current spec
-scripts/api/publish-workbook.sh get-spec <wb-id> > workbooks/<name>/spec.json
+# 1. Edit workbooks/<name>/spec.json on disk (using your original IDs)
 
-# 2. Edit workbooks/<name>/spec.json on disk
-
-# 3. Validate
+# 2. Validate
 scripts/validate-spec.py workbooks/<name>/spec.json
 
-# 4. PUT
-curl -sS -X PUT -H "Authorization: Bearer $SIGMA_API_TOKEN" \
-  -H "Content-Type: application/json" \
-  --data-binary @workbooks/<name>/spec.json \
-  "$SIGMA_BASE_URL/v2/workbooks/<wb-id>/spec"
+# 3. PUT (uses the wrapper for validation + auth)
+scripts/api/publish-workbook.sh put <wb-id> workbooks/<name>/spec.json
 
-# 5. Verify
+# 4. Verify
 scripts/api/verify-workbook.sh <wb-id>
 ```
+
+If you're editing a GET-back spec (rather than your own saved
+version), strip the response-only fields first — see the section
+above.
 
 ## Persisting the spec
 

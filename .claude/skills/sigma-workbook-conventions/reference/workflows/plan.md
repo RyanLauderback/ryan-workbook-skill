@@ -244,7 +244,9 @@ That contract puts the burden on the agent:
 4. **GET-back** via `scripts/api/publish-workbook.sh get-spec <wb-id>`.
    Save to `workbooks/<name>/spec.json` (overwriting the authored
    version) so subsequent PUTs start from the server's source of
-   truth — IDs have been remapped.
+   truth — captures any server-added fields (response-only metadata,
+   normalized layout XML, etc.). IDs are preserved verbatim, but the
+   GET-back also picks up any UI-side edits made after the POST.
 5. **Verify** via `scripts/api/verify-workbook.sh <wb-id>`. Checks
    that every element's compiled SQL doesn't contain
    `"Unknown column"` or `"Circular reference"` markers — POST

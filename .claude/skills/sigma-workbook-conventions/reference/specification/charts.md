@@ -15,6 +15,30 @@ skeleton: `source`, `columns[]`, `xAxis`, `yAxis`. Donut/pie use
 element must use the source's prefix (`[<SourceName>/col]`) — see
 `formulas.md`.
 
+## Table of contents
+
+- [Axis shape — canonical](#axis-shape--canonical) (modern + legacy forms)
+- Chart kinds:
+  - [Line chart](#line-chart)
+  - [Bar chart](#bar-chart) (with orientation + categorical-sort rule)
+  - [Area chart](#area-chart)
+  - [Combo chart](#combo-chart)
+  - [Scatter / bubble chart](#scatter--bubble-chart)
+  - [Pie / donut chart](#pie--donut-chart) (with `holeValue` distinct-column rule)
+- Cartesian-only optional features:
+  - [`refMarks` — reference lines and bands](#refmarks--reference-lines-and-bands)
+  - [`trendlines` — regression overlays](#trendlines--regression-overlays)
+  - [`dataLabel` — value labels on marks](#datalabel--value-labels-on-marks)
+- [Element-level filters (top-N, etc.)](#element-level-filters-top-n-etc)
+- [Bar/column bar spacing — `gap`](#barcolumn-bar-spacing--gap) (with `betweenSets` clustered-set precondition)
+- [Title styling (styled-name object form)](#title-styling-styled-name-object-form)
+- [Element-level frame (`style`)](#element-level-frame-style)
+- [Legend](#legend)
+- [Period-comparison patterns (`color.by: category`)](#period-comparison-patterns-colorby-category) (date-part vs synthetic Period Tag)
+- [What's NOT spec-able](#whats-not-spec-able)
+
+---
+
 ## Axis shape — canonical
 
 ```json
@@ -92,19 +116,23 @@ must be quoted in JSON/YAML to keep it a string).
 
 ### Orientation + categorical-axis sort rule
 
-Bar charts accept `orientation: "horizontal" | "vertical"` (default
-vertical). **Bar charts only** — line/area/combo/scatter use time-on-x
-or metric-on-x by design.
+Bar charts accept `orientation: "horizontal"` OR omit-for-default.
+Explicit `orientation: "vertical"` is **rejected at POST** — the
+default IS vertical, so leave the field out. **Bar charts only** —
+line/area/combo/scatter use time-on-x or metric-on-x by design.
 
 | X-axis type | Examples | `orientation` | `xAxis.sort` |
 |---|---|---|---|
 | Categorical | Segment, Tenure, Region | `"horizontal"` | `{by: "<y-col-id>", direction: "descending"}` |
-| Time-series | Month, Week, Day | omit (vertical) | `{by: "<x-col-id>", direction: "ascending"}` |
+| Time-series | Month, Week, Day | omit (defaults to vertical) | `{by: "<x-col-id>", direction: "ascending"}` |
 
 **Why categorical → horizontal + descending:** dodges Sigma's auto-
 label-rotation (labels read left-aligned on Y axis) AND ranks
 largest→smallest, the conventional categorical read order. Horizontal
 on time-series compresses the time scale.
+
+Verified 2026-07-02 against `exec-scorecard-v2` build (1 POST retry
+on explicit-`"vertical"` before this rule was documented).
 
 ### Color channel
 
@@ -212,16 +240,42 @@ Uses `value` + `color` instead of `xAxis` / `yAxis`:
 
 ### `holeValue` on donut
 
-Optional. References one of the donut's columns by ID — that
-column's aggregated value drives the hole label:
+Optional. References a donut column by ID — that column's aggregated
+value drives the hole label.
+
+**`holeValue.id` MUST reference a different column than `value.id`.**
+POST rejects same-column reuse with:
+
+> `Column '<col-id>' is referenced from both 'value' and 'holeValue';
+> a column can only be on one channel at a time`
+
+Pattern: add a second aggregation column, then wire each channel to
+its own column:
 
 ```json
-"holeValue": { "id": "col-sales" }
+{
+  "id": "sales-by-family",
+  "kind": "donut-chart",
+  "columns": [
+    { "id": "col-family",     "formula": "[Master/Product Family]" },
+    { "id": "col-sales",      "formula": "Sum([Master/Sales Amount])",  "name": "Sales" },
+    { "id": "col-order-count","formula": "CountDistinct([Master/Order Id])", "name": "Orders" }
+  ],
+  "value":     { "id": "col-sales" },
+  "holeValue": { "id": "col-order-count" },
+  "color": {
+    "id": "col-family",
+    "sort": { "by": "col-sales", "direction": "descending" }
+  }
+}
 ```
 
-`holeValue` is **not a literal number** — it must reference a
-column. To display a custom calculated value, define a column for
-it and reference its id.
+`holeValue` is **not a literal number** — it must reference a column.
+To display a custom calculated value, define a separate column for it
+and reference its id.
+
+Verified 2026-07-02: the distinct-column rule was surfaced when a
+`sales-command-center` donut POST-rejected on same-column reuse.
 
 ### Pie chart — same shape as donut
 
@@ -308,7 +362,8 @@ overrides:
 
 ## Element-level filters (top-N, etc.)
 
-Charts take the same `filters` array as tables. Top 10 by sales:
+Charts take the same `filters` array as tables. Each filter entry has
+a `kind` that determines its shape. The most common is `top-n`:
 
 ```json
 "filters": [
@@ -324,6 +379,19 @@ Charts take the same `filters` array as tables. Top 10 by sales:
 ]
 ```
 
+| Field | Notes |
+|---|---|
+| `id` | Unique within the filters array |
+| `kind` | `"top-n"` |
+| `columnId` | Column ID on this element to rank by |
+| `rankingFunction` | Observed: `"rank"`. Others likely per SQL window function |
+| `mode` | `"top-n"` (observed); presumably `"bottom-n"` supported |
+| `rowCount` | Integer literal — how many rows to keep |
+| `includeNulls` | `"always"`, `"never"`, or `"when-no-value-is-selected"` |
+
+Verified 2026-07-02 against `plugs-geography-yoy` (bar chart with
+top-10 states filter).
+
 > **`rowCount` takes a number literal only** — it cannot be bound to
 > a control. `rowCount: "[TopN]"` is rejected. Control bindings apply
 > to filter **values**, not structural fields. To vary a top-N cap
@@ -335,6 +403,53 @@ Charts take the same `filters` array as tables. Top 10 by sales:
 `text`, `color`, `fontSize`, `fontWeight`, and `visibility`. See
 `kpis.md` → "Title styling" for the shape; the rules are identical
 across all chart kinds.
+
+## Bar/column bar spacing — `gap`
+
+Bar and column charts accept a `gap` object controlling spacing.
+
+### Safe default
+
+Use only `gap.width` — works on every bar/column chart regardless of
+series count or grouping:
+
+```json
+"gap": { "width": "medium" }
+```
+
+### `gap.betweenSets` — clustered-set precondition (LOAD-BEARING)
+
+`betweenSets` controls spacing between **grouped/clustered sets**.
+POST **rejects** it on charts that don't have clustered sets, with:
+
+> `betweenSets is only supported when the chart has clustered bar sets
+> (color channel or multiple bar series with clustered stacking)`
+
+Only include `betweenSets` when the chart has one of:
+
+- A category `color` channel with multiple grouped series
+  (`color.by: "category"` with a grouping column)
+- Multiple bar series with `stacking: "clustered"` (or equivalent)
+
+Safe combined shape (when precondition holds):
+
+```json
+"gap": {
+  "width": "medium",
+  "betweenSets": "medium"
+}
+```
+
+Observed value: `"medium"`. Other d3-style values (`"small"`,
+`"large"`) likely accepted; pull the enum from the OpenAPI:
+
+```bash
+jq '.components.schemas | to_entries[] | select(.value | .. | .properties?.gap? != null) | .key' /tmp/sigma-api.json
+```
+
+Verified 2026-07-02 against `sales-mbr-sentinel` (bar chart with
+per-set groupings — worked) and `sales-command-center` iteration
+(single-series bar + combo — rejected `betweenSets`).
 
 ## Element-level frame (`style`)
 
@@ -365,6 +480,66 @@ Every chart kind accepts a top-level `style` object — see
 - `position`: `"bottom"` (observed). Other positions (`"top"`,
   `"left"`, `"right"`) likely accepted — verify via UI-toggle + GET-back.
 
+## Period-comparison patterns (`color.by: category`)
+
+When the ask is "compare current vs prior" or "year-over-year," the
+color channel is what carries the comparison dimension. Two patterns —
+pick based on how the data spans time.
+
+### Prefer date-part color when data spans multiple periods
+
+If the source data has multiple years (or quarters, months) in it,
+use the actual date-part column as the color channel. The chart draws
+one series per date-part value automatically.
+
+```json
+"columns": [
+  { "id": "col-year",  "formula": "DatePart(\"year\", [Date])", "name": "Year" },
+  { "id": "col-month", "formula": "DatePart(\"month\", [Date])", "name": "Month" },
+  { "id": "col-rev",   "formula": "Sum([Rev])", "name": "Revenue",
+    "format": { "kind": "number", "formatString": "$,.0f" } }
+],
+"xAxis":  { "columnId": "col-month", "sort": {"by": "col-month", "direction": "ascending"} },
+"yAxis":  { "columnIds": ["col-rev"] },
+"color":  { "by": "category", "column": "col-year",
+            "scheme": ["#8FA6B2", "#ce785c"] }
+```
+
+Two years in the data → two lines. Three years → three lines. Reader
+sees actual year labels in the legend (`2025`, `2026`) rather than
+abstract tags.
+
+**Why prefer this:** the color legend shows meaningful values the
+reader recognizes. A viewer looking at a "2025 vs 2026" line chart
+knows exactly what they're comparing.
+
+### Synthesize a Period Tag only for bounded-window comparisons
+
+When the ask is "last 30 days vs prior 30 days" or "current quarter
+vs same-quarter-last-year" — bounded windows that don't map to a
+single date-part — synthesize a tag column:
+
+```json
+{
+  "id": "col-period-tag",
+  "name": "Period",
+  "formula": "If([Date] >= DateAdd(\"day\", -30, Today()), \"Current\", If([Date] >= DateAdd(\"day\", -60, Today()) And [Date] < DateAdd(\"day\", -30, Today()), \"Prior\", Null))"
+}
+```
+
+Then color by `col-period-tag` with a curated 2-color scheme.
+
+**When NOT to use Period Tag:** if the user's data spans years and
+they want year-over-year, using a Period Tag to bucket into
+"Current"/"Prior" throws away the year granularity — the viewer
+can't tell whether "Prior" means last year or the year before. Use
+date-part color instead.
+
+Verified 2026-07-02 against a `Marketing-and-Promotions-Performance`
+UI edit: the user replaced `Period Tag` with `Year` on the current-vs-
+prior line chart to expose the year values directly, confirming the
+preference above.
+
 ## Cross-references
 
 - `reference/conventions.md` → "Passthrough mandate" — every chart
@@ -381,6 +556,10 @@ Every chart kind accepts a top-level `style` object — see
 - **Chart marker shapes** beyond what `dataLabel` controls — UI-only.
 - **Per-series colors** outside the `color.scheme` palette — UI-only
   (the workbook theme's categorical palette is the source).
+- **Small multiples** — not a native element kind. Build a container
+  grid of small line/bar charts (one per metric); each is a normal
+  chart element positioned in layout XML. Canonical example lives in
+  `data-model-sourced-exec-kpi-scorecard.json` (Page 1 five-tile grid).
 
 When the docs and the API disagree, trust the API error. When you're
 not sure whether a field exists, fetch the OpenAPI schema for the

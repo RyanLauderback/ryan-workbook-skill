@@ -22,10 +22,9 @@ You don't need to run `/plugin marketplace add` or `/plugin install` manually �
 
 ## Starting a session
 
-Once Claude Code is open, kick off with one of these phrases:
+Once Claude Code is open, describe what you want to build. Explicit trigger: **`start build mode`** — Claude opens with a 3-question gate (`.env` / data source / what to build + where in Sigma), warms the OAuth token, and runs `whoami` to confirm auth before recon. Then: Recon → Plan → Approval → Build → Verify.
 
-- **`start build mode`** (default) — produce a workbook. Claude opens with a 3-question gate (.env / data source / what to build + where in Sigma), warms the OAuth token, and runs `whoami` to confirm auth before recon. Then: Recon → Plan → Approval → Build → Verify.
-- **`start training mode`** — locally enrich the skill with session-specific context (e.g. Tableau migration notes). Skill-file additions use a `local-` filename prefix to stay visually separable from canonical content.
+Opt-in session-local enrichment (Tableau migration notes, account-specific patterns) uses a **`local-`** filename prefix on skill files to stay visually separable from canonical content — see the skill's SKILL.md for the convention.
 
 The plan-first convention stays: Claude proposes a written plan and waits for explicit approval before POSTing the workbook. Before drafting that plan, Claude is required to `Read` the relevant `reference/` chunk files in the workbook-conventions skill (hard gate added 2026-05-19); the plan must list which chunks were consulted under a `Chunks Read:` line.
 
@@ -46,14 +45,14 @@ You shouldn't have to look up internal UUIDs, schema paths, or connection IDs by
 | Path | What it does |
 |---|---|
 | `.claude/settings.json` | Auto-installs upstream `sigma-agent-skills` plugin on first open. |
-| `.claude/skills/sigma-workbook-conventions/` | Naming, layout, POST-time gotchas, the discovery routing rules (MCP-first for search/inspect, REST fallbacks for the rest), and **load-bearing rules** (passthrough, `[Metrics/<Name>]` resolution, formula recon anchor, controlId collision) plus a 5-file `reference/` split (`function-reference`, `element-shapes`, `layout-and-cross-element`, `scope-and-edge-cases`, `history`). SKILL.md gates the chunk reads via a hard "Required reading before authoring" check — see SKILL.md. The main draw of this repo. |
+| `.claude/skills/sigma-workbook-conventions/` | Naming, layout, POST-time gotchas, the discovery routing rules (MCP-first for search/inspect, REST fallbacks for the rest), and **load-bearing rules** (passthrough, `[Metrics/<Name>]` resolution, formula recon anchor, controlId collision) plus a chunked `reference/` split: per-element specs under `specification/` (`schema`, `charts`, `kpis`, `tables`, `controls`, `layout`, `formulas`, `formatting`, `sources`, `text`, `containers`, `others`, `maps`, etc.); operational workflows under `workflows/` (`plan`, `crud`, `validate`, `discover`, `from-image`); and top-level cross-cutting docs (`conventions`, `naming`, `scope-and-edge-cases`, `history`). SKILL.md gates the chunk reads via a hard "Required reading before authoring" check — see SKILL.md. The main draw of this repo. |
 | `scripts/api/mcp-search.sh` | Query Sigma's MCP server to find workbooks / data models / data-model elements / tables by name or topic. The first call for any name- or topic-based prompt. |
 | `scripts/api/mcp-describe.sh` | Query the MCP server's `describe` tool for any `table` / `datamodel` / `datamodel-element` / `workbook` / `workbook-element` — returns SQL DDL with column names, types, descriptions, formulas, and the metrics catalog. Replaces hand-walking `GET /v2/dataModels/{id}/spec`. |
 | `scripts/api/find-file-by-urlid.sh` | Resolve any URL slug (`/b/<id>`, `…-<urlId>`) to its file metadata via `/v2/files`. The URL-slug path of the discovery router. |
 | `scripts/api/_env.sh` | Sourced internally by every `scripts/api/*.sh`. Loads `.env`, fetches an OAuth token via the `sigma-api` skill, and caches it at `/tmp/.sigma_token` (mode 0600, 55-min TTL). Self-bootstrap — callers do not set env vars. |
 | `scripts/api/` (rest) | Thin REST wrappers used as MCP fallbacks: `list-connections.sh`, `list-folders.sh`, `lookup-path.sh`, `list-table-columns.sh`, `probe-schema-tables.sh`. Reach for these when MCP doesn't cover the case (raw connection enumeration, folder browsing by name pattern, warehouse-schema probing). |
 | `scripts/sigma-resolve.py` | Handles the messy-input case — prose mixed with URL slugs and warehouse paths (`<DB>.<SCHEMA>.<table>`). Returns structured `{sources, folder, candidates, unresolved}` JSON. Use when the simpler MCP/URL-slug paths don't fit. |
-| `scripts/validate-spec.py` | Pre-POST static checks (7 total): per-page `layout`, unplaced elements, empty containers, malformed `format` shape (missing `kind`), duplicate `controlId`, passthrough collapse on charts/pivots, and controlId/column collision on filtered elements. Auto-runs via `publish-workbook.sh post`. |
+| `scripts/validate-spec.py` | Pre-POST static checks (13 total, full catalog in `reference/workflows/validate.md`): includes passthrough collapse, controlId/column collision, bare-reference resolution, control-filter columnId existence, KPI value formula referencing sibling aggregation, `summary` × `calculations` collision, `description` object-on-KPI-and-table, pivot missing rows and columns, and 5 more. Auto-runs via `publish-workbook.sh post`. |
 | `scripts/load-env.sh` | `eval "$(scripts/load-env.sh)"` to load `.env` into the shell. Used internally by `_env.sh`; callers rarely invoke it directly. |
 | `scripts/refresh-vendor.sh` | Optional: clone a read-only mirror of upstream skills into `vendor/` for inspection while authoring new project skills. |
 | `workbooks/_template/` | Starter folder — `cp -R` to seed a new dashboard. |
@@ -70,8 +69,8 @@ Per-user workbook iterations (`workbooks/<name>/`) are gitignored; only `workboo
 2. **Discover & inspect.** Claude routes by prompt shape: name/topic → `scripts/api/mcp-search.sh`; URL slug → `scripts/api/find-file-by-urlid.sh`; messy prose → `scripts/sigma-resolve.py`. Then `scripts/api/mcp-describe.sh datamodel-element <dm> <el>` pulls the column types, descriptions, and metrics catalog for the data inventory. Ambiguity surfaces as named candidates to disambiguate, not endpoint errors.
 3. **Plan.** Claude drafts the data inventory, chart inference, controls, and layout sketch (per the plan-first workflow in the conventions skill) and waits for explicit approval.
 4. **Author.** `workbooks/<name>/spec.json` with two-tier sourcing (raw → derived → viz), `name`-on-every-cross-referenced-column, the documented control shapes, and one **top-level** `layout` XML with all `<Page>` siblings nested under it.
-5. **Publish.** `scripts/api/publish-workbook.sh post workbooks/<name>/spec.json` — the wrapper auto-runs `validate-spec.py` first (7 checks: per-page layout, unplaced elements, empty containers, malformed `format` shape, duplicate `controlId`, passthrough collapse, controlId/column collision), then POSTs to `/v2/workbooks/spec` with `Authorization` + `Accept: application/json` injected and a 401 auto-retry. Prints `{ workbookId, url, path }` on success.
-6. **GET back.** `scripts/api/publish-workbook.sh get-spec <workbookId> | jq . > workbooks/<name>/spec.json` — the GET-back spec is the new source of truth (Sigma normalizes IDs and layout XML).
+5. **Publish.** `scripts/api/publish-workbook.sh post workbooks/<name>/spec.json` — the wrapper auto-runs `validate-spec.py` first (13 checks), then POSTs to `/v2/workbooks/spec`. Prints `{ workbookId, url, path }` on success. Full check list in `reference/workflows/validate.md`.
+6. **GET back.** `scripts/api/publish-workbook.sh get-spec <workbookId> | jq . > workbooks/<name>/spec.json` — captures any server-added fields and layout XML normalization. IDs you authored are preserved verbatim.
 7. **Verify.** Open in the UI — the API doesn't validate cross-element column resolution or visualization quality.
 
 ## Adding a new dashboard

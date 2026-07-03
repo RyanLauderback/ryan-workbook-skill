@@ -13,6 +13,33 @@ The wiring (which column a control filters, which downstream elements
 respond) is the part of the design that the OpenAPI doesn't really
 teach — that's what this file is for.
 
+## Table of contents
+
+- [Common fields](#common-fields)
+- [`controlId` vs `id` — both required](#controlid-vs-id--both-required)
+- [Element-level styling](#element-level-styling)
+- Control types:
+  - [`list` (dropdown / multi-select)](#list-dropdown--multi-select)
+  - [`date-range`](#date-range) (with 8 modes)
+  - [`text` — single-line text filter](#text--single-line-text-filter)
+  - [`text-area` — multi-line text input](#text-area--multi-line-text-input)
+  - [`number-range`](#number-range)
+  - [`slider` / `range-slider`](#slider-variants--slider-and-range-slider)
+  - [`toggle` / `checkbox`](#toggle--checkbox--boolean-switch)
+  - [`dropdown` / `radio` — NOT accepted](#dropdown--radio--not-accepted-use-list--selectionmode-single)
+  - [`segmented`](#segmented--pill-button-single-select) (with manual + column variants)
+  - [`hierarchy`, `switch`, `date`, `number`](#additional-controltype-variants)
+  - [Numeric parameter control referenced from formulas](#numeric-parameter-control-referenced-from-formulas)
+- Patterns:
+  - [One control, multiple elements](#one-control-multiple-elements)
+  - [One element, multiple controls](#one-element-multiple-controls)
+  - [Control/column ID collision (CRITICAL)](#controlcolumn-id-collision-critical)
+  - [Where control bindings apply](#where-control-bindings-apply)
+  - [Inherited-from-data-model controls](#inherited-from-data-model-controls)
+- [Element-level filters — `top-n`](#element-level-filters--top-n)
+
+---
+
 ## Common fields
 
 | Field | Required | Notes |
@@ -233,21 +260,24 @@ Same shape as `text`, different widget:
 > confirm the value stuck — open the workbook or trust the last-known
 > PUT.
 
-## Slider
+## Slider variants — `slider` and `range-slider`
 
-A slider is a **`number-range` control**, not a distinct `slider` kind.
-There is no separate `controlType: slider` shape — don't use
-`value` / `min` / `max` at the top level (they get rejected with a
-misleading `Invalid kind: pages[0].elements[N], got "control"` error).
+Verified 2026-07-02: `slider` and `range-slider` are both distinct
+`controlType` values, separate from `number-range`. Inspect the
+OpenAPI shape for each before authoring, as the field set differs:
 
-```json
-{
-  "kind": "control",
-  "controlType": "number-range",
-  "mode": "between",
-  "values": [1, 10]
-}
+```bash
+jq -r '.components.schemas | keys[] | select(test("Slider|Range"))' /tmp/sigma-api.json
 ```
+
+- **`slider`** — single-thumb numeric slider.
+- **`range-slider`** — dual-thumb range slider (visually distinct from
+  `number-range`, which is a number-input pair).
+- **`number-range`** — see the section above; input-field based.
+
+Historical note: an earlier version of this doc claimed slider was
+just `number-range`. That was wrong — `element-showcase` uses `slider`
+and `range-slider` as first-class control types.
 
 ## `toggle` / `checkbox` — boolean switch
 
@@ -270,52 +300,116 @@ Both share the shape; the type picks the widget:
 }
 ```
 
-## `dropdown` / `radio` — UI variants of `list`
+## `dropdown` / `radio` — NOT accepted; use `list + selectionMode: single`
+
+**Verified 2026-07-02:** POSTing `controlType: "dropdown"` or
+`controlType: "radio"` returns `Invalid kind: "control"`. No harvested
+or exemplar workbook contains either — the API rejects them.
+
+Use `list` with `selectionMode: "single"` instead — the widget will
+render as a single-select dropdown by default:
 
 ```json
 {
   "kind": "control",
-  "controlType": "dropdown",
+  "id": "ctrl-region",
+  "controlId": "RegionFilter",
+  "name": "Store region",
+  "controlType": "list",
+  "mode": "include",
   "selectionMode": "single",
-  "mode": "include"
+  "values": [],
+  "source": {
+    "kind": "source",
+    "source": { "kind": "table", "elementId": "sales-table" },
+    "columnId": "col-region"
+  },
+  "filters": [
+    { "source": { "kind": "table", "elementId": "sales-table" },
+      "columnId": "col-region" }
+  ]
 }
 ```
 
-- `dropdown` — typically paired with `selectionMode: single`.
-- `radio` — always `selectionMode: single`.
-
-Everything else — `mode`, `values`, `source`, `filters` — matches the
-`list` shape.
+If a future API version restores `dropdown` / `radio` as first-class
+controlTypes, this doc should be updated with a verified example.
+Until then, don't ship them — the POST will fail with a generic error
+that gives no hint about the controlType being the problem.
 
 ## `segmented` — pill-button single-select
 
+Two `source` variants, both verified 2026-07-02 against harvested
+workbooks. **Do not mix them** — the earlier docs' `[{label, value}]`
+object-array form is not the accepted shape.
+
+### Variant A — manual values (inline)
+
+Use when the choices are a fixed enum with no backing column
+(e.g., date grain: year/quarter/month/week/day).
+
 ```json
 {
   "kind": "control",
-  "id": "ctrl-period",
-  "controlId": "DatePart",
-  "name": "Period",
+  "id": "ctrl-date-part",
+  "controlId": "date-part",
   "controlType": "segmented",
-  "showClearLabel": true,
-  "value": null,
   "source": {
     "kind": "manual",
-    "values": [
-      { "label": "Day", "value": "day" },
-      { "label": "Week", "value": "week" },
-      { "label": "Month", "value": "month" }
-    ]
-  }
+    "valueType": "text",
+    "values": ["year", "quarter", "month", "week", "day"],
+    "labels": ["Year", "Quarter", "Month", "Week", "Day"]
+  },
+  "value": "month"
 }
 ```
 
-`source.kind: "manual"` is documented for segmented controls — you
-specify the values inline rather than sourcing from a column.
-`scripts/workbook-manifest.py` recognizes `"manual"` as a known
-source kind for segmented controls.
+- `source.kind`: **must be `"manual"`**.
+- `source.valueType`: `"text"` (observed); other primitives likely
+  accepted — check the OpenAPI.
+- `source.values`: **array of primitive strings**, not `[{label, value}]`
+  objects.
+- `source.labels`: optional **parallel** array of display strings.
+  When omitted, `values` are shown directly.
+- `value`: initial selected value (or `null`).
 
-`showClearLabel`: boolean. When true, adds a "Clear" pill to the
-segmented widget.
+### Variant B — sourced from a column
+
+Use when the pills should reflect a column's distinct values.
+
+```json
+{
+  "kind": "control",
+  "id": "ctrl-product-segment",
+  "controlId": "Product-Segment",
+  "name": "Product Segment",
+  "controlType": "segmented",
+  "showClearLabel": true,
+  "filters": [
+    { "source": { "kind": "table", "elementId": "sales-table" },
+      "columnId": "col-product-type" }
+  ],
+  "source": {
+    "kind": "source",
+    "source": { "kind": "table", "elementId": "sales-table" },
+    "columnId": "col-product-type"
+  },
+  "value": null
+}
+```
+
+- `source.kind`: `"source"`.
+- Nested `source.source`: the source-table reference.
+- `filters`: same shape as `list` — parallel to `source`.
+
+### Common fields
+
+- `showClearLabel`: boolean. When `true`, adds a "Clear" pill.
+- `value`: initial selection (or `null`).
+- Omit `name` if you don't want a visible label above the pills
+  (both harvested variants do this).
+
+`scripts/workbook-manifest.py` recognizes both `manual` and `source`
+kinds on segmented.
 
 ---
 
@@ -397,3 +491,166 @@ workbook spec.
 
 Inspect a DM's controls via `mcp-describe.sh datamodel <dm-id>`
 and look at the `controls` array on the response.
+
+---
+
+## Additional controlType variants
+
+The following `controlType` values are verified in production
+workbooks (harvested 2026-07-02 from `element-showcase`) but need
+their exact field sets pulled from the OpenAPI before authoring —
+each has its own schema entry:
+
+```bash
+jq -r '.components.schemas | keys[] | select(test("Control$"))' /tmp/sigma-api.json
+```
+
+### `hierarchy`
+
+Hierarchical single-select or drill-through filter over a nested
+dimension (e.g., Region → State → City). Uses `filters[]` + `source`
+like `list`; verify the extra fields (drill path, initial level) via
+the OpenAPI. Observed shape:
+
+```json
+{
+  "kind": "control",
+  "id": "ctrl-hierarchy",
+  "controlId": "StoreHierarchy",
+  "name": "Store hierarchy",
+  "controlType": "hierarchy",
+  "mode": "include",
+  "source": {
+    "source": { "kind": "table", "elementId": "sales-table" },
+    "columnId": "col-region"
+  },
+  "filters": [
+    { "source": { "kind": "table", "elementId": "sales-table" }, "columnId": "col-region" }
+  ],
+  "values": []
+}
+```
+
+Note: the `source` object here does NOT carry an outer `kind` field
+(unlike `list`'s `kind: "source"`). Observed but unverified whether
+that's a variant or an omission that round-trips.
+
+### `switch`
+
+Boolean switch — visually distinct from `toggle` / `checkbox` but
+same semantics. Inspect the OpenAPI to see if it needs extra fields.
+
+### `date`
+
+Single-date picker (as opposed to `date-range`). Filters a date
+column to a single day. Pulls the same `filters[]` binding as
+`date-range`.
+
+### `number`
+
+Single-number **filter** — filters a numeric column on a target element
+by a comparison operator. Not a general-purpose scalar parameter (for
+that, see "Numeric parameter control referenced from formulas" below).
+
+```json
+{
+  "kind": "control",
+  "id": "ctrl-price",
+  "controlId": "Price-Filter",
+  "name": "Price Filter",
+  "controlType": "number",
+  "mode": "=",
+  "includeNulls": "when-no-value-is-selected",
+  "filters": [
+    { "source": { "kind": "table", "elementId": "sales-table" },
+      "columnId": "col-price" }
+  ]
+}
+```
+
+- `mode`: `"="` (observed). Likely also `">"`, `"<"`, `">="`, `"<="`, `"!="`.
+- `filters` is **required** — this is a filter control, not a bare scalar.
+
+Verified 2026-07-02 against `element-showcase` harvest.
+
+**Do NOT** attempt to author `controlType: "number"` without a
+`filters[]` binding — POST rejects with generic `Invalid kind: "control"`
+that gives no hint about the missing field. If you need a scalar
+parameter unbound from any specific column (for use in formulas), use
+the pattern in the next section instead.
+
+## Numeric parameter control referenced from formulas
+
+**Use case:** a "target margin" or "threshold" or "top-N cap" that the
+user sets via the UI and every formula reads via `[<controlId>]` bare-ref.
+
+The right shape is `segmented` with a manual value list and
+`valueType: "number"`. No `filters[]` binding — the control has no
+target element; its value is instead pulled by formulas anywhere on the
+page.
+
+```json
+{
+  "kind": "control",
+  "id": "ctrl-target",
+  "controlId": "SalesPerUnitTarget",
+  "name": "Target Sales per Unit ($)",
+  "controlType": "segmented",
+  "source": {
+    "kind": "manual",
+    "valueType": "number",
+    "values": [10, 25, 50, 100],
+    "labels": ["$10", "$25", "$50", "$100"]
+  },
+  "value": 25
+}
+```
+
+Then reference from any formula via the `controlId` (bare, no prefix):
+
+```json
+{ "id": "col-target-band",
+  "name": "Target Band",
+  "formula": "If([Sales per Unit] >= [SalesPerUnitTarget], \"Over target\", \"Under target\")" }
+```
+
+Feed `[col-target-band]` into a chart's `color.by: "category"` channel
+to get direct color-coding-by-threshold — the color updates live as the
+user changes the segmented pill.
+
+**Why segmented over `number-range` or `slider` for parameter use:**
+- No `filters[]` binding needed — cleaner semantics for a parameter.
+- Discrete values keep the UI unambiguous.
+- Adding `labels` lets you format the pill text ($10) separately from
+  the value the formula sees (10).
+
+**controlId collision reminder** — `[SalesPerUnitTarget]` bare-ref only
+resolves to the control if no column on the referencing element has
+`name` or `id` equal to `"SalesPerUnitTarget"`. See "Control/column ID
+collision" above.
+
+Verified 2026-07-02 against `Product-and-Basket-Performance` build.
+
+## Element-level filters — `top-n`
+
+Not a `controlType`, but worth listing here because it's a filter
+kind you may encounter or need to author. Lives **inside** an
+element's `filters[]` array, not as its own control:
+
+```json
+"filters": [
+  {
+    "id": "top10-states",
+    "columnId": "col-revenue",
+    "kind": "top-n",
+    "rankingFunction": "rank",
+    "mode": "top-n",
+    "rowCount": 10,
+    "includeNulls": "when-no-value-is-selected"
+  }
+]
+```
+
+See [`charts.md`](charts.md) → "Element-level filters (top-N, etc.)"
+for placement and interaction with a `columnId` field on the parent
+element.

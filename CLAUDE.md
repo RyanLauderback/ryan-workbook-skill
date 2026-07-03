@@ -2,28 +2,25 @@
 
 This workspace builds Sigma Computing dashboards/workbooks via Claude Code using Sigma's official agent skills plus project-local workbook-pattern skills.
 
-## Session modes
+## Session kickoff
 
-The user signals mode in their first message:
+The skill opens with a 3-question `AskUserQuestion` gate on the user's first
+build-related message (explicit trigger: `start build mode`). Questions cover
+`.env` state, data source, and what/where to build. On `.env`-yes, `bash
+scripts/api/_env.sh` warms the token cache and `scripts/api/whoami.sh`
+actively validates auth against the live API before recon starts. Then Recon
+→ Plan → User approval → POST → GET → Visual verify. **Plan approval is the
+only authorization for state-changing API calls.**
 
-- **`start build mode`** — produce a workbook. Kicks off with a 3-question
-  `AskUserQuestion` gate (.env check / data source / what to build +
-  destination). On `.env`-yes, run `bash scripts/api/_env.sh` to warm the
-  token cache AND `scripts/api/whoami.sh` to actively validate auth against
-  the live API before any recon starts. Then proceed Recon → Plan → User
-  approval → POST → GET → Visual verify. Plan approval is the only
-  authorization for state-changing API calls.
-- **`start training mode`** — locally enrich the skill for session-specific
-  context (e.g., a Tableau migration project needing domain-specific notes).
-  May write to skill files using the **`local-` filename prefix** so
-  additions are visually separable from canonical content (e.g.
-  `reference/local-tableau-migration.md`). No 3-question kickoff.
+If the user wants to add project-specific enrichments (Tableau migration
+notes, account-specific patterns, etc.) directly to the skill, the
+convention is a **`local-` filename prefix** on added files (e.g.
+`reference/local-tableau-migration.md`) so opt-in additions stay visually
+separable from canonical content. See SKILL.md → "Optional: session-local
+enrichment via `local-` prefix."
 
-Default when no phrase is given: **build mode** (production path).
-
-Full mode definitions, the 3-gate question text, and the session-local marker
-convention live in `.claude/skills/sigma-workbook-conventions/SKILL.md`
-("Session modes" section).
+Full 3-question text and workflow details live in
+`.claude/skills/sigma-workbook-conventions/SKILL.md` → "Session kickoff."
 
 ## Skills loaded here
 
@@ -32,7 +29,7 @@ convention live in `.claude/skills/sigma-workbook-conventions/SKILL.md`
 - `sigma-data-models` — Round-trips data model specs (sources, columns, metrics, relationships, filters, controls, folder groupings, column-level security).
 
 **Project-local (`.claude/skills/`):**
-- `sigma-workbook-conventions` — input resolution, naming, layout, control catalog, and POST-time gotchas when generating workbook specs. Carries **load-bearing rules** (passthrough mandatory, `[Metrics/<Name>]` resolution + DM-switch hard rule, formulas trace to recon, controlId/column collision) plus a 5-file `reference/` chunk split. Pair with `scripts/sigma-resolve.py` (resolver) and `scripts/validate-spec.py` (pre-POST validator — 7 checks including `passthrough-coverage` and `controlid-collision`).
+- `sigma-workbook-conventions` — input resolution, naming, layout, control catalog, and POST-time gotchas when generating workbook specs. Carries **load-bearing rules** (passthrough mandatory, `[Metrics/<Name>]` resolution + DM-switch hard rule, formulas trace to recon, controlId/column collision) plus a chunked `reference/` split under `specification/` (per-element files: `schema`, `charts`, `kpis`, `tables`, `controls`, `layout`, `formulas`, `formatting`, `sources`, `sources-warehouse`, `text`, `containers`, `others`, `maps`) and `workflows/` (`plan`, `crud`, `validate`, `discover`, `from-image`), plus top-level rules (`conventions`, `naming`, `scope-and-edge-cases`, `history`). Pair with `scripts/sigma-resolve.py` (resolver) and `scripts/validate-spec.py` (pre-POST validator — 13 checks; full catalog in `reference/workflows/validate.md`).
 
 **Required reading before authoring (HARD GATE).** Before drafting a plan or writing any spec JSON in build mode, `Read` the chunk files mapped to the task type in `.claude/skills/sigma-workbook-conventions/SKILL.md` → "Required reading before authoring." Plans must include a `Chunks Read:` line listing the files consulted. Plans without that line are not approvable. This gate was added 2026-05-19 after a cold-start test session authored two workbooks without ever opening the chunk files — see `.claude/skills/sigma-workbook-conventions/reference/history.md` → "2026-05-19 — Cold-start test session."
 
@@ -60,8 +57,8 @@ Claude.ai account, the `mcp__claude_ai_Sigma_Docs__*` tools won't appear.
 Fallback: use `WebFetch` against `https://help.sigmacomputing.com/` (function
 references) and `https://help.sigmacomputing.com/reference/` (REST API
 endpoints). The skill works without the MCP — most function syntax is
-already in `reference/function-reference.md`; the MCP is a faster lookup
-for unfamiliar functions.
+already in `.claude/skills/sigma-workbook-conventions/reference/specification/formulas.md`;
+the MCP is a faster lookup for unfamiliar functions.
 
 Workspace discovery (finding workbooks/data models), data-model
 inspection, and workbook authoring/publishing all use the bash helpers

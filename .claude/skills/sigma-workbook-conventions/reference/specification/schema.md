@@ -2,14 +2,42 @@
 
 The overall shape of the workbook spec passed to `POST /v2/workbooks/spec`.
 
+## Consulting the OpenAPI
+
+The Sigma OpenAPI is the canonical schema for every request/response
+shape. When this skill and the OpenAPI disagree, the OpenAPI wins. Fetch
+once per session and inspect with `jq`:
+
 ```bash
+curl -sf https://help.sigmacomputing.com/openapi/sigma-computing-public-rest-api.json > /tmp/sigma-api.json
+
+# Workbook spec POST request body
 jq '.paths."/v2/workbooks/spec".post.requestBody.content."application/json".schema' /tmp/sigma-api.json
+
+# A specific element kind's full shape
+jq '.components.schemas.BarChart' /tmp/sigma-api.json
+jq '.components.schemas.KpiChart' /tmp/sigma-api.json
+
+# List every schema name (when you don't know the right one)
+jq -r '.components.schemas | keys[]' /tmp/sigma-api.json | grep -i <hint>
 ```
 
+Every per-element file in this directory opens with the relevant `jq`
+recipe. Use it whenever a field shape has changed or the skill's coverage
+doesn't include a feature you need.
+
+### Schema-drift signal
+
+If a POST/PUT fails with `invalid argument`, `unknown field`,
+`unexpected property`, `missing required field`, `unrecognized parameter`,
+or a 400 about request *shape* rather than data — the API has evolved
+since this skill was written. Fallback in `reference/workflows/crud.md` →
+"Schema drift."
+
 This file covers what the OpenAPI alone won't tell you: which fields are
-response-only (must be stripped before re-POSTing), the ID-reassignment
-trap on CREATE, and a minimal working example. For per-element shapes,
-see the per-element files in this directory.
+response-only, the ID-preservation guarantee on CREATE, and a minimal
+working example. For per-element shapes, see the per-element files in
+this directory.
 
 ## Top-level object
 
@@ -80,14 +108,16 @@ text, dividers, and images. See the per-element reference files.
   in one page is not).
 - Use descriptive kebab-case or short random-looking IDs — both are
   fine. IDs are internal identifiers, not displayed to users.
-- **Critical:** on `POST`, the server reassigns external IDs to
-  internal ones. For any follow-up `PUT` (especially layout XML
-  updates), GET the current spec first and use the IDs from the
-  readback. Layout `elementId` references must match the current
-  internal IDs exactly (case-sensitive).
+- **IDs are preserved verbatim on `POST`.** Pages, elements, and
+  columns keep the `id` values you sent. Layout `elementId`
+  references stay valid across POST/PUT round-trips. You can save a
+  spec, edit it, and `PUT` it back directly using the same IDs.
+- Layout `elementId` references must match an element `id` on that
+  page exactly (case-sensitive).
 
-See `reference/workflows/crud.md` → "ID remapping on CREATE" for the
-full mechanics + iteration pattern.
+Verified 2026-07-02 against harvested exemplars: skill-authored
+workbooks (`plugs-geography-yoy`, `store-performance-pop`) retained
+100% of their kebab-case IDs after POST/GET round-trip.
 
 ## Layout
 
@@ -110,6 +140,38 @@ workbooks omit it. When present, looks like:
 The `items` are column IDs grouped under the folder name. UI-side
 organization; doesn't affect render. Inspect via `mcp-describe.sh
 workbook <wb-id>` if you need the structure.
+
+## Top-level `themeOverrides` field
+
+Optional. Controls workbook-wide page width and spacing:
+
+```json
+"themeOverrides": {
+  "pageWidth": "large",
+  "space": { "unit": "small" }
+}
+```
+
+Observed values: `pageWidth: "large"`, `space.unit: "small"`. Other
+enum values (`medium`, `full`, etc.) likely accepted — inspect via
+the OpenAPI. Verified 2026-07-02 against `sales-mbr-sentinel`.
+
+## `theme` element kind
+
+A named theme reference that can appear inside `pages[].elements[]`
+alongside data-viz elements:
+
+```json
+{
+  "kind": "theme",
+  "ref": "colors-textNeutral"
+}
+```
+
+Observed in `sales-mbr-sentinel` (2 instances). Applies theme-level
+styling by reference. Inspect the OpenAPI for the enum of valid `ref`
+values before authoring. Kept minimal here until a fuller pattern
+emerges.
 
 ## Minimal working example
 

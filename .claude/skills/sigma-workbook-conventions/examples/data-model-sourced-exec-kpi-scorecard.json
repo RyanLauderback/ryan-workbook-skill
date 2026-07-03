@@ -1,0 +1,2228 @@
+{
+  "name": "Executive KPI Scorecard v2",
+  "folderId": "dfd574ca-7299-4ef7-9d75-00952009b92b",
+  "description": "Monthly ops-review scorecard: current vs prior vs same-period-last-year for top 5 metrics, trends + map, and outlier detection.",
+  "schemaVersion": 1,
+  "pages": [
+    {
+      "id": "page-scorecard",
+      "name": "Scorecard",
+      "elements": [
+        {
+          "id": "p1-header",
+          "kind": "container",
+          "style": {
+            "backgroundColor": "#FFFFFF",
+            "borderRadius": "round",
+            "borderColor": "#ce785c",
+            "borderWidth": 3
+          }
+        },
+        {
+          "id": "p1-title",
+          "kind": "text",
+          "body": "# Executive KPI Scorecard\n\nCurrent period vs prior period vs same period last year \u2014 top 5 metrics.",
+          "verticalAlign": "middle"
+        },
+        {
+          "kind": "control",
+          "controlId": "DateRangeCtrl",
+          "id": "p1-ctrl-date",
+          "name": "Date range",
+          "filters": [
+            {
+              "source": {
+                "kind": "table",
+                "elementId": "tbl-tx"
+              },
+              "columnId": "col-date"
+            }
+          ],
+          "controlType": "date-range",
+          "mode": "between",
+          "includeNulls": "when-no-value-is-selected"
+        },
+        {
+          "kind": "control",
+          "controlId": "RegionSelect",
+          "id": "p1-ctrl-region",
+          "name": "Store region",
+          "filters": [
+            {
+              "source": {
+                "kind": "table",
+                "elementId": "tbl-tx"
+              },
+              "columnId": "col-store-region"
+            }
+          ],
+          "controlType": "list",
+          "mode": "include",
+          "selectionMode": "multiple",
+          "values": [],
+          "source": {
+            "kind": "source",
+            "source": {
+              "kind": "table",
+              "elementId": "tbl-tx"
+            },
+            "columnId": "col-store-region"
+          }
+        },
+        {
+          "kind": "control",
+          "controlId": "ProductTypeSelect",
+          "id": "p1-ctrl-product",
+          "name": "Product type",
+          "filters": [
+            {
+              "source": {
+                "kind": "table",
+                "elementId": "tbl-tx"
+              },
+              "columnId": "col-product-type"
+            }
+          ],
+          "controlType": "list",
+          "mode": "include",
+          "selectionMode": "multiple",
+          "values": [],
+          "source": {
+            "kind": "source",
+            "source": {
+              "kind": "table",
+              "elementId": "tbl-tx"
+            },
+            "columnId": "col-product-type"
+          }
+        },
+        {
+          "id": "p1-kpi-group",
+          "kind": "container",
+          "style": {
+            "backgroundColor": "#FAF7F2",
+            "borderRadius": "round",
+            "borderColor": "#e8dfd3",
+            "borderWidth": 1
+          }
+        },
+        {
+          "id": "p1-kpi-revenue",
+          "kind": "kpi-chart",
+          "source": {
+            "elementId": "tbl-tx",
+            "kind": "table"
+          },
+          "columns": [
+            {
+              "id": "k1-val",
+              "formula": "[Metrics/Total Revenue]",
+              "name": "Revenue",
+              "format": {
+                "kind": "number",
+                "formatString": "$.2~S"
+              }
+            },
+            {
+              "id": "k1-month",
+              "formula": "DateTrunc(\"month\", [Tx/Date])",
+              "name": "Month"
+            },
+            {
+              "id": "k1-date",
+              "formula": "[Tx/Date]",
+              "name": "Date"
+            },
+            {
+              "id": "k1-qty",
+              "formula": "[Tx/Quantity]",
+              "name": "Quantity"
+            },
+            {
+              "id": "k1-price",
+              "formula": "[Tx/Price]",
+              "name": "Price"
+            },
+            {
+              "id": "k1-region",
+              "formula": "[Tx/Store Region]",
+              "name": "Store Region"
+            }
+          ],
+          "value": {
+            "columnId": "k1-val"
+          },
+          "name": {
+            "text": "Total Revenue",
+            "color": "#3a2e26",
+            "fontWeight": "bold",
+            "fontSize": 20
+          },
+          "style": {
+            "backgroundColor": "#FFFFFF",
+            "borderRadius": "round",
+            "borderColor": "#e8dfd3",
+            "borderWidth": 1
+          },
+          "layout": {
+            "anchor": "middle"
+          }
+        },
+        {
+          "id": "p1-kpi-profit",
+          "kind": "kpi-chart",
+          "source": {
+            "elementId": "tbl-tx",
+            "kind": "table"
+          },
+          "columns": [
+            {
+              "id": "k2-val",
+              "formula": "[Metrics/Total Profit]",
+              "name": "Profit",
+              "format": {
+                "kind": "number",
+                "formatString": "$.2~S"
+              }
+            },
+            {
+              "id": "k2-month",
+              "formula": "DateTrunc(\"month\", [Tx/Date])",
+              "name": "Month"
+            },
+            {
+              "id": "k2-date",
+              "formula": "[Tx/Date]",
+              "name": "Date"
+            },
+            {
+              "id": "k2-qty",
+              "formula": "[Tx/Quantity]",
+              "name": "Quantity"
+            },
+            {
+              "id": "k2-cost",
+              "formula": "[Tx/Unit Cost]",
+              "name": "Unit Cost"
+            },
+            {
+              "id": "k2-region",
+              "formula": "[Tx/Store Region]",
+              "name": "Store Region"
+            }
+          ],
+          "value": {
+            "columnId": "k2-val"
+          },
+          "name": {
+            "text": "Total Profit",
+            "color": "#3a2e26",
+            "fontWeight": "bold",
+            "fontSize": 20
+          },
+          "style": {
+            "backgroundColor": "#FFFFFF",
+            "borderRadius": "round",
+            "borderColor": "#e8dfd3",
+            "borderWidth": 1
+          },
+          "layout": {
+            "anchor": "middle"
+          }
+        },
+        {
+          "id": "p1-kpi-margin",
+          "kind": "kpi-chart",
+          "source": {
+            "elementId": "tbl-tx",
+            "kind": "table"
+          },
+          "columns": [
+            {
+              "id": "k3-val",
+              "formula": "[Metrics/Total Profit Margin]",
+              "name": "Margin",
+              "format": {
+                "kind": "number",
+                "formatString": ".1%"
+              }
+            },
+            {
+              "id": "k3-month",
+              "formula": "DateTrunc(\"month\", [Tx/Date])",
+              "name": "Month"
+            },
+            {
+              "id": "k3-date",
+              "formula": "[Tx/Date]",
+              "name": "Date"
+            },
+            {
+              "id": "k3-qty",
+              "formula": "[Tx/Quantity]",
+              "name": "Quantity"
+            },
+            {
+              "id": "k3-region",
+              "formula": "[Tx/Store Region]",
+              "name": "Store Region"
+            }
+          ],
+          "value": {
+            "columnId": "k3-val"
+          },
+          "name": {
+            "text": "Profit Margin",
+            "color": "#3a2e26",
+            "fontWeight": "bold",
+            "fontSize": 20
+          },
+          "style": {
+            "backgroundColor": "#FFFFFF",
+            "borderRadius": "round",
+            "borderColor": "#e8dfd3",
+            "borderWidth": 1
+          },
+          "layout": {
+            "anchor": "middle"
+          }
+        },
+        {
+          "id": "p1-kpi-orders",
+          "kind": "kpi-chart",
+          "source": {
+            "elementId": "tbl-tx",
+            "kind": "table"
+          },
+          "columns": [
+            {
+              "id": "k4-val",
+              "formula": "[Metrics/Distinct Orders]",
+              "name": "Orders",
+              "format": {
+                "kind": "number",
+                "formatString": ",.0f"
+              }
+            },
+            {
+              "id": "k4-month",
+              "formula": "DateTrunc(\"month\", [Tx/Date])",
+              "name": "Month"
+            },
+            {
+              "id": "k4-date",
+              "formula": "[Tx/Date]",
+              "name": "Date"
+            },
+            {
+              "id": "k4-order",
+              "formula": "[Tx/Order Number]",
+              "name": "Order Number"
+            },
+            {
+              "id": "k4-region",
+              "formula": "[Tx/Store Region]",
+              "name": "Store Region"
+            }
+          ],
+          "value": {
+            "columnId": "k4-val"
+          },
+          "name": {
+            "text": "Distinct Orders",
+            "color": "#3a2e26",
+            "fontWeight": "bold",
+            "fontSize": 20
+          },
+          "style": {
+            "backgroundColor": "#FFFFFF",
+            "borderRadius": "round",
+            "borderColor": "#e8dfd3",
+            "borderWidth": 1
+          },
+          "layout": {
+            "anchor": "middle"
+          }
+        },
+        {
+          "id": "p1-kpi-aov",
+          "kind": "kpi-chart",
+          "source": {
+            "elementId": "tbl-tx",
+            "kind": "table"
+          },
+          "columns": [
+            {
+              "id": "k5-val",
+              "formula": "[Metrics/AOV]",
+              "name": "AOV",
+              "format": {
+                "kind": "number",
+                "formatString": "$,.2f"
+              }
+            },
+            {
+              "id": "k5-month",
+              "formula": "DateTrunc(\"month\", [Tx/Date])",
+              "name": "Month"
+            },
+            {
+              "id": "k5-date",
+              "formula": "[Tx/Date]",
+              "name": "Date"
+            },
+            {
+              "id": "k5-order",
+              "formula": "[Tx/Order Number]",
+              "name": "Order Number"
+            },
+            {
+              "id": "k5-region",
+              "formula": "[Tx/Store Region]",
+              "name": "Store Region"
+            }
+          ],
+          "value": {
+            "columnId": "k5-val"
+          },
+          "name": {
+            "text": "AOV",
+            "color": "#3a2e26",
+            "fontWeight": "bold",
+            "fontSize": 20
+          },
+          "style": {
+            "backgroundColor": "#FFFFFF",
+            "borderRadius": "round",
+            "borderColor": "#e8dfd3",
+            "borderWidth": 1
+          },
+          "layout": {
+            "anchor": "middle"
+          }
+        },
+        {
+          "id": "p1-sm-revenue",
+          "kind": "bar-chart",
+          "source": {
+            "elementId": "tbl-tx-period",
+            "kind": "table"
+          },
+          "columns": [
+            {
+              "id": "sm1-period-color",
+              "formula": "[Tx Period/Period Tag]",
+              "name": "Period (color)"
+            },
+            {
+              "id": "sm1-period",
+              "formula": "[Tx Period/Period Tag]",
+              "name": "Period"
+            },
+            {
+              "id": "sm1-val",
+              "formula": "Sum([Tx Period/Sales Amount])",
+              "name": "Revenue",
+              "format": {
+                "kind": "number",
+                "formatString": "$.2~S"
+              }
+            },
+            {
+              "id": "sm1-date",
+              "formula": "[Tx Period/Date]",
+              "name": "Date"
+            },
+            {
+              "id": "sm1-qty",
+              "formula": "[Tx Period/Quantity]",
+              "name": "Quantity"
+            },
+            {
+              "id": "sm1-price",
+              "formula": "[Tx Period/Price]",
+              "name": "Price"
+            },
+            {
+              "id": "sm1-order",
+              "formula": "[Tx Period/Order Number]",
+              "name": "Order Number"
+            },
+            {
+              "id": "sm1-region",
+              "formula": "[Tx Period/Store Region]",
+              "name": "Store Region"
+            }
+          ],
+          "yAxis": {
+            "columnIds": [
+              "sm1-val"
+            ]
+          },
+          "xAxis": {
+            "columnId": "sm1-period"
+          },
+          "color": {
+            "by": "category",
+            "column": "sm1-period-color",
+            "scheme": [
+              "#ce785c",
+              "#8FA6B2",
+              "#B4B4B4"
+            ]
+          },
+          "name": {
+            "text": "Revenue: Current vs Prior vs LY",
+            "fontWeight": "bold",
+            "fontSize": 14
+          },
+          "legend": {
+            "visibility": "hidden"
+          },
+          "style": {
+            "backgroundColor": "#FFFFFF",
+            "borderRadius": "round",
+            "borderColor": "#e8dfd3",
+            "borderWidth": 1
+          }
+        },
+        {
+          "id": "p1-sm-profit",
+          "kind": "bar-chart",
+          "source": {
+            "elementId": "tbl-tx-period",
+            "kind": "table"
+          },
+          "columns": [
+            {
+              "id": "sm2-period-color",
+              "formula": "[Tx Period/Period Tag]",
+              "name": "Period (color)"
+            },
+            {
+              "id": "sm2-period",
+              "formula": "[Tx Period/Period Tag]",
+              "name": "Period"
+            },
+            {
+              "id": "sm2-val",
+              "formula": "Sum([Tx Period/Sales Amount]) - Sum([Tx Period/Quantity] * [Tx Period/Unit Cost])",
+              "name": "Profit",
+              "format": {
+                "kind": "number",
+                "formatString": "$.2~S"
+              }
+            },
+            {
+              "id": "sm2-date",
+              "formula": "[Tx Period/Date]",
+              "name": "Date"
+            },
+            {
+              "id": "sm2-qty",
+              "formula": "[Tx Period/Quantity]",
+              "name": "Quantity"
+            },
+            {
+              "id": "sm2-cost",
+              "formula": "[Tx Period/Unit Cost]",
+              "name": "Unit Cost"
+            },
+            {
+              "id": "sm2-price",
+              "formula": "[Tx Period/Price]",
+              "name": "Price"
+            },
+            {
+              "id": "sm2-region",
+              "formula": "[Tx Period/Store Region]",
+              "name": "Store Region"
+            }
+          ],
+          "yAxis": {
+            "columnIds": [
+              "sm2-val"
+            ]
+          },
+          "xAxis": {
+            "columnId": "sm2-period"
+          },
+          "color": {
+            "by": "category",
+            "column": "sm2-period-color",
+            "scheme": [
+              "#ce785c",
+              "#8FA6B2",
+              "#B4B4B4"
+            ]
+          },
+          "name": {
+            "text": "Profit: Current vs Prior vs LY",
+            "fontWeight": "bold",
+            "fontSize": 14
+          },
+          "legend": {
+            "visibility": "hidden"
+          },
+          "style": {
+            "backgroundColor": "#FFFFFF",
+            "borderRadius": "round",
+            "borderColor": "#e8dfd3",
+            "borderWidth": 1
+          }
+        },
+        {
+          "id": "p1-sm-margin",
+          "kind": "bar-chart",
+          "source": {
+            "elementId": "tbl-tx-period",
+            "kind": "table"
+          },
+          "columns": [
+            {
+              "id": "sm3-period-color",
+              "formula": "[Tx Period/Period Tag]",
+              "name": "Period (color)"
+            },
+            {
+              "id": "sm3-period",
+              "formula": "[Tx Period/Period Tag]",
+              "name": "Period"
+            },
+            {
+              "id": "sm3-val",
+              "formula": "(Sum([Tx Period/Sales Amount]) - Sum([Tx Period/Quantity] * [Tx Period/Unit Cost])) / Sum([Tx Period/Quantity] * [Tx Period/Unit Cost])",
+              "name": "Margin",
+              "format": {
+                "kind": "number",
+                "formatString": ".1%"
+              }
+            },
+            {
+              "id": "sm3-profit",
+              "formula": "Sum([Tx Period/Sales Amount]) - Sum([Tx Period/Quantity] * [Tx Period/Unit Cost])",
+              "name": "Profit Numer"
+            },
+            {
+              "id": "sm3-cogs",
+              "formula": "Sum([Tx Period/Quantity] * [Tx Period/Unit Cost])",
+              "name": "COGS Denom"
+            },
+            {
+              "id": "sm3-date",
+              "formula": "[Tx Period/Date]",
+              "name": "Date"
+            },
+            {
+              "id": "sm3-qty",
+              "formula": "[Tx Period/Quantity]",
+              "name": "Quantity"
+            },
+            {
+              "id": "sm3-region",
+              "formula": "[Tx Period/Store Region]",
+              "name": "Store Region"
+            }
+          ],
+          "yAxis": {
+            "columnIds": [
+              "sm3-val"
+            ]
+          },
+          "xAxis": {
+            "columnId": "sm3-period"
+          },
+          "color": {
+            "by": "category",
+            "column": "sm3-period-color",
+            "scheme": [
+              "#ce785c",
+              "#8FA6B2",
+              "#B4B4B4"
+            ]
+          },
+          "name": {
+            "text": "Margin: Current vs Prior vs LY",
+            "fontWeight": "bold",
+            "fontSize": 14
+          },
+          "legend": {
+            "visibility": "hidden"
+          },
+          "style": {
+            "backgroundColor": "#FFFFFF",
+            "borderRadius": "round",
+            "borderColor": "#e8dfd3",
+            "borderWidth": 1
+          }
+        },
+        {
+          "id": "p1-sm-orders",
+          "kind": "bar-chart",
+          "source": {
+            "elementId": "tbl-tx-period",
+            "kind": "table"
+          },
+          "columns": [
+            {
+              "id": "sm4-period-color",
+              "formula": "[Tx Period/Period Tag]",
+              "name": "Period (color)"
+            },
+            {
+              "id": "sm4-period",
+              "formula": "[Tx Period/Period Tag]",
+              "name": "Period"
+            },
+            {
+              "id": "sm4-val",
+              "formula": "CountDistinct([Tx Period/Order Number])",
+              "name": "Orders",
+              "format": {
+                "kind": "number",
+                "formatString": ",.0f"
+              }
+            },
+            {
+              "id": "sm4-date",
+              "formula": "[Tx Period/Date]",
+              "name": "Date"
+            },
+            {
+              "id": "sm4-qty",
+              "formula": "[Tx Period/Quantity]",
+              "name": "Quantity"
+            },
+            {
+              "id": "sm4-order",
+              "formula": "[Tx Period/Order Number]",
+              "name": "Order Number"
+            },
+            {
+              "id": "sm4-region",
+              "formula": "[Tx Period/Store Region]",
+              "name": "Store Region"
+            }
+          ],
+          "yAxis": {
+            "columnIds": [
+              "sm4-val"
+            ]
+          },
+          "xAxis": {
+            "columnId": "sm4-period"
+          },
+          "color": {
+            "by": "category",
+            "column": "sm4-period-color",
+            "scheme": [
+              "#ce785c",
+              "#8FA6B2",
+              "#B4B4B4"
+            ]
+          },
+          "name": {
+            "text": "Orders: Current vs Prior vs LY",
+            "fontWeight": "bold",
+            "fontSize": 14
+          },
+          "legend": {
+            "visibility": "hidden"
+          },
+          "style": {
+            "backgroundColor": "#FFFFFF",
+            "borderRadius": "round",
+            "borderColor": "#e8dfd3",
+            "borderWidth": 1
+          }
+        },
+        {
+          "id": "p1-sm-aov",
+          "kind": "bar-chart",
+          "source": {
+            "elementId": "tbl-tx-period",
+            "kind": "table"
+          },
+          "columns": [
+            {
+              "id": "sm5-period-color",
+              "formula": "[Tx Period/Period Tag]",
+              "name": "Period (color)"
+            },
+            {
+              "id": "sm5-period",
+              "formula": "[Tx Period/Period Tag]",
+              "name": "Period"
+            },
+            {
+              "id": "sm5-val",
+              "formula": "Sum([Tx Period/Sales Amount]) / CountDistinct([Tx Period/Order Number])",
+              "name": "AOV",
+              "format": {
+                "kind": "number",
+                "formatString": "$,.2f"
+              }
+            },
+            {
+              "id": "sm5-date",
+              "formula": "[Tx Period/Date]",
+              "name": "Date"
+            },
+            {
+              "id": "sm5-qty",
+              "formula": "[Tx Period/Quantity]",
+              "name": "Quantity"
+            },
+            {
+              "id": "sm5-order",
+              "formula": "[Tx Period/Order Number]",
+              "name": "Order Number"
+            },
+            {
+              "id": "sm5-region",
+              "formula": "[Tx Period/Store Region]",
+              "name": "Store Region"
+            }
+          ],
+          "yAxis": {
+            "columnIds": [
+              "sm5-val"
+            ]
+          },
+          "xAxis": {
+            "columnId": "sm5-period"
+          },
+          "color": {
+            "by": "category",
+            "column": "sm5-period-color",
+            "scheme": [
+              "#ce785c",
+              "#8FA6B2",
+              "#B4B4B4"
+            ]
+          },
+          "name": {
+            "text": "AOV: Current vs Prior vs LY",
+            "fontWeight": "bold",
+            "fontSize": 14
+          },
+          "legend": {
+            "visibility": "hidden"
+          },
+          "style": {
+            "backgroundColor": "#FFFFFF",
+            "borderRadius": "round",
+            "borderColor": "#e8dfd3",
+            "borderWidth": 1
+          }
+        },
+        {
+          "id": "p1-pivot-pop",
+          "kind": "pivot-table",
+          "source": {
+            "elementId": "tbl-tx-period",
+            "kind": "table"
+          },
+          "columns": [
+            {
+              "id": "pv-region",
+              "formula": "[Tx Period/Store Region]",
+              "name": "Store Region"
+            },
+            {
+              "id": "pv-current",
+              "formula": "Sum(If([Tx Period/Period Tag] = \"Current\", [Tx Period/Sales Amount], 0))",
+              "name": "Current Revenue",
+              "format": {
+                "kind": "number",
+                "formatString": "$,.0f"
+              }
+            },
+            {
+              "id": "pv-prior",
+              "formula": "Sum(If([Tx Period/Period Tag] = \"Prior\", [Tx Period/Sales Amount], 0))",
+              "name": "Prior Revenue",
+              "format": {
+                "kind": "number",
+                "formatString": "$,.0f"
+              }
+            },
+            {
+              "id": "pv-ly",
+              "formula": "Sum(If([Tx Period/Period Tag] = \"LastYear\", [Tx Period/Sales Amount], 0))",
+              "name": "LY Revenue",
+              "format": {
+                "kind": "number",
+                "formatString": "$,.0f"
+              }
+            },
+            {
+              "id": "pv-pop-pct",
+              "formula": "(Sum(If([Tx Period/Period Tag] = \"Current\", [Tx Period/Sales Amount], 0)) - Sum(If([Tx Period/Period Tag] = \"Prior\", [Tx Period/Sales Amount], 0))) / Sum(If([Tx Period/Period Tag] = \"Prior\", [Tx Period/Sales Amount], 0))",
+              "name": "PoP % Change",
+              "format": {
+                "kind": "number",
+                "formatString": ".1%"
+              }
+            },
+            {
+              "id": "pv-yoy-pct",
+              "formula": "(Sum(If([Tx Period/Period Tag] = \"Current\", [Tx Period/Sales Amount], 0)) - Sum(If([Tx Period/Period Tag] = \"LastYear\", [Tx Period/Sales Amount], 0))) / Sum(If([Tx Period/Period Tag] = \"LastYear\", [Tx Period/Sales Amount], 0))",
+              "name": "YoY % Change",
+              "format": {
+                "kind": "number",
+                "formatString": ".1%"
+              }
+            }
+          ],
+          "values": [
+            "pv-current",
+            "pv-prior",
+            "pv-ly",
+            "pv-pop-pct",
+            "pv-yoy-pct"
+          ],
+          "rowsBy": [
+            {
+              "id": "pv-region",
+              "sort": {
+                "by": "pv-current",
+                "direction": "descending"
+              }
+            }
+          ],
+          "name": {
+            "text": "Period-over-Period by Store Region",
+            "fontWeight": "bold",
+            "fontSize": 16
+          },
+          "style": {
+            "backgroundColor": "#FFFFFF",
+            "borderRadius": "round",
+            "borderColor": "#e8dfd3",
+            "borderWidth": 1
+          },
+          "conditionalFormats": [
+            {
+              "type": "single",
+              "columnIds": [
+                "pv-pop-pct"
+              ],
+              "condition": ">",
+              "value": 0,
+              "style": {
+                "backgroundColor": "#dcfce7",
+                "color": "#166534"
+              }
+            },
+            {
+              "type": "single",
+              "columnIds": [
+                "pv-pop-pct"
+              ],
+              "condition": "<",
+              "value": 0,
+              "style": {
+                "backgroundColor": "#fee2e2",
+                "color": "#991b1b"
+              }
+            }
+          ]
+        },
+        {
+          "id": "tbl-tx-period",
+          "kind": "table",
+          "source": {
+            "elementId": "tbl-tx",
+            "kind": "table"
+          },
+          "columns": [
+            {
+              "id": "tp-order-number",
+              "formula": "[Tx/Order Number]",
+              "name": "Order Number"
+            },
+            {
+              "id": "tp-date",
+              "formula": "[Tx/Date]",
+              "name": "Date"
+            },
+            {
+              "id": "tp-quantity",
+              "formula": "[Tx/Quantity]",
+              "name": "Quantity"
+            },
+            {
+              "id": "tp-price",
+              "formula": "[Tx/Price]",
+              "name": "Price"
+            },
+            {
+              "id": "tp-unit-cost",
+              "formula": "[Tx/Unit Cost]",
+              "name": "Unit Cost"
+            },
+            {
+              "id": "tp-store-key",
+              "formula": "[Tx/Store Key]",
+              "name": "Store Key"
+            },
+            {
+              "id": "tp-store-name",
+              "formula": "[Tx/Store Name]",
+              "name": "Store Name"
+            },
+            {
+              "id": "tp-store-region",
+              "formula": "[Tx/Store Region]",
+              "name": "Store Region"
+            },
+            {
+              "id": "tp-cust-key",
+              "formula": "[Tx/Cust Key]",
+              "name": "Cust Key"
+            },
+            {
+              "id": "tp-product-name",
+              "formula": "[Tx/Product Name]",
+              "name": "Product Name"
+            },
+            {
+              "id": "tp-product-type",
+              "formula": "[Tx/Product Type]",
+              "name": "Product Type"
+            },
+            {
+              "id": "tp-sales-amount",
+              "formula": "[Tx/Sales Amount]",
+              "name": "Sales Amount"
+            },
+            {
+              "id": "tp-max-date",
+              "formula": "Rollup(Max([Tx/Date]), 1, 1)",
+              "name": "Max Date"
+            },
+            {
+              "id": "tp-current-month",
+              "formula": "DateTrunc(\"month\", [Max Date])",
+              "name": "Current Month"
+            },
+            {
+              "id": "tp-row-month",
+              "formula": "DateTrunc(\"month\", [Tx/Date])",
+              "name": "Row Month"
+            },
+            {
+              "id": "tp-months-back",
+              "formula": "DateDiff(\"month\", [Row Month], [Current Month])",
+              "name": "Months Back"
+            },
+            {
+              "id": "tp-period-tag",
+              "formula": "If([Months Back] = 0, \"Current\", If([Months Back] = 1, \"Prior\", If([Months Back] = 12, \"LastYear\", Null)))",
+              "name": "Period Tag"
+            }
+          ],
+          "name": "Tx Period",
+          "order": [
+            "tp-order-number",
+            "tp-date",
+            "tp-quantity",
+            "tp-price",
+            "tp-unit-cost",
+            "tp-store-key",
+            "tp-store-name",
+            "tp-store-region",
+            "tp-cust-key",
+            "tp-product-name",
+            "tp-product-type",
+            "tp-sales-amount",
+            "tp-max-date",
+            "tp-current-month",
+            "tp-row-month",
+            "tp-months-back",
+            "tp-period-tag"
+          ]
+        },
+        {
+          "id": "tbl-tx",
+          "kind": "table",
+          "source": {
+            "dataModelId": "3889b3c3-4657-4d9e-b568-5d2388cf4b4c",
+            "elementId": "GwiskXBx0S",
+            "kind": "data-model"
+          },
+          "columns": [
+            {
+              "id": "col-order-number",
+              "formula": "[Transactions with Details & Relationships (5M)/Order Number]",
+              "name": "Order Number"
+            },
+            {
+              "id": "col-date",
+              "formula": "[Transactions with Details & Relationships (5M)/Date]",
+              "name": "Date"
+            },
+            {
+              "id": "col-quantity",
+              "formula": "[Transactions with Details & Relationships (5M)/Quantity]",
+              "name": "Quantity"
+            },
+            {
+              "id": "col-price",
+              "formula": "[Transactions with Details & Relationships (5M)/Price]",
+              "name": "Price"
+            },
+            {
+              "id": "col-unit-cost",
+              "formula": "[Transactions with Details & Relationships (5M)/Unit Cost]",
+              "name": "Unit Cost"
+            },
+            {
+              "id": "col-store-key",
+              "formula": "[Transactions with Details & Relationships (5M)/Store Key]",
+              "name": "Store Key"
+            },
+            {
+              "id": "col-store-name",
+              "formula": "[Transactions with Details & Relationships (5M)/Store Name]",
+              "name": "Store Name"
+            },
+            {
+              "id": "col-store-region",
+              "formula": "[Transactions with Details & Relationships (5M)/Store Region]",
+              "name": "Store Region"
+            },
+            {
+              "id": "col-cust-key",
+              "formula": "[Transactions with Details & Relationships (5M)/Cust Key]",
+              "name": "Cust Key"
+            },
+            {
+              "id": "col-cust-name",
+              "formula": "[Transactions with Details & Relationships (5M)/Cust Name]",
+              "name": "Cust Name"
+            },
+            {
+              "id": "col-product-name",
+              "formula": "[Transactions with Details & Relationships (5M)/Product Name]",
+              "name": "Product Name"
+            },
+            {
+              "id": "col-product-type",
+              "formula": "[Transactions with Details & Relationships (5M)/Product Type]",
+              "name": "Product Type"
+            },
+            {
+              "id": "col-product-key",
+              "formula": "[Transactions with Details & Relationships (5M)/Product Key]",
+              "name": "Product Key"
+            },
+            {
+              "id": "col-sales-amount",
+              "formula": "[Transactions with Details & Relationships (5M)/Sales Amount]",
+              "name": "Sales Amount",
+              "format": {
+                "kind": "number",
+                "formatString": "$,.2f"
+              }
+            }
+          ],
+          "name": "Tx",
+          "order": [
+            "col-order-number",
+            "col-date",
+            "col-quantity",
+            "col-price",
+            "col-unit-cost",
+            "col-store-key",
+            "col-store-name",
+            "col-store-region",
+            "col-cust-key",
+            "col-cust-name",
+            "col-product-name",
+            "col-product-type",
+            "col-product-key",
+            "col-sales-amount"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "page-trends",
+      "name": "Trends & Geography",
+      "elements": [
+        {
+          "id": "p2-header",
+          "kind": "container",
+          "style": {
+            "backgroundColor": "#FFFFFF",
+            "borderRadius": "round",
+            "borderColor": "#ce785c",
+            "borderWidth": 3
+          }
+        },
+        {
+          "id": "p2-title",
+          "kind": "text",
+          "body": "# Trends & Geography\n\nLong-run monthly trends for the top 5 metrics + geographic distribution of revenue.",
+          "verticalAlign": "middle"
+        },
+        {
+          "id": "p2-trend-revenue",
+          "kind": "line-chart",
+          "source": {
+            "elementId": "p2-tbl-tx",
+            "kind": "table"
+          },
+          "columns": [
+            {
+              "id": "t1-month",
+              "formula": "DateTrunc(\"month\", [Tx2/Date])",
+              "name": "Month",
+              "format": {
+                "kind": "datetime",
+                "formatString": "%b %Y"
+              }
+            },
+            {
+              "id": "t1-val",
+              "formula": "Sum([Tx2/Sales Amount])",
+              "name": "Revenue",
+              "format": {
+                "kind": "number",
+                "formatString": "$.2~S"
+              }
+            },
+            {
+              "id": "t1-date",
+              "formula": "[Tx2/Date]",
+              "name": "Date"
+            },
+            {
+              "id": "t1-qty",
+              "formula": "[Tx2/Quantity]",
+              "name": "Quantity"
+            },
+            {
+              "id": "t1-price",
+              "formula": "[Tx2/Price]",
+              "name": "Price"
+            },
+            {
+              "id": "t1-order",
+              "formula": "[Tx2/Order Number]",
+              "name": "Order Number"
+            },
+            {
+              "id": "t1-region",
+              "formula": "[Tx2/Store Region]",
+              "name": "Store Region"
+            }
+          ],
+          "yAxis": {
+            "columnIds": [
+              "t1-val"
+            ]
+          },
+          "xAxis": {
+            "columnId": "t1-month",
+            "sort": {
+              "by": "t1-month",
+              "direction": "ascending"
+            }
+          },
+          "name": {
+            "text": "Revenue Trend",
+            "fontWeight": "bold",
+            "fontSize": 14
+          },
+          "legend": {
+            "visibility": "hidden"
+          },
+          "style": {
+            "backgroundColor": "#FFFFFF",
+            "borderRadius": "round",
+            "borderColor": "#e8dfd3",
+            "borderWidth": 1
+          }
+        },
+        {
+          "id": "p2-trend-profit",
+          "kind": "line-chart",
+          "source": {
+            "elementId": "p2-tbl-tx",
+            "kind": "table"
+          },
+          "columns": [
+            {
+              "id": "t2-month",
+              "formula": "DateTrunc(\"month\", [Tx2/Date])",
+              "name": "Month",
+              "format": {
+                "kind": "datetime",
+                "formatString": "%b %Y"
+              }
+            },
+            {
+              "id": "t2-val",
+              "formula": "Sum([Tx2/Sales Amount]) - Sum([Tx2/Quantity] * [Tx2/Unit Cost])",
+              "name": "Profit",
+              "format": {
+                "kind": "number",
+                "formatString": "$.2~S"
+              }
+            },
+            {
+              "id": "t2-date",
+              "formula": "[Tx2/Date]",
+              "name": "Date"
+            },
+            {
+              "id": "t2-qty",
+              "formula": "[Tx2/Quantity]",
+              "name": "Quantity"
+            },
+            {
+              "id": "t2-cost",
+              "formula": "[Tx2/Unit Cost]",
+              "name": "Unit Cost"
+            },
+            {
+              "id": "t2-price",
+              "formula": "[Tx2/Price]",
+              "name": "Price"
+            },
+            {
+              "id": "t2-region",
+              "formula": "[Tx2/Store Region]",
+              "name": "Store Region"
+            }
+          ],
+          "yAxis": {
+            "columnIds": [
+              "t2-val"
+            ]
+          },
+          "xAxis": {
+            "columnId": "t2-month",
+            "sort": {
+              "by": "t2-month",
+              "direction": "ascending"
+            }
+          },
+          "name": {
+            "text": "Profit Trend",
+            "fontWeight": "bold",
+            "fontSize": 14
+          },
+          "legend": {
+            "visibility": "hidden"
+          },
+          "style": {
+            "backgroundColor": "#FFFFFF",
+            "borderRadius": "round",
+            "borderColor": "#e8dfd3",
+            "borderWidth": 1
+          }
+        },
+        {
+          "id": "p2-trend-margin",
+          "kind": "line-chart",
+          "source": {
+            "elementId": "p2-tbl-tx",
+            "kind": "table"
+          },
+          "columns": [
+            {
+              "id": "t3-month",
+              "formula": "DateTrunc(\"month\", [Tx2/Date])",
+              "name": "Month",
+              "format": {
+                "kind": "datetime",
+                "formatString": "%b %Y"
+              }
+            },
+            {
+              "id": "t3-val",
+              "formula": "(Sum([Tx2/Sales Amount]) - Sum([Tx2/Quantity] * [Tx2/Unit Cost])) / Sum([Tx2/Quantity] * [Tx2/Unit Cost])",
+              "name": "Margin",
+              "format": {
+                "kind": "number",
+                "formatString": ".1%"
+              }
+            },
+            {
+              "id": "t3-date",
+              "formula": "[Tx2/Date]",
+              "name": "Date"
+            },
+            {
+              "id": "t3-qty",
+              "formula": "[Tx2/Quantity]",
+              "name": "Quantity"
+            },
+            {
+              "id": "t3-cost",
+              "formula": "[Tx2/Unit Cost]",
+              "name": "Unit Cost"
+            },
+            {
+              "id": "t3-region",
+              "formula": "[Tx2/Store Region]",
+              "name": "Store Region"
+            }
+          ],
+          "yAxis": {
+            "columnIds": [
+              "t3-val"
+            ]
+          },
+          "xAxis": {
+            "columnId": "t3-month",
+            "sort": {
+              "by": "t3-month",
+              "direction": "ascending"
+            }
+          },
+          "name": {
+            "text": "Margin Trend",
+            "fontWeight": "bold",
+            "fontSize": 14
+          },
+          "legend": {
+            "visibility": "hidden"
+          },
+          "style": {
+            "backgroundColor": "#FFFFFF",
+            "borderRadius": "round",
+            "borderColor": "#e8dfd3",
+            "borderWidth": 1
+          }
+        },
+        {
+          "id": "p2-trend-orders",
+          "kind": "line-chart",
+          "source": {
+            "elementId": "p2-tbl-tx",
+            "kind": "table"
+          },
+          "columns": [
+            {
+              "id": "t4-month",
+              "formula": "DateTrunc(\"month\", [Tx2/Date])",
+              "name": "Month",
+              "format": {
+                "kind": "datetime",
+                "formatString": "%b %Y"
+              }
+            },
+            {
+              "id": "t4-val",
+              "formula": "CountDistinct([Tx2/Order Number])",
+              "name": "Orders",
+              "format": {
+                "kind": "number",
+                "formatString": ",.0f"
+              }
+            },
+            {
+              "id": "t4-date",
+              "formula": "[Tx2/Date]",
+              "name": "Date"
+            },
+            {
+              "id": "t4-qty",
+              "formula": "[Tx2/Quantity]",
+              "name": "Quantity"
+            },
+            {
+              "id": "t4-order",
+              "formula": "[Tx2/Order Number]",
+              "name": "Order Number"
+            },
+            {
+              "id": "t4-region",
+              "formula": "[Tx2/Store Region]",
+              "name": "Store Region"
+            }
+          ],
+          "yAxis": {
+            "columnIds": [
+              "t4-val"
+            ]
+          },
+          "xAxis": {
+            "columnId": "t4-month",
+            "sort": {
+              "by": "t4-month",
+              "direction": "ascending"
+            }
+          },
+          "name": {
+            "text": "Orders Trend",
+            "fontWeight": "bold",
+            "fontSize": 14
+          },
+          "legend": {
+            "visibility": "hidden"
+          },
+          "style": {
+            "backgroundColor": "#FFFFFF",
+            "borderRadius": "round",
+            "borderColor": "#e8dfd3",
+            "borderWidth": 1
+          }
+        },
+        {
+          "id": "p2-trend-aov",
+          "kind": "line-chart",
+          "source": {
+            "elementId": "p2-tbl-tx",
+            "kind": "table"
+          },
+          "columns": [
+            {
+              "id": "t5-month",
+              "formula": "DateTrunc(\"month\", [Tx2/Date])",
+              "name": "Month",
+              "format": {
+                "kind": "datetime",
+                "formatString": "%b %Y"
+              }
+            },
+            {
+              "id": "t5-val",
+              "formula": "Sum([Tx2/Sales Amount]) / CountDistinct([Tx2/Order Number])",
+              "name": "AOV",
+              "format": {
+                "kind": "number",
+                "formatString": "$,.2f"
+              }
+            },
+            {
+              "id": "t5-date",
+              "formula": "[Tx2/Date]",
+              "name": "Date"
+            },
+            {
+              "id": "t5-qty",
+              "formula": "[Tx2/Quantity]",
+              "name": "Quantity"
+            },
+            {
+              "id": "t5-order",
+              "formula": "[Tx2/Order Number]",
+              "name": "Order Number"
+            },
+            {
+              "id": "t5-region",
+              "formula": "[Tx2/Store Region]",
+              "name": "Store Region"
+            }
+          ],
+          "yAxis": {
+            "columnIds": [
+              "t5-val"
+            ]
+          },
+          "xAxis": {
+            "columnId": "t5-month",
+            "sort": {
+              "by": "t5-month",
+              "direction": "ascending"
+            }
+          },
+          "name": {
+            "text": "AOV Trend",
+            "fontWeight": "bold",
+            "fontSize": 14
+          },
+          "legend": {
+            "visibility": "hidden"
+          },
+          "style": {
+            "backgroundColor": "#FFFFFF",
+            "borderRadius": "round",
+            "borderColor": "#e8dfd3",
+            "borderWidth": 1
+          }
+        },
+        {
+          "id": "p2-map",
+          "kind": "region-map",
+          "source": {
+            "elementId": "p2-tbl-store",
+            "kind": "table"
+          },
+          "columns": [
+            {
+              "id": "m-state",
+              "formula": "[Store/Store State]",
+              "name": "Store State"
+            },
+            {
+              "id": "m-revenue",
+              "formula": "Sum([Store/Store Revenue])",
+              "name": "Revenue",
+              "format": {
+                "kind": "number",
+                "formatString": "$.2~S"
+              }
+            },
+            {
+              "id": "m-store-name",
+              "formula": "[Store/Store Name]",
+              "name": "Store Name"
+            },
+            {
+              "id": "m-region",
+              "formula": "[Store/Store Region]",
+              "name": "Store Region"
+            },
+            {
+              "id": "m-store-key",
+              "formula": "[Store/Store Key]",
+              "name": "Store Key"
+            },
+            {
+              "id": "m-city",
+              "formula": "[Store/Store City]",
+              "name": "Store City"
+            },
+            {
+              "id": "m-lat",
+              "formula": "[Store/Latitude]",
+              "name": "Latitude"
+            },
+            {
+              "id": "m-lon",
+              "formula": "[Store/Longitude]",
+              "name": "Longitude"
+            }
+          ],
+          "region": {
+            "id": "m-state",
+            "regionType": "us-state"
+          },
+          "color": {
+            "by": "scale",
+            "column": "m-revenue",
+            "scheme": [
+              "#fef3c7",
+              "#fbbf24",
+              "#dc2626"
+            ]
+          },
+          "tooltip": [
+            {
+              "id": "m-store-name"
+            },
+            {
+              "id": "m-region"
+            }
+          ],
+          "name": {
+            "text": "Revenue by State",
+            "fontWeight": "bold",
+            "fontSize": 16
+          },
+          "style": {
+            "backgroundColor": "#FFFFFF",
+            "borderRadius": "round",
+            "borderColor": "#e8dfd3",
+            "borderWidth": 1
+          }
+        },
+        {
+          "id": "p2-tbl-tx",
+          "kind": "table",
+          "source": {
+            "dataModelId": "3889b3c3-4657-4d9e-b568-5d2388cf4b4c",
+            "elementId": "GwiskXBx0S",
+            "kind": "data-model"
+          },
+          "columns": [
+            {
+              "id": "p2-col-order-number",
+              "formula": "[Transactions with Details & Relationships (5M)/Order Number]",
+              "name": "Order Number"
+            },
+            {
+              "id": "p2-col-date",
+              "formula": "[Transactions with Details & Relationships (5M)/Date]",
+              "name": "Date"
+            },
+            {
+              "id": "p2-col-quantity",
+              "formula": "[Transactions with Details & Relationships (5M)/Quantity]",
+              "name": "Quantity"
+            },
+            {
+              "id": "p2-col-price",
+              "formula": "[Transactions with Details & Relationships (5M)/Price]",
+              "name": "Price"
+            },
+            {
+              "id": "p2-col-unit-cost",
+              "formula": "[Transactions with Details & Relationships (5M)/Unit Cost]",
+              "name": "Unit Cost"
+            },
+            {
+              "id": "p2-col-store-key",
+              "formula": "[Transactions with Details & Relationships (5M)/Store Key]",
+              "name": "Store Key"
+            },
+            {
+              "id": "p2-col-store-name",
+              "formula": "[Transactions with Details & Relationships (5M)/Store Name]",
+              "name": "Store Name"
+            },
+            {
+              "id": "p2-col-store-region",
+              "formula": "[Transactions with Details & Relationships (5M)/Store Region]",
+              "name": "Store Region"
+            },
+            {
+              "id": "p2-col-cust-key",
+              "formula": "[Transactions with Details & Relationships (5M)/Cust Key]",
+              "name": "Cust Key"
+            },
+            {
+              "id": "p2-col-product-name",
+              "formula": "[Transactions with Details & Relationships (5M)/Product Name]",
+              "name": "Product Name"
+            },
+            {
+              "id": "p2-col-product-type",
+              "formula": "[Transactions with Details & Relationships (5M)/Product Type]",
+              "name": "Product Type"
+            },
+            {
+              "id": "p2-col-sales-amount",
+              "formula": "[Transactions with Details & Relationships (5M)/Sales Amount]",
+              "name": "Sales Amount",
+              "format": {
+                "kind": "number",
+                "formatString": "$,.2f"
+              }
+            }
+          ],
+          "name": "Tx2",
+          "order": [
+            "p2-col-order-number",
+            "p2-col-date",
+            "p2-col-quantity",
+            "p2-col-price",
+            "p2-col-unit-cost",
+            "p2-col-store-key",
+            "p2-col-store-name",
+            "p2-col-store-region",
+            "p2-col-cust-key",
+            "p2-col-product-name",
+            "p2-col-product-type",
+            "p2-col-sales-amount"
+          ]
+        },
+        {
+          "id": "p2-tbl-store",
+          "kind": "table",
+          "source": {
+            "dataModelId": "3889b3c3-4657-4d9e-b568-5d2388cf4b4c",
+            "elementId": "DVAsUdttVX",
+            "kind": "data-model"
+          },
+          "columns": [
+            {
+              "id": "st-store-key",
+              "formula": "[D_STORE/Store Key]",
+              "name": "Store Key"
+            },
+            {
+              "id": "st-store-name",
+              "formula": "[D_STORE/Store Name]",
+              "name": "Store Name"
+            },
+            {
+              "id": "st-store-city",
+              "formula": "[D_STORE/Store City]",
+              "name": "Store City"
+            },
+            {
+              "id": "st-store-state",
+              "formula": "[D_STORE/Store State]",
+              "name": "Store State"
+            },
+            {
+              "id": "st-store-region",
+              "formula": "[D_STORE/Store Region]",
+              "name": "Store Region"
+            },
+            {
+              "id": "st-lat",
+              "formula": "[D_STORE/Latitude]",
+              "name": "Latitude"
+            },
+            {
+              "id": "st-lon",
+              "formula": "[D_STORE/Longitude]",
+              "name": "Longitude"
+            },
+            {
+              "id": "st-store-revenue",
+              "formula": "Lookup(Sum([Tx2/Sales Amount]), [Store Key], [Tx2/Store Key])",
+              "name": "Store Revenue",
+              "format": {
+                "kind": "number",
+                "formatString": "$,.0f"
+              }
+            }
+          ],
+          "name": "Store",
+          "order": [
+            "st-store-key",
+            "st-store-name",
+            "st-store-city",
+            "st-store-state",
+            "st-store-region",
+            "st-lat",
+            "st-lon",
+            "st-store-revenue"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "page-outliers",
+      "name": "Anomalies & Outliers",
+      "elements": [
+        {
+          "id": "p3-header",
+          "kind": "container",
+          "style": {
+            "backgroundColor": "#FFFFFF",
+            "borderRadius": "round",
+            "borderColor": "#ce785c",
+            "borderWidth": 3
+          }
+        },
+        {
+          "id": "p3-title",
+          "kind": "text",
+          "body": "# Anomalies & Outliers\n\nStores whose most recent month moved dramatically vs their historical monthly average \u2014 biggest movers first.",
+          "verticalAlign": "middle"
+        },
+        {
+          "id": "p3-anomaly-tbl",
+          "kind": "table",
+          "source": {
+            "elementId": "p3-tbl-store-monthly",
+            "kind": "table"
+          },
+          "columns": [
+            {
+              "id": "an-store",
+              "formula": "[Store Monthly/Store Name]",
+              "name": "Store Name"
+            },
+            {
+              "id": "an-region",
+              "formula": "[Store Monthly/Store Region]",
+              "name": "Store Region"
+            },
+            {
+              "id": "an-current",
+              "formula": "[Store Monthly/Current Month Revenue]",
+              "name": "Current Month Revenue",
+              "format": {
+                "kind": "number",
+                "formatString": "$,.0f"
+              }
+            },
+            {
+              "id": "an-avg",
+              "formula": "[Store Monthly/Historical Avg]",
+              "name": "Historical Avg Monthly Revenue",
+              "format": {
+                "kind": "number",
+                "formatString": "$,.0f"
+              }
+            },
+            {
+              "id": "an-dev-abs",
+              "formula": "[Store Monthly/Deviation $]",
+              "name": "Deviation $",
+              "format": {
+                "kind": "number",
+                "formatString": "$,.0f"
+              }
+            },
+            {
+              "id": "an-dev-pct",
+              "formula": "[Store Monthly/Deviation %]",
+              "name": "Deviation %",
+              "format": {
+                "kind": "number",
+                "formatString": ".1%"
+              }
+            },
+            {
+              "id": "an-abs-dev-pct",
+              "formula": "[Store Monthly/Abs Deviation %]",
+              "name": "|Deviation %|",
+              "format": {
+                "kind": "number",
+                "formatString": ".1%"
+              }
+            }
+          ],
+          "name": {
+            "text": "Store Movers (ranked by |deviation %|)",
+            "fontWeight": "bold",
+            "fontSize": 16
+          },
+          "filters": [
+            {
+              "id": "an-top",
+              "columnId": "an-abs-dev-pct",
+              "kind": "top-n",
+              "rankingFunction": "rank",
+              "mode": "top-n",
+              "rowCount": 25,
+              "includeNulls": "when-no-value-is-selected"
+            }
+          ],
+          "order": [
+            "an-store",
+            "an-region",
+            "an-current",
+            "an-avg",
+            "an-dev-abs",
+            "an-dev-pct",
+            "an-abs-dev-pct"
+          ],
+          "style": {
+            "backgroundColor": "#FFFFFF",
+            "borderRadius": "round",
+            "borderColor": "#e8dfd3",
+            "borderWidth": 1
+          },
+          "conditionalFormats": [
+            {
+              "type": "single",
+              "columnIds": [
+                "an-dev-pct"
+              ],
+              "condition": ">",
+              "value": 0,
+              "style": {
+                "backgroundColor": "#dcfce7",
+                "color": "#166534"
+              }
+            },
+            {
+              "type": "single",
+              "columnIds": [
+                "an-dev-pct"
+              ],
+              "condition": "<",
+              "value": 0,
+              "style": {
+                "backgroundColor": "#fee2e2",
+                "color": "#991b1b"
+              }
+            },
+            {
+              "type": "dataBars",
+              "columnIds": [
+                "an-abs-dev-pct"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "p3-scatter",
+          "kind": "scatter-chart",
+          "source": {
+            "elementId": "p3-tbl-store-monthly",
+            "kind": "table"
+          },
+          "columns": [
+            {
+              "id": "sc-dir",
+              "formula": "If([Store Monthly/Deviation %] > 0, \"Up\", \"Down\")",
+              "name": "Direction"
+            },
+            {
+              "id": "sc-vol",
+              "formula": "[Store Monthly/Current Month Revenue]",
+              "name": "Current Month Revenue",
+              "format": {
+                "kind": "number",
+                "formatString": "$.2~S"
+              }
+            },
+            {
+              "id": "sc-dev",
+              "formula": "[Store Monthly/Deviation %]",
+              "name": "Deviation %",
+              "format": {
+                "kind": "number",
+                "formatString": ".1%"
+              }
+            },
+            {
+              "id": "sc-avg",
+              "formula": "[Store Monthly/Historical Avg]",
+              "name": "Historical Avg"
+            },
+            {
+              "id": "sc-store",
+              "formula": "[Store Monthly/Store Name]",
+              "name": "Store Name"
+            },
+            {
+              "id": "sc-region",
+              "formula": "[Store Monthly/Store Region]",
+              "name": "Store Region"
+            }
+          ],
+          "yAxis": {
+            "columnIds": [
+              "sc-dev"
+            ]
+          },
+          "xAxis": {
+            "columnId": "sc-vol"
+          },
+          "size": {
+            "id": "sc-avg"
+          },
+          "color": {
+            "by": "category",
+            "column": "sc-dir",
+            "scheme": [
+              "#22c55e",
+              "#ef4444"
+            ]
+          },
+          "name": {
+            "text": "Volume vs Change % (Outlier Scatter)",
+            "fontWeight": "bold",
+            "fontSize": 16
+          },
+          "legend": {
+            "position": "bottom"
+          },
+          "style": {
+            "backgroundColor": "#FFFFFF",
+            "borderRadius": "round",
+            "borderColor": "#e8dfd3",
+            "borderWidth": 1
+          }
+        },
+        {
+          "id": "p3-tbl-store-monthly",
+          "kind": "table",
+          "source": {
+            "elementId": "p3-tbl-tx",
+            "kind": "table"
+          },
+          "columns": [
+            {
+              "id": "sm-store-name",
+              "formula": "[Tx3/Store Name]",
+              "name": "Store Name"
+            },
+            {
+              "id": "sm-store-region",
+              "formula": "[Tx3/Store Region]",
+              "name": "Store Region"
+            },
+            {
+              "id": "sm-store-key",
+              "formula": "[Tx3/Store Key]",
+              "name": "Store Key"
+            },
+            {
+              "id": "sm-current-rev",
+              "formula": "Sum(If(DateTrunc(\"month\", [Tx3/Date]) = DateTrunc(\"month\", Today()), [Tx3/Sales Amount], 0))",
+              "name": "Current Month Revenue",
+              "format": {
+                "kind": "number",
+                "formatString": "$,.0f"
+              }
+            },
+            {
+              "id": "sm-hist-total",
+              "formula": "Sum(If(DateTrunc(\"month\", [Tx3/Date]) < DateTrunc(\"month\", Today()), [Tx3/Sales Amount], 0))",
+              "name": "Historical Total",
+              "format": {
+                "kind": "number",
+                "formatString": "$,.0f"
+              }
+            },
+            {
+              "id": "sm-hist-months",
+              "formula": "CountDistinct(If(DateTrunc(\"month\", [Tx3/Date]) < DateTrunc(\"month\", Today()), DateTrunc(\"month\", [Tx3/Date]), Null))",
+              "name": "Historical Months"
+            },
+            {
+              "id": "sm-hist-avg",
+              "formula": "If([Historical Months] > 0, [Historical Total] / [Historical Months], Null)",
+              "name": "Historical Avg",
+              "format": {
+                "kind": "number",
+                "formatString": "$,.0f"
+              }
+            },
+            {
+              "id": "sm-dev-abs",
+              "formula": "If(IsNull([Historical Avg]), Null, [Current Month Revenue] - [Historical Avg])",
+              "name": "Deviation $",
+              "format": {
+                "kind": "number",
+                "formatString": "$,.0f"
+              }
+            },
+            {
+              "id": "sm-dev-pct",
+              "formula": "If(IsNull([Historical Avg]), Null, If([Historical Avg] = 0, Null, [Deviation $] / [Historical Avg]))",
+              "name": "Deviation %",
+              "format": {
+                "kind": "number",
+                "formatString": ".1%"
+              }
+            },
+            {
+              "id": "sm-abs-dev-pct",
+              "formula": "If(IsNull([Deviation %]), Null, If([Deviation %] < 0, 0 - [Deviation %], [Deviation %]))",
+              "name": "Abs Deviation %",
+              "format": {
+                "kind": "number",
+                "formatString": ".1%"
+              }
+            }
+          ],
+          "name": "Store Monthly",
+          "groupings": [
+            {
+              "id": "g-by-store",
+              "groupBy": [
+                "sm-store-name",
+                "sm-store-region",
+                "sm-store-key"
+              ],
+              "calculations": [
+                "sm-current-rev",
+                "sm-hist-total",
+                "sm-hist-months",
+                "sm-hist-avg",
+                "sm-dev-abs",
+                "sm-dev-pct",
+                "sm-abs-dev-pct"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "p3-tbl-tx",
+          "kind": "table",
+          "source": {
+            "dataModelId": "3889b3c3-4657-4d9e-b568-5d2388cf4b4c",
+            "elementId": "GwiskXBx0S",
+            "kind": "data-model"
+          },
+          "columns": [
+            {
+              "id": "p3-col-order-number",
+              "formula": "[Transactions with Details & Relationships (5M)/Order Number]",
+              "name": "Order Number"
+            },
+            {
+              "id": "p3-col-date",
+              "formula": "[Transactions with Details & Relationships (5M)/Date]",
+              "name": "Date"
+            },
+            {
+              "id": "p3-col-quantity",
+              "formula": "[Transactions with Details & Relationships (5M)/Quantity]",
+              "name": "Quantity"
+            },
+            {
+              "id": "p3-col-price",
+              "formula": "[Transactions with Details & Relationships (5M)/Price]",
+              "name": "Price"
+            },
+            {
+              "id": "p3-col-unit-cost",
+              "formula": "[Transactions with Details & Relationships (5M)/Unit Cost]",
+              "name": "Unit Cost"
+            },
+            {
+              "id": "p3-col-store-key",
+              "formula": "[Transactions with Details & Relationships (5M)/Store Key]",
+              "name": "Store Key"
+            },
+            {
+              "id": "p3-col-store-name",
+              "formula": "[Transactions with Details & Relationships (5M)/Store Name]",
+              "name": "Store Name"
+            },
+            {
+              "id": "p3-col-store-region",
+              "formula": "[Transactions with Details & Relationships (5M)/Store Region]",
+              "name": "Store Region"
+            },
+            {
+              "id": "p3-col-cust-key",
+              "formula": "[Transactions with Details & Relationships (5M)/Cust Key]",
+              "name": "Cust Key"
+            },
+            {
+              "id": "p3-col-product-name",
+              "formula": "[Transactions with Details & Relationships (5M)/Product Name]",
+              "name": "Product Name"
+            },
+            {
+              "id": "p3-col-product-type",
+              "formula": "[Transactions with Details & Relationships (5M)/Product Type]",
+              "name": "Product Type"
+            },
+            {
+              "id": "p3-col-sales-amount",
+              "formula": "[Transactions with Details & Relationships (5M)/Sales Amount]",
+              "name": "Sales Amount",
+              "format": {
+                "kind": "number",
+                "formatString": "$,.2f"
+              }
+            }
+          ],
+          "name": "Tx3",
+          "order": [
+            "p3-col-order-number",
+            "p3-col-date",
+            "p3-col-quantity",
+            "p3-col-price",
+            "p3-col-unit-cost",
+            "p3-col-store-key",
+            "p3-col-store-name",
+            "p3-col-store-region",
+            "p3-col-cust-key",
+            "p3-col-product-name",
+            "p3-col-product-type",
+            "p3-col-sales-amount"
+          ]
+        }
+      ]
+    }
+  ],
+  "themeOverrides": {
+    "pageWidth": "large",
+    "space": {
+      "unit": "small"
+    }
+  },
+  "layout": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<Page type=\"grid\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\" id=\"page-scorecard\">\n  <GridContainer elementId=\"p1-header\" type=\"grid\" gridColumn=\"1 / 25\" gridRow=\"1 / 5\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n    <LayoutElement elementId=\"p1-title\" gridColumn=\"1 / 25\" gridRow=\"1 / 3\"/>\n    <LayoutElement elementId=\"p1-ctrl-date\" gridColumn=\"1 / 9\" gridRow=\"3 / 5\"/>\n    <LayoutElement elementId=\"p1-ctrl-region\" gridColumn=\"9 / 17\" gridRow=\"3 / 5\"/>\n    <LayoutElement elementId=\"p1-ctrl-product\" gridColumn=\"17 / 25\" gridRow=\"3 / 5\"/>\n  </GridContainer>\n  <GridContainer elementId=\"p1-kpi-group\" type=\"grid\" gridColumn=\"1 / 25\" gridRow=\"5 / 15\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n    <LayoutElement elementId=\"p1-kpi-revenue\" gridColumn=\"1 / 6\" gridRow=\"1 / 10\"/>\n    <LayoutElement elementId=\"p1-kpi-profit\" gridColumn=\"6 / 11\" gridRow=\"1 / 10\"/>\n    <LayoutElement elementId=\"p1-kpi-margin\" gridColumn=\"11 / 15\" gridRow=\"1 / 10\"/>\n    <LayoutElement elementId=\"p1-kpi-orders\" gridColumn=\"15 / 20\" gridRow=\"1 / 10\"/>\n    <LayoutElement elementId=\"p1-kpi-aov\" gridColumn=\"20 / 25\" gridRow=\"1 / 10\"/>\n  </GridContainer>\n  <LayoutElement elementId=\"p1-sm-revenue\" gridColumn=\"1 / 6\" gridRow=\"15 / 25\"/>\n  <LayoutElement elementId=\"p1-sm-profit\" gridColumn=\"6 / 11\" gridRow=\"15 / 25\"/>\n  <LayoutElement elementId=\"p1-sm-margin\" gridColumn=\"11 / 15\" gridRow=\"15 / 25\"/>\n  <LayoutElement elementId=\"p1-sm-orders\" gridColumn=\"15 / 20\" gridRow=\"15 / 25\"/>\n  <LayoutElement elementId=\"p1-sm-aov\" gridColumn=\"20 / 25\" gridRow=\"15 / 25\"/>\n  <LayoutElement elementId=\"p1-pivot-pop\" gridColumn=\"1 / 25\" gridRow=\"25 / 41\"/>\n  <LayoutElement elementId=\"tbl-tx-period\" gridColumn=\"1 / 25\" gridRow=\"41 / 55\"/>\n  <LayoutElement elementId=\"tbl-tx\" gridColumn=\"1 / 25\" gridRow=\"55 / 69\"/>\n</Page>\n<Page type=\"grid\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\" id=\"page-trends\">\n  <GridContainer elementId=\"p2-header\" type=\"grid\" gridColumn=\"1 / 25\" gridRow=\"1 / 4\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n    <LayoutElement elementId=\"p2-title\" gridColumn=\"1 / 25\" gridRow=\"1 / 4\"/>\n  </GridContainer>\n  <LayoutElement elementId=\"p2-trend-revenue\" gridColumn=\"1 / 13\" gridRow=\"4 / 14\"/>\n  <LayoutElement elementId=\"p2-trend-profit\" gridColumn=\"13 / 25\" gridRow=\"4 / 14\"/>\n  <LayoutElement elementId=\"p2-trend-margin\" gridColumn=\"1 / 13\" gridRow=\"14 / 24\"/>\n  <LayoutElement elementId=\"p2-trend-orders\" gridColumn=\"13 / 25\" gridRow=\"14 / 24\"/>\n  <LayoutElement elementId=\"p2-trend-aov\" gridColumn=\"1 / 25\" gridRow=\"24 / 34\"/>\n  <LayoutElement elementId=\"p2-map\" gridColumn=\"1 / 25\" gridRow=\"34 / 52\"/>\n  <LayoutElement elementId=\"p2-tbl-tx\" gridColumn=\"1 / 25\" gridRow=\"52 / 64\"/>\n  <LayoutElement elementId=\"p2-tbl-store\" gridColumn=\"1 / 25\" gridRow=\"64 / 76\"/>\n</Page>\n<Page type=\"grid\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\" id=\"page-outliers\">\n  <GridContainer elementId=\"p3-header\" type=\"grid\" gridColumn=\"1 / 25\" gridRow=\"1 / 4\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n    <LayoutElement elementId=\"p3-title\" gridColumn=\"1 / 25\" gridRow=\"1 / 4\"/>\n  </GridContainer>\n  <LayoutElement elementId=\"p3-anomaly-tbl\" gridColumn=\"1 / 25\" gridRow=\"4 / 22\"/>\n  <LayoutElement elementId=\"p3-scatter\" gridColumn=\"1 / 25\" gridRow=\"22 / 40\"/>\n  <LayoutElement elementId=\"p3-tbl-store-monthly\" gridColumn=\"1 / 25\" gridRow=\"40 / 52\"/>\n  <LayoutElement elementId=\"p3-tbl-tx\" gridColumn=\"1 / 25\" gridRow=\"52 / 64\"/>\n</Page>\n"
+}

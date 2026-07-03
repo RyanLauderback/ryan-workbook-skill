@@ -34,7 +34,7 @@ from typing import Any
 # block (createdAt..workbookId) that's stripped before POST.
 SPEC_KEYS = {
     "name", "schemaVersion", "folderId", "pages", "controls", "description",
-    "layout", "folders",
+    "layout", "folders", "themeOverrides",
     # GET-spec metadata — present on round-trip, not part of authored spec.
     "createdAt", "createdBy", "documentVersion", "latestDocumentVersion",
     "ownerId", "updatedAt", "updatedBy", "url", "workbookId",
@@ -49,7 +49,9 @@ PAGE_KEYS = {"id", "name", "elements", "hidden", "visibility", "description"}
 # fields ON the element body. Unknown keys flag as gaps.
 #
 # COMMON_KEYS apply to every element kind; per-kind sets layer on top.
-COMMON_KEYS = {"id", "kind", "name", "source", "style", "description"}
+# `layout` here is the element-level layout OBJECT (e.g., {anchor: "middle"}),
+# distinct from the top-level layout XML string.
+COMMON_KEYS = {"id", "kind", "name", "source", "style", "description", "layout"}
 
 # Cartesian-chart-specific keys (refMarks/trendlines/dataLabel/seriesDataLabel)
 # verified 2026-05-21 from the upstream sigma-workbooks skill — applies to
@@ -66,18 +68,19 @@ ELEMENT_KEYS = {
     "bar-chart": COMMON_KEYS | CARTESIAN_EXTRAS | {
         "columns", "xAxis", "yAxis", "color", "orientation",
         "stacking", "filters", "legend", "axis", "format",
+        "gap",  # {width, betweenSets} — bar/set spacing
     },
     "line-chart": COMMON_KEYS | CARTESIAN_EXTRAS | {
         "columns", "xAxis", "yAxis", "color", "filters", "legend",
-        "axis", "format",
+        "axis", "format", "gap",
     },
     "area-chart": COMMON_KEYS | CARTESIAN_EXTRAS | {
         "columns", "xAxis", "yAxis", "color", "stacking",
-        "filters", "legend", "axis", "format",
+        "filters", "legend", "axis", "format", "gap",
     },
     "combo-chart": COMMON_KEYS | CARTESIAN_EXTRAS | {
         "columns", "xAxis", "yAxis", "color", "filters", "legend",
-        "axis", "format",
+        "axis", "format", "gap",
     },
     "pie-chart": COMMON_KEYS | {
         "columns", "color", "value", "filters", "legend", "format",
@@ -85,6 +88,7 @@ ELEMENT_KEYS = {
     "donut-chart": COMMON_KEYS | {
         "columns", "color", "value", "filters", "legend", "format",
         "holeValue",  # references a column by id for the donut hole label
+        "dataLabel",  # labels/labelDisplay ("percent", etc.)
     },
     "scatter-chart": COMMON_KEYS | CARTESIAN_EXTRAS | {
         "columns", "xAxis", "yAxis", "color", "size",
@@ -95,6 +99,7 @@ ELEMENT_KEYS = {
         "conditionalFormatting",  # legacy key
         "conditionalFormats",     # current key per upstream (4 variants)
         "totals", "format",
+        "tableStyle", "tableComponents",
     },
     "table": COMMON_KEYS | {
         "columns", "groupings", "order", "filters",
@@ -105,6 +110,8 @@ ELEMENT_KEYS = {
         "summary",                # list[col-id] — summary-bar pattern
         "folders",                # list[{id, name, items?}] — column-folder groupings
         "noDataText",             # string — empty-state caption
+        "tableStyle",             # {banding, preset, cellSpacing, textStyles}
+        "tableComponents",        # {collapsedColumns: [...]}
     },
     "container": COMMON_KEYS | {
         "backgroundImage",        # object {url, style: {fit, align, tiling}}
@@ -121,9 +128,37 @@ ELEMENT_KEYS = {
         # Date-range mode-specific fields:
         "startDate", "endDate", "date", "unit", "includeToday",
     },
-    # Net-new element kinds documented in the upstream sigma-workbooks skill.
-    "divider": COMMON_KEYS,                  # minimal: {id, kind}
-    "image":   COMMON_KEYS | {"url"},        # url supports {{formula}} interpolation
+    # Content elements (non-data-bound).
+    "divider": COMMON_KEYS | {
+        "direction",     # "horizontal" | "vertical"
+        "align",         # e.g. "middle"
+        # style set inherited via COMMON_KEYS ({color, width, strokeStyle})
+    },
+    "image":   COMMON_KEYS | {"url", "alt", "link"},  # url supports {{formula}}
+    "embed":   COMMON_KEYS | {"url"},         # renders external URL inline
+
+    # Map elements (verified 2026-07-02).
+    "geography-map": COMMON_KEYS | {
+        "columns", "geography", "color", "label", "tooltip",
+        "filters", "legend", "mapStyle",
+    },
+    "point-map": COMMON_KEYS | {
+        "columns", "latitude", "longitude", "size", "color",
+        "label", "tooltip", "filters", "legend", "mapStyle",
+    },
+    "region-map": COMMON_KEYS | {
+        "columns", "region", "color", "label", "tooltip",
+        "filters", "legend", "mapStyle",
+    },
+
+    # Editable-table element (documented upstream; limited value without actions).
+    "input-table": COMMON_KEYS | {
+        "columns", "inputMode", "filters", "conditionalFormats",
+        "sort", "summary", "noDataText",
+    },
+
+    # Theme reference — a directive element, not data-bound.
+    "theme": {"kind", "ref"},
 }
 
 # Per-controlType recognized keys layered on top of the base "control" set.
@@ -133,15 +168,20 @@ CONTROL_TYPE_KEYS = {
     "list":         {"selectionMode", "values", "mode", "source"},
     "date-range":   {"mode", "includeNulls", "startDate", "endDate",
                      "date", "unit", "value", "includeToday"},
+    "date":         {"mode", "includeNulls", "date", "value"},
     "text":         {"mode", "value", "includeNulls", "case", "showOperators"},
     "text-area":    {"mode", "value", "includeNulls", "case", "showOperators"},
     "segmented":    {"showClearLabel", "source", "value"},
-    "number":       {"value", "min", "max", "step"},
+    "number":       {"mode", "value", "min", "max", "step", "includeNulls"},
     "number-range": {"mode", "min", "max", "step", "values"},
+    "slider":       {"mode", "value", "min", "max", "step"},
+    "range-slider": {"mode", "values", "min", "max", "step"},
     "toggle":       {"value"},
+    "switch":       {"value"},
     "checkbox":     {"value"},
     "dropdown":     {"selectionMode", "values", "mode", "source"},
     "radio":        {"selectionMode", "values", "mode", "source"},
+    "hierarchy":    {"selectionMode", "values", "mode", "source"},
 }
 
 CHART_KINDS = {
@@ -255,9 +295,9 @@ def element_summary(el: dict) -> list[str]:
     # Dynamic-title detector: name field is an object (styled) or contains formula.
     if isinstance(name_field, dict):
         lines.append("  - 🎨 styled `name` (object form — likely custom title styling)")
-        # Recognized name-object keys per reference/element-shapes.md
-        # § "name — string OR styled object". `format`/`formula`/`kind`/`value`
-        # are speculative future shapes; harmless to leave.
+        # Recognized name-object keys per reference/specification/kpis.md
+        # → "Title styling (styled-name object form)". `format`/`formula`/
+        # `kind`/`value` are speculative future shapes; harmless to leave.
         unknown_name = sorted(set(name_field.keys()) - {
             "text", "color", "fontSize", "fontWeight", "visibility",
             "format", "formula", "kind", "value", "style",
@@ -331,7 +371,11 @@ def kpi_details(el: dict) -> list[str]:
     out.append(f"  - columns: {len(cols)}")
     val = el.get("value") or {}
     if val:
-        out.append(f"  - value.id: `{val.get('id')}`")
+        # Verified 2026-07-02: the canonical KPI value field is `columnId`,
+        # not `id`. Fall back to `id` so older exemplars still surface a
+        # value here.
+        col_ref = val.get("columnId") or val.get("id")
+        out.append(f"  - value.columnId: `{col_ref}`")
     if "comparison" in el:
         out.append("  - 🎨 comparison/period-over-period present")
     if "trend" in el or "sparkline" in el:

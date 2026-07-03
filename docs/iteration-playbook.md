@@ -48,10 +48,14 @@ the SKILL.md index alone.
 
 | Task type | Required chunks |
 |---|---|
-| Every build | `.claude/skills/sigma-workbook-conventions/reference/layout-and-cross-element.md` |
-| Viz-heavy build | + `.claude/skills/sigma-workbook-conventions/reference/element-shapes.md` |
-| Formula-heavy build | + `.claude/skills/sigma-workbook-conventions/reference/function-reference.md` |
-| Round-trip / edge-case work | + `.claude/skills/sigma-workbook-conventions/reference/scope-and-edge-cases.md` |
+| Every build | `.claude/skills/sigma-workbook-conventions/reference/conventions.md` + `.claude/skills/sigma-workbook-conventions/reference/workflows/plan.md` + `.claude/skills/sigma-workbook-conventions/reference/specification/schema.md` + `.claude/skills/sigma-workbook-conventions/reference/specification/layout.md` |
+| Viz-heavy build | + per-kind files under `.claude/skills/sigma-workbook-conventions/reference/specification/` (`charts.md`, `kpis.md`, `tables.md`, etc.) |
+| Formula-heavy build | + `.claude/skills/sigma-workbook-conventions/reference/specification/formulas.md` |
+| Map-bearing build | + `.claude/skills/sigma-workbook-conventions/reference/specification/maps.md` |
+| Round-trip / edge-case work | + `.claude/skills/sigma-workbook-conventions/reference/scope-and-edge-cases.md` + `.claude/skills/sigma-workbook-conventions/reference/workflows/validate.md` |
+
+For the full task-type → chunks table (with more categories), see the
+skill's `SKILL.md` → "Required reading before authoring."
 
 The plan in step 2 must include a `Chunks Read:` line listing files
 consulted. Plans without it are not approvable. This gate was added 2026-05-19
@@ -114,9 +118,9 @@ approved plan from step 2.
 
 `workbooks/<name>/iterations/<YYYYMMDD-HHMM>.json`. Apply the rules in the
 appropriate `reference/*.md` chunk
-([function-reference](../.claude/skills/sigma-workbook-conventions/reference/function-reference.md),
-[element-shapes](../.claude/skills/sigma-workbook-conventions/reference/element-shapes.md),
-[layout-and-cross-element](../.claude/skills/sigma-workbook-conventions/reference/layout-and-cross-element.md),
+([formulas](../.claude/skills/sigma-workbook-conventions/reference/specification/formulas.md),
+[per-element specification/](../.claude/skills/sigma-workbook-conventions/reference/specification/),
+[layout](../.claude/skills/sigma-workbook-conventions/reference/specification/layout.md),
 [scope-and-edge-cases](../.claude/skills/sigma-workbook-conventions/reference/scope-and-edge-cases.md)):
 
 - Declare every column you'll reference downstream, with stable readable ids
@@ -233,10 +237,10 @@ Where to put it:
 
 | Lesson type | Destination |
 |-------------|-------------|
-| Naming / layout / general workbook conventions | `.claude/skills/sigma-workbook-conventions/reference/naming.md` |
-| Function signatures / formula namespaces | `.claude/skills/sigma-workbook-conventions/reference/function-reference.md` |
-| Element shape mechanics (KPI/bar/pie/scatter/pivot/controls) | `.claude/skills/sigma-workbook-conventions/reference/element-shapes.md` |
-| Layout XML, cross-element formulas, groupings, summary-bar | `.claude/skills/sigma-workbook-conventions/reference/layout-and-cross-element.md` |
+| Naming / layout / general workbook conventions | `.claude/skills/sigma-workbook-conventions/reference/naming.md` or `reference/conventions.md` |
+| Function signatures / formula namespaces | `.claude/skills/sigma-workbook-conventions/reference/specification/formulas.md` |
+| Element shape mechanics (KPI/bar/pie/scatter/pivot/controls) | `.claude/skills/sigma-workbook-conventions/reference/specification/<kind>.md` (e.g., `charts.md`, `kpis.md`, `tables.md`, `controls.md`, `maps.md`) |
+| Layout XML, cross-element formulas, groupings, summary-bar | `.claude/skills/sigma-workbook-conventions/reference/specification/layout.md` + `reference/conventions.md` |
 | Scope-of-code limits, edge cases, format field, fallbacks | `.claude/skills/sigma-workbook-conventions/reference/scope-and-edge-cases.md` |
 | Pattern-specific (e.g. financial recon variance formula) | `.claude/skills/<pattern-skill>/reference/<topic>.md` |
 | A whole spec that exemplifies a pattern | `workbooks/_exemplars/<pattern>-<shape>.json` |
