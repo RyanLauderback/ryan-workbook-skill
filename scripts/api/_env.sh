@@ -30,10 +30,15 @@ fi
 if [ -z "${SIGMA_API_TOKEN:-}" ]; then
   _fresh=false
   if [ -f "$_sigma_token_cache" ]; then
-    # macOS: stat -f %m   |   Linux: stat -c %Y
-    _mtime=$(stat -f %m "$_sigma_token_cache" 2>/dev/null \
-          || stat -c %Y "$_sigma_token_cache" 2>/dev/null \
+    # Linux/GNU: stat -c %Y   |   macOS/BSD: stat -f %m
+    # GNU-first: on Linux, `stat -f %m <file>` treats %m as a bad operand and
+    # prints filesystem info to stdout while exiting 1, poisoning $_mtime with a
+    # multi-line non-numeric string (breaks the arithmetic below under set -u).
+    _mtime=$(stat -c %Y "$_sigma_token_cache" 2>/dev/null \
+          || stat -f %m "$_sigma_token_cache" 2>/dev/null \
           || echo 0)
+    # Guard: if anything non-numeric slipped through, treat cache as stale.
+    case "$_mtime" in ''|*[!0-9]*) _mtime=0 ;; esac
     _age=$(( $(date +%s) - _mtime ))
     if [ "$_age" -lt "$_sigma_token_ttl" ]; then
       _fresh=true

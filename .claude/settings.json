@@ -1,4 +1,7 @@
 {
+  "env": {
+    "SIGMA_TOKEN_FETCHER": "/home/user/ryan-workbook-skill/scripts/api/local-get-token.sh"
+  },
   "extraKnownMarketplaces": {
     "sigma-computing": {
       "source": {
@@ -13,6 +16,8 @@
   "permissions": {
     "allow": [
       "Bash(scripts/api/*)",
+      "Bash(scripts/api/local-get-token.sh)",
+      "Bash(curl * $SIGMA_BASE_URL/v2/auth/token*)",
       "Bash(python3 scripts/sigma-resolve.py:*)",
       "Bash(python3 scripts/validate-spec.py:*)",
       "Bash(bash scripts/refresh-vendor.sh:*)",
