@@ -2,13 +2,13 @@
 # Self-bootstrap for scripts in scripts/api/. Sourced (not executed).
 #
 # After sourcing, these vars are set in the calling script's shell:
-#   SIGMA_BASE_URL   from .env
+#   SIGMA_BASE_URL   from .env (or already-exported env vars — Claude Code web)
 #   SIGMA_API_TOKEN  cached on disk (/tmp/.sigma_token, mode 0600), refreshed
-#                    when older than 55 min, fetched fresh via the sigma-api
-#                    skill's get-token.sh on first call of a session.
+#                    when older than 55 min, fetched fresh via the repo-local
+#                    scripts/api/get-token.sh on first call of a session.
 #
-# Override the token-fetcher path via $SIGMA_TOKEN_FETCHER if your install
-# differs from the marketplace plugin default.
+# Override the token-fetcher path via $SIGMA_TOKEN_FETCHER if you want to use
+# the upstream sigma-api plugin's get-token.sh or a custom fetcher instead.
 #
 # Usage from a script in scripts/api/:
 #   set -euo pipefail
@@ -30,10 +30,15 @@ fi
 if [ -z "${SIGMA_API_TOKEN:-}" ]; then
   _fresh=false
   if [ -f "$_sigma_token_cache" ]; then
-    # macOS: stat -f %m   |   Linux: stat -c %Y
-    _mtime=$(stat -f %m "$_sigma_token_cache" 2>/dev/null \
-          || stat -c %Y "$_sigma_token_cache" 2>/dev/null \
+    # Linux: stat -c %Y   |   macOS/BSD: stat -f %m
+    # Order matters: on Linux, `stat -f` prints a filesystem report to
+    # *stdout* (not stderr), so trying the BSD form first silently
+    # "succeeds" with garbage. `stat -c` is a hard error on BSD, so this
+    # order fails cleanly to the fallback on macOS.
+    _mtime=$(stat -c %Y "$_sigma_token_cache" 2>/dev/null \
+          || stat -f %m "$_sigma_token_cache" 2>/dev/null \
           || echo 0)
+    [ -z "${_mtime:-}" ] && _mtime=0
     _age=$(( $(date +%s) - _mtime ))
     if [ "$_age" -lt "$_sigma_token_ttl" ]; then
       _fresh=true
@@ -43,10 +48,13 @@ if [ -z "${SIGMA_API_TOKEN:-}" ]; then
   if $_fresh; then
     SIGMA_API_TOKEN=$(cat "$_sigma_token_cache")
   else
-    _gettoken="${SIGMA_TOKEN_FETCHER:-$HOME/.claude/plugins/marketplaces/sigma-computing/skills/sigma-api/scripts/get-token.sh}"
+    # Skill owns auth: default to the repo-local fetcher (present in every
+    # checkout / zip, in CLI and web alike). $SIGMA_TOKEN_FETCHER overrides
+    # for anyone who prefers the upstream sigma-api plugin's get-token.sh.
+    _gettoken="${SIGMA_TOKEN_FETCHER:-$_sigma_repo_root/scripts/api/get-token.sh}"
     if [ ! -f "$_gettoken" ]; then
-      echo "_env.sh: get-token.sh not found at $_gettoken." >&2
-      echo "  Set SIGMA_TOKEN_FETCHER to the correct path." >&2
+      echo "_env.sh: token fetcher not found at $_gettoken." >&2
+      echo "  Expected scripts/api/get-token.sh in the repo, or set SIGMA_TOKEN_FETCHER." >&2
       return 1 2>/dev/null || exit 1
     fi
     # get-token.sh prints `export SIGMA_API_TOKEN=...` on stdout for eval.

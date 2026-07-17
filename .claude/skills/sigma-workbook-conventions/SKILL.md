@@ -22,7 +22,10 @@ generating or editing any `spec.json` in `workbooks/` or `examples/`.
 
 This skill is reference-only — no scripts. It assumes:
 
-- The user has already authenticated via the `sigma-api` skill.
+- Sigma auth is bootstrapped by the repo-local `scripts/api/_env.sh`
+  (see "Auth is auto-bootstrapped" below). The upstream `sigma-api`
+  plugin is optional — used only when `SIGMA_TOKEN_FETCHER` points at
+  its `get-token.sh`.
 - `sigma-data-models` is available for endpoint mechanics and field semantics.
 - The local mirror at `vendor/sigma-agent-skills/` is available to consult when a
   field-level question isn't answered here.
@@ -122,11 +125,17 @@ Sigma functions."
 
 ### Auth is auto-bootstrapped
 
-Each `scripts/api/*.sh` sources `_env.sh` on first call — loads `.env`,
-fetches an OAuth token via the `sigma-api` skill, caches it at
+Each `scripts/api/*.sh` sources `_env.sh` on first call — loads `.env`
+(or reads already-exported `SIGMA_*` env vars, e.g. in Claude Code web
+sessions), mints an OAuth token via the repo-local
+`scripts/api/get-token.sh` (a self-contained `client_credentials`
+exchange against `/v2/auth/token`), and caches it at
 `/tmp/.sigma_token` (mode 0600, 55-min TTL). Callers pass no env vars,
-no tokens. Override the fetcher path via `SIGMA_TOKEN_FETCHER` if your
-install differs from the marketplace plugin default.
+no tokens. **CLI and web run identical code** — the skill owns auth
+end-to-end rather than delegating to the upstream `sigma-api` plugin
+(which isn't installed in web sessions opened from a downloaded zip).
+Override the fetcher via `SIGMA_TOKEN_FETCHER=/abs/path/to/get-token.sh`
+if you want to point at the plugin's fetcher or a custom one.
 
 ### Installing this skill in a new project
 
