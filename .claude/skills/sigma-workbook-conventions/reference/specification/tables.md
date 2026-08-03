@@ -140,6 +140,22 @@ render-hint serializations from older GET-backs — they don't
 aggregate. Use the canonical shape for any new authoring. See
 `reference/history.md` → "2026-05-13 — Cohort iteration."
 
+**Every column in `columns[]` must be either a `groupBy` dimension or a
+`calculations` entry once a table has `groupings` — an orphaned column
+(declared in `columns[]` but referenced by neither) renders as a
+nonsensical "summary" value instead of the actual per-row data.**
+Verified 2026-08-03: a state-filtered detail table grouped by Product
+Name only, with `Store State` declared as a plain passthrough column
+outside the grouping structure (kept only so a filter control had an
+`id` to bind to), displayed a garbled value for Store State instead of
+the state name. Fix: fold every column that needs to appear meaningfully
+into either `groupBy` (as an additional dimension — a compound
+`groupBy: ["col-a", "col-b"]` is accepted, not just single-column) or
+`calculations`. If a column only exists so a control can filter on it
+and doesn't need to be *visible*, that's a signal to reconsider whether
+it belongs on this element at all, rather than leaving it structurally
+homeless.
+
 Multi-level groupings produce real `GROUP BY` SQL — one per level,
 joined so each detail row carries the aggregates from its ancestor
 levels. Canonical example:

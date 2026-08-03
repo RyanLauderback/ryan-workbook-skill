@@ -103,6 +103,14 @@ A modal is a **page**, not an element — set `type: "modal"` and a
 grid, not 24." Author modal-page `<LayoutElement>` `gridColumn` values
 against 12 columns.
 
+**The modal page's layout `<Page>` tag keeps `type="grid"` — never
+`type="modal"`.** The JSON `pages[].type: "modal"` field is the only
+place that distinction is expressed; copying it into the layout XML's
+`<Page type=...>` attribute is a wrong, easy-to-make mistake (verified
+2026-08-03 — see `layout.md` → "Modal pages get a 12-column grid, not
+24" for the corrected tag and the incident that surfaced it, and
+`reference/history.md` for the full write-up).
+
 Opening/closing a modal (`open-overlay`/`close-overlay` effects) is an
 action/effect concern, not a page-structure one — documented once the
 actions chunk exists; this section covers only the modal page's own

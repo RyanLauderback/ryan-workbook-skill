@@ -190,6 +190,28 @@ For relative `startDate` / `endDate` shapes (used in `custom` mode):
 }
 ```
 
+**Caution — `last`/`next`/`current` modes anchor to the real calendar
+date, not the data's date range.** `mode:"last"` (and `next`/`current`)
+resolves relative to *today, at render time* — pushed down as a literal
+`WHERE date BETWEEN <today-minus-N> AND <today>` clause into the compiled
+SQL. Verified 2026-08-03: a dashboard built against a synthetic/seeded
+dataset (a `PERFORMANCE_TESTING_DB` warehouse table with no relationship
+to the real calendar) used `mode:"last", value:24, unit:"month",
+includeToday:true` as the default filter and rendered **completely
+blank** — every KPI, chart, and table empty — because the dataset's actual
+dates didn't fall inside the resulting 24-months-before-today window. No
+error anywhere: POST succeeded, `verify-workbook.sh` and
+`audit-workbook-schema.sh` both reported clean (this is a *filtering*
+problem, not a compile or schema error, so neither check catches it).
+Diagnosed via `GET /v2/workbooks/{id}/elements/{eid}/query` (the same
+compiled-SQL-preview endpoint `verify-workbook.sh` uses) — the pushed-down
+date `WHERE` clause was directly visible in the SQL text. **Default a
+date-range control to `mode:"between"` with no `startDate`/`endDate`**
+(fully open, no restriction) unless the user's prompt specifically named
+a relative window ("last 90 days") *and* you've confirmed via recon that
+the data actually has recent rows — don't default to a "last N" window
+just because it's a common dashboard convention.
+
 ## `text` — single-line text filter
 
 ```json

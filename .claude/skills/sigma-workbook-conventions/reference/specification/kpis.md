@@ -234,6 +234,23 @@ aggregation functions. Warn-level, not fail — a false positive is
 possible when the sibling's aggregation happens to evaluate to a
 single valid scalar (rare); inspect flagged cases.
 
+**This pitfall generalizes to *cross-element* sibling refs too, not
+just same-element ones.** Verified 2026-08-03: a KPI's value formula
+was `[<SourceTable>/Total Revenue]` — a bare reference to a *different*
+element's own column (not one of the KPI's own `columns[]`), where that
+source column's formula was itself an aggregate (`[Metrics/Total
+Revenue]`, broadcasting a `Sum(...)` result over every row of the
+ungrouped source table). The compiled SQL showed Sigma wrapping this in
+a defensive `equal_null(min(x), max(x))` uniformity check — "only use
+this value if it's actually the same on every row" — which collapsed to
+`NULL`. The existing `kpi-value-references-aggregation` validator check
+only inspects bare refs to the KPI's *own* sibling columns and does not
+catch this cross-element form. Fix is the same as the same-element
+case: **write the aggregation directly on the KPI**
+(`Sum([<SourceTable>/Sales Amount])`), never as a bare passthrough of
+another element's already-aggregated column — even when that column
+looks like a clean, reusable "pre-computed metric" to reference.
+
 ## Passthrough columns
 
 The KPI's `columns` array should include the source table's

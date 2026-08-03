@@ -576,6 +576,22 @@ If([denom] = 0, Null, [num] / [denom])
 Zn([num] / [denom])
 ```
 
+**`Sum()` (and other aggregates) over an all-null input returns `NULL`,
+not `0`.** A derived cost/profit column like `Sum([Quantity] *
+[Unit Cost])` will render `NULL` — not `0` — for any group whose rows
+all have a null `Unit Cost` (a plausible real-world case: returns,
+promotional items, or any transaction type that doesn't carry cost
+data). That `NULL` then poisons any downstream sibling-ref formula that
+subtracts or divides by it (`[Revenue] - [COGS]` → `NULL` for that
+group, when the intent was almost always "treat missing cost as $0
+cost"). Verified 2026-08-03: a ranked revenue/profit/COGS breakdown
+table rendered `null` Profit cells for exactly the groups with
+incomplete cost data — no error anywhere in the pipeline, since this is
+a data-shape problem, not a formula-shape one. **Wrap any aggregate
+that feeds an arithmetic sibling-ref chain in `Zn(...)`** —
+`Zn(Sum([Quantity] * [Unit Cost]))` — so missing data reads as `0`
+rather than propagating `NULL` through every downstream calculation.
+
 > ⚠️ `DivideSafe(<num>, <denom>)` does NOT exist in Sigma. This
 > was a hallucination caught 2026-05-15 and removed from prior
 > skill content. Use one of the patterns above. See

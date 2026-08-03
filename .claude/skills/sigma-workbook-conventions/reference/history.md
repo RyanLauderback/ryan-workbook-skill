@@ -539,3 +539,152 @@ after all of the above. The scratch probe workbook
 left in the live org pending user confirmation to delete — this skill's
 own convention requires asking before any DELETE, including for
 self-created test artifacts.
+
+## 2026-08-03 — Multi-page `<?xml ?>` declaration bug (found via a real build-mode session, not a probe)
+
+A follow-up test session (fresh kickoff → recon → plan → approval → build,
+against a real user ask — "wave 1 test," a sales dashboard with 3 tabbed
+containers for region/customer/product plus a click-to-modal state map)
+deliberately exercised the newest Wave 1 / C2 surface (tabbed containers,
+modal pages, region-map click actions) in combination, in one spec,
+authored from this skill's own chunk text rather than copied from the
+Wave 1 probe. The first full POST failed with a generic, field-less 400:
+
+```
+{"code":"invalid_request","message":"An error has occurred. Please try again later (incident-id=...)"}
+```
+
+No JSON path, no field name — none of `validate.md`'s cryptic-error
+patterns matched. `validate-spec.py` passed all 15 checks (it has no way
+to catch this class of error). `publish-workbook.sh`'s Wave-1-fixed
+error-echoing worked correctly and showed this body, but the body itself
+carried no diagnostic content — so the fix from earlier that session
+(making failures visible at all) was necessary but not sufficient here.
+
+**Root cause, found via bisection against the live API (POST a reduced
+spec, observe 200 vs 400, narrow the diff):** this file's own prose
+(`layout.md` → "Layout is top-level") said multi-page workbooks
+concatenate per-page XML documents "each with its own `<?xml ?>`
+declaration" — plausible-sounding, and exactly what an agent authoring
+from that prose (rather than copying a real spec byte-for-byte) would
+write: `<?xml ?><Page id="page-1">...</Page><?xml ?><Page
+id="page-2">...</Page>`. **That prose was wrong.** A live GET of the
+actual Wave 1 probe workbook (`b9e4bc48-afa8-4085-b94d-fdd61c06bf0d`)
+shows exactly ONE `<?xml version="1.0" encoding="utf-8"?>` declaration
+for the entire layout string, with every subsequent `<Page>` as a bare
+sibling — no one had actually re-read that probe's raw layout string
+character-for-character against the prose describing it until this
+session did, mid-bisection.
+
+**A second bug, same incident, same root symptom:** the same probe spec
+also revealed the modal page's layout `<Page>` tag keeps `type="grid"` —
+the `type="modal"` distinction lives *only* in the JSON `pages[].type`
+field. This session's first attempt mirrored `type:"modal"` into the
+layout XML's `<Page type="modal" ...>` attribute — a second natural
+mistake, and, combined with the declaration bug, part of the same 400.
+
+**Bisection method (worth keeping as a technique note):** built a
+"core-only" reduced spec (the dashboard minus map/modal/cross-page
+control) and POSTed it directly — 200. Then added back pieces one at a
+time (map alone: 200; modal + a flat table, no control: still 400 — a
+red herring at first, traced to a *second*, unrelated bug the bisection
+script itself introduced: a dangling `<LayoutElement>` reference to an
+already-removed control element, which `validate-spec.py`'s
+`elements-placed-in-layout` check does NOT catch because it only verifies
+every *element* has a layout entry, not the reverse — see the open
+follow-up below). Once that self-inflicted bug was fixed and the modal
+page still 400'd alone, direct comparison against the live probe spec's
+raw `layout` string (fetched via `GET /v2/workbooks/{id}/spec`) surfaced
+both real bugs above within one diff-read.
+
+**Fix.** `layout.md` → "Layout is top-level (NOT per-page)" corrected
+with the right concatenation shape and the exact 400 signature to
+recognize; `layout.md` → "Modal pages get a 12-column grid, not 24"
+augmented with the `type="grid"` correction; `pages.md` → modal section
+cross-references both. Full build then succeeded: HTTP 200 POST,
+`verify-workbook.sh` 27/27 elements compiling clean, GET-back round-trip
+byte-for-byte on the tabbed container, modal page, and map's
+`on-select` → `set-control-value` + `open-overlay` action chain.
+`audit-workbook-schema.sh` returned the expected `INCOMPLETE` (exit 3,
+this org's OAuth client still lacks MCP scope) — not a new bug, the same
+documented gap from the Wave 0 test session.
+
+**Open follow-up, not yet implemented:** `validate-spec.py` has no check
+for (a) more than one `<?xml ?>` declaration in `layout`, or (b) a
+layout `elementId` reference that matches no element anywhere in the
+spec (the reverse of the existing `elements-placed-in-layout` check).
+Both are exactly the silent/generic-failure shapes this skill's own
+doctrine says are worth a pre-POST check. Left as a candidate for the
+next validator pass rather than added under time pressure in this
+session — a new check should be calibrated against all canonical
+examples + harvested specs before shipping, per the 2026-05-19 and
+2026-08-03 promotion-guardrail precedent above.
+
+## 2026-08-03 — Four more bugs found live-iterating the same build (KPI nulls, container-child coordinate model, orphaned grouping column, aggregate-null-propagation)
+
+Continuation of the same real build-mode session (the "wave 1 test"
+dashboard). After the initial successful publish, three rounds of user
+feedback ("everything is blank" → "spacing/nulls/modal are still wrong"
+→ "same bugs persist, and the KPI null is a column-vs-calculation bug")
+surfaced four more real, previously-undocumented bugs — none caught by
+POST, `validate-spec.py`, or `verify-workbook.sh`, because all four are
+either data-shape or layout-shape problems, not spec-shape problems.
+
+1. **A restrictive `date-range` control default silently zeroed every
+   row.** `mode:"last", value:24, unit:"month", includeToday:true`
+   resolves relative to the real calendar date at render time, not the
+   data's actual range — against a synthetic `PERFORMANCE_TESTING_DB`
+   table with no relationship to "today," the resulting window matched
+   zero rows, and every KPI/chart/table downstream rendered empty.
+   Diagnosed via `GET /v2/workbooks/{id}/elements/{eid}/query` (compiled
+   SQL preview — the same endpoint `verify-workbook.sh` uses) showing the
+   literal pushed-down `WHERE` clause. Fixed by defaulting to
+   `mode:"between"` with no bounds. See `controls.md` → the new caution
+   under `date-range`.
+2. **`Sum()` over an all-null input returns `NULL`, not `0`**, silently
+   poisoning any downstream sibling-ref arithmetic
+   (`Profit = Revenue - COGS` → `NULL` for any group with incomplete
+   cost data). Fixed by wrapping every such aggregate in `Zn(...)`. See
+   `formulas.md` → "Numeric guards."
+3. **A column declared outside a grouped table's `groupBy`/`calculations`
+   renders as a nonsensical "summary" value.** The modal's detail table
+   grouped by Product Name only, with `Store State` sitting in
+   `columns[]` unreferenced by the grouping — neither a dimension nor a
+   calculation. Fixed by folding it into a compound `groupBy`. See
+   `tables.md` → "groupings."
+4. **The KPI-null root cause, precisely diagnosed by the user:** all 5
+   KPIs used a bare cross-element reference to another element's own
+   already-aggregated column (`[Transactions Detail/Total Revenue]`,
+   itself a `Sum(...)` broadcast over an ungrouped table) instead of
+   writing the calculation directly. This forces Sigma into a defensive
+   `equal_null(min(x), max(x))` uniformity check in the compiled SQL,
+   which collapsed to `NULL`. Confirmed via compiled-SQL diff
+   before/after. Fixed by inlining the aggregation on the KPI itself.
+   This is the same failure class `kpis.md` already documented for
+   *same-element* sibling refs ("Value formula pitfall") — this session
+   confirms it generalizes to cross-element refs too, and the existing
+   `kpi-value-references-aggregation` validator check does not catch the
+   cross-element form. See `kpis.md`.
+5. **The real layout root cause (correcting this same session's own
+   earlier, wrong fix attempt):** `<GridContainer>` children use row
+   coordinates **local** to that container (starting at row 1),
+   never the page's absolute row numbering. Every layout example
+   previously in `layout.md` — and every layout attempt earlier in this
+   same session — used containers that happened to start at page-row 1,
+   which hides the local/absolute distinction (they coincide only in
+   that case). Proven by diffing against a real canonical exemplar
+   (`examples/dashboard-department-scorecard.json`), whose `ctr-kpi-row`
+   sits at page-absolute `4/12` while its children read `1/9`. This
+   single misunderstanding was the actual cause of the "poorly laid out"
+   complaint across *three* consecutive fix attempts, each making it
+   worse: feeding absolute child coordinates that grew larger each round
+   (chasing the server's own auto-expansion) was read by Sigma as ever-
+   larger *local* start positions, forcing the container to keep
+   re-expanding. Confirmed fixed with a completely stable PUT → GET-back
+   round-trip (zero drift in any row/column number), vs. three rounds of
+   worsening drift beforehand. `layout.md`'s prior "re-anchor to the
+   container's actual expanded band" note (added mid-session, before
+   this correction) was itself wrong and has been retracted/replaced.
+
+**Retest note:** full 12-example validator regression re-run clean after
+every fix in this entry (still 15/15, no regressions).
