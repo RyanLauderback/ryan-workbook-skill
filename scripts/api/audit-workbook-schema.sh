@@ -27,9 +27,18 @@
 #
 # Usage:  scripts/api/audit-workbook-schema.sh <workbook-id>
 # Exit codes:
-#   0 — no error-typed columns
+#   0 — no error-typed columns (a genuine clean pass)
 #   1 — one or more error-typed columns detected
 #   2 — setup / input error
+#   3 — INCOMPLETE: one or more elements could not be checked because
+#       mcp-describe.sh failed at the transport level (its own exit 3 —
+#       e.g. an OAuth client without MCP scope, a 403/5xx/connection
+#       failure). This is deliberately NOT folded into exit 0 — a total
+#       MCP outage must not read as "audit passed clean." Found via a
+#       live build-mode test 2026-08-03: this exact case previously
+#       printed "0 queryable element(s) checked, no error-typed columns,"
+#       indistinguishable from a real clean audit of a workbook with no
+#       queryable elements.
 #
 # publish-workbook.sh invokes this automatically after POST and PUT.
 # Call directly to re-audit a workbook without republishing.
@@ -65,17 +74,39 @@ fi
 TOTAL_ELEMENTS=0
 CHECKED_ELEMENTS=0
 TOTAL_ERRORS=0
+DESCRIBE_FAILURES=0
 HEADER_SHOWN=0
+
+describe_err_file="$(mktemp "${TMPDIR:-/tmp}/audit-describe-err.XXXXXX")"
+trap 'rm -f "$describe_err_file"' EXIT
 
 while IFS=$'\t' read -r EID NAME; do
   TOTAL_ELEMENTS=$((TOTAL_ELEMENTS + 1))
 
-  # mcp-describe returns non-zero on non-queryable elements (controls,
-  # containers, text). Skip silently — those don't have column schemas.
+  # mcp-describe.sh exit 1 means "MCP responded but this element isn't
+  # describable" — the normal case for controls/containers/text, skipped
+  # silently. Exit 3 means the MCP call itself failed at the HTTP/transport
+  # level (e.g. 403 from an OAuth client without MCP scope) — that is NOT
+  # the same as "nothing to check" and must not be swallowed the same way,
+  # or a total MCP outage reads as a clean audit. (Bug found 2026-08-03 via
+  # a live build-mode test: this org's OAuth client hits exactly this case,
+  # and the audit previously reported "0 queryable element(s) checked, no
+  # error-typed columns" — indistinguishable from a real clean pass.)
   set +e
-  DDL=$("$script_dir/mcp-describe.sh" workbook-element "$WB_ID" "$EID" 2>/dev/null)
+  DDL=$("$script_dir/mcp-describe.sh" workbook-element "$WB_ID" "$EID" 2>"$describe_err_file")
   desc_exit=$?
   set -e
+  desc_err="$(cat "$describe_err_file")"
+
+  if [ "$desc_exit" -eq 3 ]; then
+    DESCRIBE_FAILURES=$((DESCRIBE_FAILURES + 1))
+    if [ "$DESCRIBE_FAILURES" -eq 1 ]; then
+      echo "" >&2
+      echo "WARNING: mcp-describe failed at the transport level for element $EID ($NAME):" >&2
+      echo "$desc_err" | sed 's/^/  /' >&2
+    fi
+    continue
+  fi
 
   if [ "$desc_exit" -ne 0 ] || [ -z "$DDL" ]; then
     continue
@@ -132,6 +163,22 @@ if [ "$TOTAL_ERRORS" -gt 0 ]; then
   echo "  - Rollup arg3 that isn't the partition column or an ordering column"
   echo "  - Inline aggregation mixed with per-row refs on a table sourcing a grouped element"
   exit 1
+fi
+
+if [ "$DESCRIBE_FAILURES" -gt 0 ]; then
+  echo "" >&2
+  echo "audit-workbook-schema: INCOMPLETE — $DESCRIBE_FAILURES of $TOTAL_ELEMENTS element(s) could not be" >&2
+  echo "  checked (mcp-describe failed at the transport level, not \"not describable\")." >&2
+  echo "  $CHECKED_ELEMENTS element(s) that WERE reachable show no error-typed columns, but" >&2
+  echo "  this is NOT a clean audit — the gate could not inspect everything it should have." >&2
+  echo "  A 403 here commonly means this org's OAuth client lacks MCP scope; see" >&2
+  echo "  reference/workflows/discover.md for the REST fallback, though that fallback" >&2
+  echo "  does not cover this script's own DDL-based error-column detection." >&2
+  echo "  Do not report this workbook as built-and-verified on this signal alone —" >&2
+  echo "  fall back to a manual UI check of the elements above, or re-run once MCP" >&2
+  echo "  scope is enabled. Suppress this exit with SIGMA_SKIP_AUDIT=1 only if you" >&2
+  echo "  understand the gate did not actually run." >&2
+  exit 3
 fi
 
 echo "audit-workbook-schema: $CHECKED_ELEMENTS queryable element(s) checked, no error-typed columns."

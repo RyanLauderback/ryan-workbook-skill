@@ -14,6 +14,20 @@
 #
 # Env:    self-bootstrapped via _env.sh (loads .env, caches OAuth token)
 # Output: The DDL text (stdout). The MCP `url` field is appended as a comment.
+#
+# Exit codes:
+#   0 — success, DDL printed
+#   1 — MCP responded but said isError (e.g. "not describable" — a
+#       genuinely non-queryable object like a control/text element)
+#   2 — usage error (bad args)
+#   3 — MCP endpoint itself failed at the HTTP/transport level (4xx/5xx,
+#       connection refused, etc.) — distinct from 1 because this means
+#       "could not check," not "checked and it's not describable."
+#       Callers (e.g. audit-workbook-schema.sh) must not treat this the
+#       same as exit 1, or a total MCP outage reads as "nothing to check"
+#       instead of "the check itself failed." See discover.md for the
+#       documented REST fallback (GET /v2/dataModels/{id}/spec) when this
+#       fires — commonly an OAuth client without MCP scope enabled.
 set -euo pipefail
 source "$(dirname "$0")/_env.sh"
 
@@ -30,7 +44,7 @@ USAGE
 fi
 
 python3 - "$SIGMA_BASE_URL" "$SIGMA_API_TOKEN" "$@" <<'PY'
-import json, re, sys, urllib.request
+import json, re, sys, urllib.error, urllib.request
 
 base, tok, kind, *ids = sys.argv[1:]
 
@@ -67,7 +81,23 @@ req = urllib.request.Request(
         "Accept": "application/json, text/event-stream",
     },
 )
-raw = urllib.request.urlopen(req).read().decode()
+try:
+    raw = urllib.request.urlopen(req).read().decode()
+except urllib.error.HTTPError as e:
+    body = e.read().decode(errors="replace")[:500]
+    sys.stderr.write(
+        f"mcp-describe: MCP endpoint returned HTTP {e.code} for '{kind}' "
+        f"({', '.join(f'{k}={v}' for k, v in zip(fields, ids))}).\n"
+        f"  This is a transport-level failure, not \"not describable\" —\n"
+        f"  a 403 here commonly means this org's OAuth client doesn't have\n"
+        f"  MCP scope enabled. See reference/workflows/discover.md for the\n"
+        f"  documented REST fallback: GET /v2/dataModels/{{id}}/spec.\n"
+        f"  Response body: {body}\n"
+    )
+    sys.exit(3)
+except urllib.error.URLError as e:
+    sys.stderr.write(f"mcp-describe: could not reach MCP endpoint: {e.reason}\n")
+    sys.exit(3)
 
 # SSE frame: `event: message\ndata: {...json...}\n\n` — extract the JSON payload.
 m = re.search(r"data:\s*(\{.+\})", raw, re.DOTALL)

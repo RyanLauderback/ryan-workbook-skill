@@ -419,3 +419,50 @@ explicitly. Validated clean (14/14 checks, 0 fail/warn). Also fixed a
 stale "buttons, modals unsupported" line in
 `data-model-sourced-sales-command-center.prompt.md` that had escaped the
 earlier retraction sweep.
+
+## 2026-08-03 — Wave 0 build-mode test finds a real masked-failure bug in the audit gate
+
+The Wave 0 test session (a full kickoff → recon → plan → approval → POST
+→ GET → verify build-mode run against the live org, producing a real
+published workbook) surfaced two bugs, both traced to the same root
+cause: this org's OAuth client lacks MCP scope, so every `mcp-describe`
+call returns HTTP 403.
+
+**Bug 1 — `audit-workbook-schema.sh` reported a false clean pass.** The
+script bucketed "mcp-describe failed at the transport level" the same
+way as "element is genuinely non-queryable" (controls/text/containers),
+so a total MCP outage produced "0 queryable element(s) checked, no
+error-typed columns" with exit 0 — indistinguishable from a real clean
+audit of a workbook with nothing to check. This directly undermined
+`plan.md`'s own stated rule: "Do not report the workbook as built until
+audit returns clean." Exactly the class of masked failure this skill's
+doctrine exists to catch — a safety gate that silently no-ops instead of
+failing loudly.
+
+**Bug 2 — `mcp-describe.sh` crashed with a raw traceback on HTTP
+errors.** A 403 raised an unhandled `urllib.error.HTTPError`, dumping a
+Python traceback instead of pointing at the documented REST fallback
+(`discover.md` → `GET /v2/dataModels/{id}/spec`). The test session only
+recovered because it had just read that fallback section — a
+less-prepared session could easily read the traceback as fatal.
+
+**Fix.** `mcp-describe.sh` now catches `HTTPError`/`URLError` and exits
+**3** (a new, distinct code) with a clean message naming the likely cause
+and the REST fallback — kept separate from exit 1 ("MCP responded but
+this object isn't describable," the normal case for controls/text).
+`audit-workbook-schema.sh` now checks for exit 3 specifically, tracks it
+in a separate `DESCRIBE_FAILURES` counter, and — if any element hit
+it — exits 3 itself with a loud `INCOMPLETE` warning instead of a clean
+report. `publish-workbook.sh`'s existing `set -e` already propagates this
+correctly (verified: it already documents "exits with the audit's exit
+code so the caller sees the failure signal," unchanged). `plan.md` and
+`validate.md` updated to document exit 3 as a hard blocker, not a pass.
+
+Verified against the live org and the real published test workbook
+(`fa396595-4b8c-484d-8ce6-049682e3498a`): `mcp-describe.sh` now prints a
+clean message and exits 3 (previously a raw traceback); a fresh
+`audit-workbook-schema.sh` run against that workbook now correctly
+reports "INCOMPLETE — 10 of 10 element(s) could not be checked" and
+exits 3, where it previously would have printed a false "0 queryable
+element(s) checked, no error-typed columns" / exit 0. Full 12-example
+validator regression re-run clean after these changes.

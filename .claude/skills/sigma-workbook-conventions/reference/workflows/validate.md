@@ -162,6 +162,19 @@ errors usually traces to one upstream errored column — fix the root,
 downstream clears. Suppress with `SIGMA_SKIP_AUDIT=1`; standalone
 re-audit via `scripts/api/audit-workbook-schema.sh <wb-id>`.
 
+**Exit 3 means the gate didn't actually run — treat it as a hard
+blocker, not a pass.** Found via a live build-mode test 2026-08-03: when
+this org's OAuth client lacks MCP scope, every `mcp-describe` call 403s,
+and the script previously bucketed that the same way as a genuinely
+non-queryable element (control/text/container) — reporting "0 queryable
+element(s) checked, no error-typed columns" with exit 0, indistinguishable
+from a real clean audit. Fixed so `mcp-describe.sh` exits 3 specifically
+for transport-level failures (distinct from its exit 1 for "responded but
+not describable"), and `audit-workbook-schema.sh` now exits 3 and prints
+a loud `INCOMPLETE` warning instead of silently reporting clean. **Do not
+report a workbook as built-and-verified on an exit-3 audit** — fall back
+to a manual UI check, or fix the underlying MCP-scope grant and re-run.
+
 ## 5. Visual verify in the UI
 
 After verify-workbook returns clean, **open the workbook URL and

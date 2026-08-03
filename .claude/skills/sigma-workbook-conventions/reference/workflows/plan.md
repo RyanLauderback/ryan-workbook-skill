@@ -242,9 +242,13 @@ That contract puts the burden on the agent:
    Fix everything reported.
 3. **POST** via `scripts/api/publish-workbook.sh post workbooks/<name>/spec.json`.
    The wrapper runs validate-spec.py, POSTs, then auto-runs
-   `audit-workbook-schema.sh`. A non-zero exit means the audit found
-   errored columns; fix and PUT before proceeding. **Do not report
-   the workbook as built until audit returns clean.**
+   `audit-workbook-schema.sh`. Exit 1 means the audit found errored
+   columns; fix and PUT before proceeding. **Exit 3 means the audit
+   couldn't run at all** (its `mcp-describe` dependency failed at the
+   transport level — commonly an OAuth client without MCP scope) —
+   this is not a pass either; fall back to a manual UI check. **Do not
+   report the workbook as built until audit returns clean (exit 0),
+   and do not treat exit 3 as equivalent to exit 0.**
 4. **GET-back** via `scripts/api/publish-workbook.sh get-spec <wb-id>`.
    Save to `workbooks/<name>/spec.json` (overwriting the authored
    version) so subsequent PUTs start from the server's source of
