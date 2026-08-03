@@ -67,11 +67,17 @@ for the workflow.
 
 ## Authentication
 
-1. `cp .env.example .env` and fill in `SIGMA_BASE_URL`, `SIGMA_CLIENT_ID`, `SIGMA_CLIENT_SECRET`.
+1. Provide credentials. **CLI/local**: `cp .env.example .env` and fill in
+   `SIGMA_BASE_URL`, `SIGMA_CLIENT_ID`, `SIGMA_CLIENT_SECRET`. **Claude Code
+   web**: the same `SIGMA_*` variables are already injected as env vars — no
+   `.env` needed.
 2. Done — scripts in `scripts/api/*.sh` self-bootstrap on first call (load
-   `.env`, fetch token via the `sigma-api` skill, cache at `/tmp/.sigma_token`
-   with a 55-min TTL). No env-prelude or token chaining needed from the caller.
-3. If your `get-token.sh` lives somewhere other than `~/.claude/plugins/marketplaces/sigma-computing/...`, set `SIGMA_TOKEN_FETCHER` to its path.
+   `.env` if the vars aren't already exported, mint an OAuth token via the
+   repo-local `scripts/api/get-token.sh`, cache at `/tmp/.sigma_token` with
+   a 55-min TTL). No env-prelude or token chaining needed from the caller.
+   The skill owns auth end-to-end so the same code path runs in CLI and web.
+3. To use the upstream `sigma-api` plugin's `get-token.sh` (or any custom
+   fetcher) instead, set `SIGMA_TOKEN_FETCHER` to its absolute path.
 4. **Never echo `$SIGMA_API_TOKEN`, `$SIGMA_CLIENT_SECRET`, or any other secret.** Don't write secrets to files inside the workspace. Pass tokens only via `Authorization` headers.
 
 ## Layout
