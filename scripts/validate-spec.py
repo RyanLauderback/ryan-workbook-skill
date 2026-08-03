@@ -815,14 +815,14 @@ def _load_spec(path: str) -> dict:
     specs arrive from users; the validator was JSON-only until now.
     """
     if not path.endswith((".yaml", ".yml")):
-        with open(path) as f:
+        with open(path, encoding="utf-8") as f:
             return json.load(f)
     try:
         import yaml  # type: ignore
     except ImportError:
         pass
     else:
-        with open(path) as f:
+        with open(path, encoding="utf-8") as f:
             return yaml.safe_load(f)
     import subprocess
     for cmd in (["yq", "-o=json", path], ["yq", ".", path]):

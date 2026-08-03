@@ -6,8 +6,12 @@
 
 set -euo pipefail
 
+# Anchor to the repo root, not the caller's cwd — VENDOR_DIR feeds an
+# `rm -rf` below, so a cwd-relative path run from anywhere but the repo
+# root would rm -rf an unrelated "vendor/" tree (or clone into one).
+repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 REPO_URL="https://github.com/sigmacomputing/sigma-agent-skills.git"
-VENDOR_DIR="vendor/sigma-agent-skills"
+VENDOR_DIR="$repo_root/vendor/sigma-agent-skills"
 
 if [ -d "$VENDOR_DIR/.git" ]; then
   echo "Updating $VENDOR_DIR ..."

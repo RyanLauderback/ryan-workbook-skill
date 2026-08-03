@@ -27,14 +27,22 @@
     "    are caught by the ask pattern; the broad Bash(scripts/api/*) allow",
     "    would otherwise let them through silently.",
     "",
-    "Anything in `ask` MUST stay prompting — destructive ops with no undo."
+    "Anything in `ask` MUST stay prompting — destructive ops with no undo.",
+    "",
+    "The `bash scripts/api/*` allow entry (and its `bash scripts/api/delete-*`",
+    "ask-list mirror) exist for filesystems that don't preserve the executable",
+    "bit on scripts/api/*.sh — notably a WSL checkout living on a Windows-native",
+    "drive mounted via DrvFs (/mnt/c/...). Cloning inside the WSL filesystem",
+    "(e.g. ~/...) avoids this entirely; the bash-prefixed entries are a fallback."
   ],
   "permissions": {
     "allow": [
       "Bash(scripts/api/*)",
+      "Bash(bash scripts/api/*)",
       "Bash(python3 scripts/sigma-resolve.py:*)",
       "Bash(python3 scripts/validate-spec.py:*)",
       "Bash(bash scripts/refresh-vendor.sh:*)",
+      "Bash(bash scripts/doctor.sh:*)",
       "Bash(eval \"$(scripts/load-env.sh)\")",
       "Bash(curl * $SIGMA_BASE_URL/v2/dataModels/*)",
       "Bash(curl * $SIGMA_BASE_URL/v2/workbooks/*)",
@@ -61,7 +69,8 @@
     ],
     "ask": [
       "Bash(curl * -X DELETE *)",
-      "Bash(scripts/api/delete-*)"
+      "Bash(scripts/api/delete-*)",
+      "Bash(bash scripts/api/delete-*)"
     ]
   }
 }

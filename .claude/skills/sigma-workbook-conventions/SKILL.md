@@ -46,7 +46,7 @@ questions. Each question has a defined branch behavior:
 **Q1: Is your `.env` set up?**
 
 - **Yes** — Claude runs two actions in sequence to verify auth end-to-end:
-  1. `bash scripts/api/_env.sh` — warms the token cache at `/tmp/.sigma_token` (55-min TTL).
+  1. `bash scripts/api/_env.sh` — warms the token cache at a per-user `$SIGMA_TOKEN_CACHE` path (55-min TTL).
   2. `scripts/api/whoami.sh` — actively probes `/v2/files?limit=5` to confirm the token works against the live API and surfaces 5 recent files the user can confirm visually.
 
   Why both: passive bootstrap (`_env.sh`) succeeds even when credentials are wrong as long as `.env` has the variables filled in. The active `whoami` probe catches expired clients, wrong region URLs, and revoked tokens *before* recon starts — not mid-build.
@@ -129,8 +129,8 @@ Each `scripts/api/*.sh` sources `_env.sh` on first call — loads `.env`
 (or reads already-exported `SIGMA_*` env vars, e.g. in Claude Code web
 sessions), mints an OAuth token via the repo-local
 `scripts/api/get-token.sh` (a self-contained `client_credentials`
-exchange against `/v2/auth/token`), and caches it at
-`/tmp/.sigma_token` (mode 0600, 55-min TTL). Callers pass no env vars,
+exchange against `/v2/auth/token`), and caches it at a per-user path
+under `$SIGMA_TOKEN_CACHE` (mode 0600, 55-min TTL). Callers pass no env vars,
 no tokens. **CLI and web run identical code** — the skill owns auth
 end-to-end rather than delegating to the upstream `sigma-api` plugin
 (which isn't installed in web sessions opened from a downloaded zip).

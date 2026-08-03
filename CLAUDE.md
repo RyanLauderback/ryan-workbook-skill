@@ -73,8 +73,9 @@ for the workflow.
    `.env` needed.
 2. Done — scripts in `scripts/api/*.sh` self-bootstrap on first call (load
    `.env` if the vars aren't already exported, mint an OAuth token via the
-   repo-local `scripts/api/get-token.sh`, cache at `/tmp/.sigma_token` with
-   a 55-min TTL). No env-prelude or token chaining needed from the caller.
+   repo-local `scripts/api/get-token.sh`, cache at a per-user
+   `$SIGMA_TOKEN_CACHE` path with a 55-min TTL). No env-prelude or token
+   chaining needed from the caller.
    The skill owns auth end-to-end so the same code path runs in CLI and web.
 3. To use the upstream `sigma-api` plugin's `get-token.sh` (or any custom
    fetcher) instead, set `SIGMA_TOKEN_FETCHER` to its absolute path.

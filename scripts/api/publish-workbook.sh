@@ -24,6 +24,18 @@ source "$(dirname "$0")/_env.sh"
 
 script_dir="$(dirname "$0")"
 
+# jq parses the POST/PUT response to decide whether to run the post-publish
+# audit gate (run_audit, below). Without this preflight, a missing jq made
+# that decision fail silently — wb_id came back empty and the audit just
+# never ran, with no error at all. verify-workbook.sh and
+# audit-workbook-schema.sh already check for jq; this brings publish-workbook.sh
+# in line with them.
+if ! command -v jq >/dev/null 2>&1; then
+  echo "publish-workbook: jq is required (used to parse POST/PUT responses" >&2
+  echo "  and decide whether to run the post-publish audit gate)." >&2
+  exit 1
+fi
+
 run_audit() {
   # $1 = workbook id
   # Runs audit-workbook-schema.sh unless SIGMA_SKIP_AUDIT=1. Exits with the

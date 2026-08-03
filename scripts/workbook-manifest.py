@@ -592,7 +592,7 @@ def _load_spec(spec_path: Path) -> dict:
     not installed the script emits a helpful install hint rather than a
     cryptic ImportError. JSON loading uses stdlib only.
     """
-    text = spec_path.read_text()
+    text = spec_path.read_text(encoding="utf-8")
     suffix = spec_path.suffix.lower()
     if suffix in (".yaml", ".yml"):
         try:
@@ -643,9 +643,14 @@ def main() -> int:
 
     out = manifest(args.spec)
     if args.out:
-        args.out.write_text(out)
+        args.out.write_text(out, encoding="utf-8")
         print(f"Wrote {args.out}")
     else:
+        # The manifest contains non-ASCII markers (warning triangles, etc.);
+        # reconfigure stdout to UTF-8 with a graceful fallback rather than
+        # crash on a non-UTF-8 locale (Windows cp1252, or LC_ALL=C on a
+        # minimal Linux image).
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
         sys.stdout.write(out)
         sys.stdout.write("\n")
     return 0

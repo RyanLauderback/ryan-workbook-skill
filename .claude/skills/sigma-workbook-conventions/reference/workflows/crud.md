@@ -27,7 +27,7 @@ scripts/api/publish-workbook.sh get-meta <workbookId>                 # url, nam
 ```
 
 The wrapper:
-- Sources `_env.sh` for auth (caches OAuth token at `/tmp/.sigma_token`)
+- Sources `_env.sh` for auth (caches OAuth token at a per-user `$SIGMA_TOKEN_CACHE` path)
 - Runs `scripts/validate-spec.py` before POST/PUT (fails fast on the
   passthrough-coverage and controlid-collision gotchas)
 - Uses `sigma_curl` for auth-injected, 401-retrying requests
@@ -176,7 +176,7 @@ skill's per-workbook folder is preferred for iteration audit trails.
 
 | Error | Cause | Fix |
 |---|---|---|
-| `401 Unauthorized` | Token missing or expired | Delete `/tmp/.sigma_token`, re-run any `scripts/api/*.sh` to re-fetch |
+| `401 Unauthorized` | Token missing or expired | Delete the file at `$SIGMA_TOKEN_CACHE`, re-run any `scripts/api/*.sh` to re-fetch |
 | `403 Forbidden` on POST | Credential can't create in this folder | Ask user's Sigma admin to check folder permissions |
 | `schemaVersion mismatch` | Hardcoded `1` against a newer API | Read `schemaVersion` from a reference GET, use that value |
 | `Invalid kind: pages[0].elements[N], got "..."` | Inner element shape mismatch (NOT kind unsupported) | See `reference/workflows/validate.md` → "Decoding cryptic errors" |

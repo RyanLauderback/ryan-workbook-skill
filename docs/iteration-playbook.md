@@ -273,7 +273,7 @@ treated as immutable — prefer adding new ones over modifying old.
   account/data quirks.** Account specifics go to memory, not skills.
 - **Hand-editing exemplars.** They're anchors. If an exemplar needs an edit,
   it usually means it's wrong — replace it instead.
-- **Echoing tokens or secrets.** The cached token at `/tmp/.sigma_token` is
+- **Echoing tokens or secrets.** The cached token at `$SIGMA_TOKEN_CACHE` is
   mode 0600 and never logged. Never `echo $SIGMA_API_TOKEN` or paste it into a
   prompt/file/commit.
 - **Skipping recon** because "the user told me what they want." Recon catches

@@ -67,8 +67,13 @@ def _bootstrap_env() -> None:
              "printf 'SIGMA_BASE_URL=%s\\nSIGMA_API_TOKEN=%s\\n' "
              "\"$SIGMA_BASE_URL\" \"$SIGMA_API_TOKEN\""],
             capture_output=True, text=True, check=True, timeout=30,
+            cwd=repo_root,
         )
-    except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
+    except (subprocess.CalledProcessError, subprocess.TimeoutExpired, OSError):
+        # OSError (incl. FileNotFoundError) covers "bash" not being on PATH
+        # at all — without it, a bare CalledProcessError/TimeoutExpired
+        # catch lets that case raise an uncaught traceback instead of the
+        # intended silent fallback documented above.
         return
     for line in result.stdout.strip().splitlines():
         if "=" in line:
