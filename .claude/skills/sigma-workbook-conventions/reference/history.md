@@ -273,3 +273,103 @@ for `error`-typed columns, and reports element + column + formula.
 `publish-workbook.sh` auto-invokes it after POST/PUT and propagates
 the exit code. Failure classes in
 `reference/workflows/validate.md` → §4 audit subsection.
+
+## 2026-08-03 — Capability-expansion planning: a load-bearing phantom limitation, a retracted validator check, and gate cleanup
+
+Planning to extend this skill toward interactive/agentic workbook
+features (buttons, agents, input tables, SVG, scenario modeling)
+surfaced a much bigger problem than expected: `others.md` → "What about
+buttons and modals?" and `scope-and-edge-cases.md` had been asserting,
+since some earlier session, that buttons, modals, tabbed containers,
+page breaks, and action sequences were **"not supported"** and "break
+GET-spec." **All five round-tripped cleanly (HTTP 200, full fidelity)**
+against 5 real production workbooks harvested during planning (Claims
+Command Center, Insurance P4P Analytics, Workbooks Demo 2026, Marketing
+Control Center, Bergey's Unified Insights). This is the `DivideSafe`
+failure mode in the opposite direction — instead of a hallucinated
+capability, a hallucinated (or stale, unverified) *limitation* — and it
+had been steering every build away from working functionality.
+
+The real upstream `sigma-workbooks` skill (finally read in full — a
+prior attempt was blocked by SAML SSO on `sigma-agent-skills-dev`, and a
+structurally similar-looking repo mistaken for a mirror was used as a
+proxy in the interim) turned out not to cover this surface at all, in
+either direction — it doesn't document buttons/actions/agents/plugins
+one way or the other. So this correction rests entirely on this skill's
+own harvest evidence, which is the correct standard: it's literally
+upstream's own recommended discovery technique (find a reference
+workbook, GET its spec, study it). Upstream's own validator-error
+guidance (`reference/workflows/validate.md` → "Decoding cryptic
+validation errors") already explains the likely root cause: a generic
+`Invalid kind` or a GET-spec 500 caused by an unrelated feature on the
+same workbook, misread as "this kind is rejected."
+
+**Fix.** Retracted the false claim in `others.md` and
+`scope-and-edge-cases.md` (kept as strikethrough + explanation per the
+notes-promotion guardrail, not silently deleted); corrected
+`SKILL.md:328-330`'s input-table prohibition to scope it to data-model
+round-trip only (it was contradicting `tables.md` and reads as a blanket
+ban if skimmed); added `reference/capability-ledger.md` — a dated,
+sourced ledger of verified-supported and unverified-pending claims, plus
+the retest protocol that should have been applied before the original
+claim was written.
+
+**A second, related finding while implementing the validator check for
+load-bearing rule #2** (`conventions.md` → "Explicit-`name` rule"):
+implementing `name-required-on-passthrough` literally, then calibrating
+it against all 11 canonical `examples/` specs *and* the 5 harvested
+production workbooks (mandatory before shipping any new check — see the
+2026-05-19 entry above), produced 587 / 131 / 25 hits on 3 real,
+currently-rendering dashboards and 6+ hits on 3 non-deprecated canonical
+examples. That's not a check finding real bugs — it's the documented
+rule itself being either a phantom limitation or far narrower in its
+real trigger condition than its prose states. **Retracted, not shipped**
+— the function is left in `validate-spec.py` with a docstring explaining
+why, but is not wired into `CHECKS` or `main()`. Needs an isolated live
+POST probe to find the real trigger, if one exists, before any version
+of this check ships.
+
+**Also this session:**
+- `validate-spec.py`: added `"TabbedContainer"` to the layout-XML tag
+  set `elements-placed-in-layout` recognizes (5 false FAILs on 2
+  independent harvested workbooks, exact tabbed-container count both
+  times); exempted `controlType:"synced"` from `control-id-unique`
+  (Bergey's Unified Insights showed the exact mechanism — one primary
+  control + N `synced` cross-page stubs sharing a `controlId`); added
+  `layoutelement-has-children` (forward case of `containers-have-children`,
+  ported from the real upstream skill's manual checklist); added YAML
+  input support (PyYAML → `yq` fallback chain, also ported from
+  upstream); added a stated-limitations footer to every run. Net: 13 →
+  14 checks. Full regression clean across all 11 examples + 5 harvested
+  specs after these changes.
+- `reference/workflows/validate.md`: the check table had drifted from
+  `CHECKS` in both directions — 5 documented checks didn't exist in
+  code, 4 implemented checks had no row. Reconciled to match code
+  exactly, in `CHECKS` order.
+- `tables.md` → "Input tables": fixed `columnType` → `type` (0
+  occurrences of `columnType` across 5 harvested specs; independently
+  confirmed by the real upstream skill's own doc via a completely
+  different method), added the required `connectionId` on
+  `source.kind:"empty"`, corrected `linked` (binds to another *element*,
+  not directly to a warehouse table), and documented all 6 column
+  shapes (upstream's 4 plus `dropdown`/`pills` and `file`, both
+  harvest-only).
+- Gate single-sourcing: `reference/workflows/plan.md` and
+  `docs/iteration-playbook.md` each carried their own partial copy of
+  the task-type → chunk table, both already drifted from `SKILL.md`'s
+  version (missing rows, stale "Capability N" labels). Both now point
+  at `SKILL.md` instead of re-listing rows — the 4-place duplication
+  that made the check-table drift above possible is retired.
+- `SKILL.md`: fixed the `example-full.yaml` "verbatim from upstream"
+  provenance claim — the real upstream skill has no such file; it's
+  local-authored content, mislabeled.
+- `schema.md`: softened "response-only fields must be stripped...
+  sending unknown top-level fields is rejected" to match the real
+  upstream skill's claim that these are ignored on write (stripping is
+  still the recommended, cleaner practice).
+
+Full capability decomposition, sequencing, and the remaining waves
+(action/effect vocabulary, agent surface, layout/page structure chunk,
+dynamic-value binding, visual media/theming, scenario-modeling pattern,
+plugin packaging) are tracked outside this file for the duration of the
+active work.

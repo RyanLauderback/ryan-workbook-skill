@@ -149,21 +149,26 @@ round-trippable through the spec (2026-07-02) against the harvested
 
 ## What about buttons and modals?
 
-Per Sigma's official workbooks-as-code limitations
-(<https://help.sigmacomputing.com/docs/manage-workbooks-as-code>),
-the following are **not supported** as standalone element kinds in
-the spec:
+**Retracted 2026-08-03 — this section previously claimed the opposite of
+reality.** It said buttons, modals/popovers, tabbed containers, page
+breaks, and action sequences were "not supported as standalone element
+kinds" and that workbooks using them "break GET-spec." **All five are
+fully spec-able and were verified via clean `GET /v2/workbooks/<id>/spec`
+(HTTP 200) against 5 real production workbooks** — see
+`reference/capability-ledger.md` for the dated evidence, and
+`reference/specification/actions.md` / `pages.md` (new — see the plan
+that retracted this section) for the shapes.
 
-- Buttons
-- Modals / popovers
-- Tabbed containers (multi-page navigation containers)
-- Page breaks
-- Action sequences (workflow buttons)
+This claim likely originated the way the real upstream `sigma-workbooks`
+skill's own docs warn against: a generic `Invalid kind` or a GET-spec 500
+on one malformed or unrelated attempt, misread as "this kind is rejected"
+rather than "the inner shape was wrong" or "a *different* feature on that
+same workbook broke the serializer." See
+`reference/workflows/validate.md` → "Decoding cryptic validation errors"
+— `Invalid kind` almost always means the inner shape doesn't match the
+`kind`/`controlType` claimed, not that the kind itself is unsupported.
 
-Workbooks that use these features render in the UI but **break
-GET-spec** (the serializer returns `service_error`). See
-`reference/scope-and-edge-cases.md` → "GET-spec can 500 when UI
-features aren't representable." When the user asks for one of
-these, surface the gap during the plan step and propose a
-substitute (e.g., navigation via drill-through actions on a KPI, or
-a separate page).
+**The retest protocol, before declaring anything unsupported again:**
+pull the live shape via the `kind`-discriminator `jq` recipe against a
+reference workbook that uses the feature (see `SKILL.md` → "Sources of
+truth") before concluding a kind is rejected.

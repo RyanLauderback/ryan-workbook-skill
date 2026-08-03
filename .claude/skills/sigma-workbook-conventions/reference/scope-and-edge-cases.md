@@ -57,12 +57,14 @@ limitations, not bugs to fix):
   `padding`, `ContainerSpacing`, `gap` but none survive into the JSON or
   layout XML on GET-back. UI-only.
 
-- **Modal / popover pages, tabbed containers, buttons, action sequences**
-  — per Sigma's official workbooks-as-code limitations, these are NOT
-  supported in the spec. Workbooks that use them render in the UI but
-  break GET-spec — see "GET-spec can 500" below. When the user asks for
-  one, surface during planning and propose a substitute (drill-through
-  actions, separate pages, etc.).
+- ~~Modal / popover pages, tabbed containers, buttons, action sequences —
+  per Sigma's official workbooks-as-code limitations, these are NOT
+  supported in the spec.~~ **Retracted 2026-08-03.** All five are fully
+  spec-able — verified via clean GET-spec (HTTP 200) against 5 real
+  production workbooks. See `reference/capability-ledger.md` for dated
+  evidence and `reference/specification/others.md` → "What about buttons
+  and modals?" for the full retraction and the retest protocol that should
+  have been applied before this claim was written.
 
 (Add new findings here when you discover other UI-only properties.)
 

@@ -30,6 +30,7 @@ CHECKS = [
     "no-per-page-layout",
     "elements-placed-in-layout",
     "containers-have-children",
+    "layoutelement-has-children",
     "column-format-shape",
     "control-id-unique",
     "passthrough-coverage",
@@ -87,10 +88,17 @@ def _parse_layout(layout: str) -> ET.Element | None:
 def issues_elements_placed(spec: dict, root: ET.Element | None) -> list[tuple[str, str]]:
     if root is None:
         return [("fail", "no top-level `layout` field — workbook will have an auto-generated layout")]
+    # The layout XML grammar has 5 tags, not 2 — TabbedContainer is a valid
+    # elementId-bearing placement tag alongside LayoutElement/GridContainer.
+    # (Its child <Tab> tags carry no elementId — tabs bind positionally to
+    # the element's own `tabs[]` array order, not by XML attribute.)
+    # Verified 2026-08-03 against 2 harvested workbooks (Claims Command
+    # Center, Bergey's Unified Insights) — both produced exactly one false
+    # FAIL per tabbed-container element before this fix.
     placed_ids = {
         el.get("elementId")
         for el in root.iter()
-        if el.tag in ("LayoutElement", "GridContainer")
+        if el.tag in ("LayoutElement", "GridContainer", "TabbedContainer")
     }
     issues = []
     for pi, p in enumerate(spec.get("pages", [])):
@@ -102,6 +110,36 @@ def issues_elements_placed(spec: dict, root: ET.Element | None) -> list[tuple[st
                     f"pages[{pi}].elements ({eid}, kind={el.get('kind')}): "
                     "not placed in the layout XML — will render at the page bottom or not at all."
                 ))
+    return issues
+
+
+def issues_layoutelement_has_children(root: ET.Element | None) -> list[tuple[str, str]]:
+    """Forward case of the containers-have-children check.
+
+    `<LayoutElement>` is a leaf tag — it positions exactly one element and
+    takes no children. `<LayoutElement type="grid">` with nested tags parses
+    without error but the children are silently dropped (they never render).
+    Use `<GridContainer>` instead when a tag needs to wrap children.
+
+    Ported 2026-08-03 from the real upstream `sigma-workbooks` skill's manual
+    checklist (`reference/workflows/validate.md`) — the local skill's
+    `containers-have-children` only caught the inverse (a container element
+    with no matching nested children), not this direction.
+    """
+    if root is None:
+        return []
+    issues = []
+    for el in root.iter("LayoutElement"):
+        children = list(el)
+        if children:
+            child_tags = ", ".join(c.tag for c in children)
+            issues.append((
+                "fail",
+                f"<LayoutElement elementId=\"{el.get('elementId')}\"> has nested "
+                f"child tag(s) ({child_tags}) — LayoutElement is a leaf; children "
+                "nested inside it are silently dropped and never render. Use "
+                "<GridContainer> instead if this element needs to wrap children."
+            ))
     return issues
 
 
@@ -164,7 +202,24 @@ def issues_column_format_shape(spec: dict) -> list[tuple[str, str]]:
 
 
 def issues_control_id_unique(spec: dict) -> list[tuple[str, str]]:
-    seen: dict[str, str] = {}
+    """`controlId` is workbook-wide unique — EXCEPT for `controlType:"synced"`.
+
+    `synced` is a first-class cross-page control-sync primitive: one page
+    owns a full control definition (any controlType, `source`, `value`,
+    etc.); every other page places a thin `controlType:"synced"` stub
+    carrying only `id`+`controlId`+`kind`+`controlType`, deliberately
+    reusing the primary's `controlId` so the two stay in sync. This is not
+    tolerated duplication — it's how Sigma represents "the same control,
+    placed on multiple pages."
+
+    Verified 2026-08-03 against Bergey's Unified Insights: one `segmented`
+    control on `Parts` plus four `synced` stubs (Service/Sales/Leasing/Body
+    Shop) all sharing `controlId: "Business-Line-Nav"`.
+
+    Only fail when a duplicate exists where **neither** side is `synced` —
+    that's genuine accidental collision, still a real bug.
+    """
+    seen: dict[str, tuple[str, str]] = {}  # controlId -> (elementId, controlType)
     issues = []
     for p in spec.get("pages", []):
         for el in p.get("elements", []):
@@ -173,14 +228,19 @@ def issues_control_id_unique(spec: dict) -> list[tuple[str, str]]:
             cid = el.get("controlId")
             if not cid:
                 continue
+            ctype = el.get("controlType")
             if cid in seen:
+                prev_eid, prev_ctype = seen[cid]
+                if ctype == "synced" or prev_ctype == "synced":
+                    continue  # deliberate cross-page sync — not a collision
                 issues.append((
                     "fail",
-                    f"controlId `{cid}` duplicated on elements {seen[cid]} and {el.get('id')}. "
-                    "controlId is workbook-wide unique."
+                    f"controlId `{cid}` duplicated on elements {prev_eid} and {el.get('id')}, "
+                    f"neither is `controlType:\"synced\"`. controlId is workbook-wide unique "
+                    "unless one side is a synced stub."
                 ))
             else:
-                seen[cid] = el.get("id")
+                seen[cid] = (el.get("id"), ctype)
     return issues
 
 
@@ -275,6 +335,84 @@ def issues_passthrough_coverage(spec: dict) -> list[tuple[str, str]]:
                     f"({src_table.get('id')}). Pivot may be missing dimension "
                     "or value cols. See SKILL.md → 'Load-bearing rules' → rule #1."
                 ))
+    return issues
+
+
+def _display_name(el: dict) -> str | None:
+    """Return an element's rendered display name, styled or plain."""
+    name = el.get("name")
+    if isinstance(name, dict):
+        return name.get("text")
+    return name
+
+
+def issues_name_required_on_passthrough(spec: dict) -> list[tuple[str, str]]:
+    """RETRACTED 2026-08-03 — NOT wired into CHECKS/main(). Kept here so the
+    investigation isn't lost, and so nobody re-adds this naively without
+    reading this note.
+
+    `reference/conventions.md` -> "Explicit-`name` rule" claims a passthrough
+    column whose formula is a single qualified ref `[<Source>/<Column>]`
+    "works in a GET-back exemplar... but fails at POST" if referenced
+    downstream via its inferred name before an explicit `name` is set. This
+    function implements that claim literally. Calibrating it against the
+    12 canonical `examples/` specs AND 5 live-harvested production
+    workbooks (all currently rendering correctly in the Sigma UI) produced
+    587 / 131 / 25 hits on claims / marketing / sales respectively, and 6+
+    hits on 3 of the 12 "canonical, non-deprecated" examples — i.e. this
+    exact pattern is pervasive in workbooks that demonstrably work.
+
+    Conclusion: either the documented rule is a phantom limitation (an
+    overclaim of the same shape as the buttons/modals "unsupported" claim
+    this plan retired elsewhere), or its real trigger condition is far
+    narrower than "any bare-inferred passthrough column referenced
+    downstream" — e.g. maybe it only fails on the very first POST of a
+    *freshly authored* spec before Sigma's resolver has ever seen the
+    column, and round-tripped/established workbooks are unaffected. That
+    distinction isn't recoverable from the JSON alone, so this check can't
+    be made accurate without a live POST probe isolating the real trigger.
+    Left un-wired pending that probe; see reference/history.md.
+    """
+    issues = []
+    all_elements = _all_elements(spec)
+
+    elements_by_name: dict[str, dict] = {}
+    for _, el in all_elements:
+        dn = _display_name(el)
+        if dn:
+            elements_by_name.setdefault(dn, el)
+
+    qualified_refs: set[tuple[str, str]] = set()
+    for _, el in all_elements:
+        for col in el.get("columns", []) or []:
+            formula = col.get("formula") or ""
+            for m in re.finditer(r"\[([^/\]]+)/([^/\]]+)\]", formula):
+                qualified_refs.add((m.group(1), m.group(2)))
+
+    seen: set[tuple[str, str]] = set()
+    for source_name, col_name in sorted(qualified_refs):
+        source_el = elements_by_name.get(source_name)
+        if not source_el:
+            continue  # unresolved source name is a different failure mode
+        for col in source_el.get("columns", []) or []:
+            if col.get("name"):
+                continue  # explicit name already present — fine
+            if _inferred_column_name(col) != col_name:
+                continue
+            key = (source_el.get("id"), col.get("id"))
+            if key in seen:
+                continue
+            seen.add(key)
+            issues.append((
+                "fail",
+                f"element '{source_name}' / column '{col.get('id')}': referenced "
+                f"downstream as `[{source_name}/{col_name}]` but has no explicit "
+                "`name` field — only an inferred display name from its own "
+                "passthrough formula. Works in a GET-back exemplar; POST/PUT "
+                "rejects with 'dependency not found: formula reference ...'. "
+                f'Add `"name": "{col_name}"` to this column. See '
+                "reference/conventions.md -> 'Explicit-`name` rule'."
+            ))
     return issues
 
 
@@ -668,12 +806,44 @@ def issues_pivot_missing_rows_and_columns(spec: dict) -> list[tuple[str, str]]:
     return issues
 
 
+def _load_spec(path: str) -> dict:
+    """Load a spec from JSON or YAML.
+
+    YAML support ported 2026-08-03 from the real upstream `sigma-workbooks`
+    skill's `validate-spec.sh`, which handles `.yaml`/`.yml` via a
+    PyYAML-or-`yq` fallback chain. `SKILL.md` already documents that YAML
+    specs arrive from users; the validator was JSON-only until now.
+    """
+    if not path.endswith((".yaml", ".yml")):
+        with open(path) as f:
+            return json.load(f)
+    try:
+        import yaml  # type: ignore
+    except ImportError:
+        pass
+    else:
+        with open(path) as f:
+            return yaml.safe_load(f)
+    import subprocess
+    for cmd in (["yq", "-o=json", path], ["yq", ".", path]):
+        try:
+            result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+            return json.loads(result.stdout)
+        except (FileNotFoundError, subprocess.CalledProcessError, json.JSONDecodeError):
+            continue
+    sys.stderr.write(
+        "validate-spec: YAML input requires PyYAML (`pip install pyyaml`) "
+        "or `yq` on PATH (either mikefarah/yq or the Python yq wrapper — "
+        "both read the same via `yq .`).\n"
+    )
+    sys.exit(2)
+
+
 def main() -> None:
     if len(sys.argv) != 2:
-        sys.stderr.write("usage: validate-spec.py <spec.json>\n")
+        sys.stderr.write("usage: validate-spec.py <spec.json|spec.yaml>\n")
         sys.exit(2)
-    with open(sys.argv[1]) as f:
-        spec = json.load(f)
+    spec = _load_spec(sys.argv[1])
 
     root = _parse_layout(spec.get("layout", ""))
 
@@ -682,6 +852,7 @@ def main() -> None:
         ("no-per-page-layout",        lambda: issues_per_page_layout(spec)),
         ("elements-placed-in-layout", lambda: issues_elements_placed(spec, root)),
         ("containers-have-children",  lambda: issues_containers_have_children(spec, root)),
+        ("layoutelement-has-children", lambda: issues_layoutelement_has_children(root)),
         ("column-format-shape",       lambda: issues_column_format_shape(spec)),
         ("control-id-unique",         lambda: issues_control_id_unique(spec)),
         ("passthrough-coverage",      lambda: issues_passthrough_coverage(spec)),
@@ -699,8 +870,19 @@ def main() -> None:
     fail_count = sum(1 for level, _, _ in all_issues if level == "fail")
     warn_count = sum(1 for level, _, _ in all_issues if level == "warn")
 
+    limitations = (
+        "Note: these checks catch known failure signatures from past sessions "
+        "— a clean run does not guarantee the spec renders correctly. "
+        "`bare-ref-resolution` only catches bare (unqualified) refs; qualified "
+        "refs are not verified here (the server checks those on publish). No "
+        "check yet verifies action/effect referential integrity (dangling "
+        "overlayId/control/table/tabbedContainer/agentId) — always visually "
+        "verify after publish."
+    )
+
     if not all_issues:
         print(f"validate-spec: {sys.argv[1]} — all {len(CHECKS)} checks passed")
+        print(limitations)
         sys.exit(0)
 
     for level, tag, msg in all_issues:
@@ -708,7 +890,7 @@ def main() -> None:
         sys.stderr.write(f"[{prefix}][{tag}] {msg}\n")
 
     summary = f"validate-spec: {fail_count} fail, {warn_count} warn in {sys.argv[1]}"
-    sys.stderr.write(f"\n{summary}\n")
+    sys.stderr.write(f"\n{summary}\n{limitations}\n")
     sys.exit(1 if fail_count else 0)
 
 

@@ -36,7 +36,7 @@ Pivot tables:
 
 Input tables:
 
-- [Input tables](#input-tables) (minimal — value limited until actions land)
+- [Input tables](#input-tables) (verified 2026-08-03 against 27 harvested instances)
 
 - [Cross-references](#cross-references)
 
@@ -434,11 +434,19 @@ See `reference/conventions.md` → "Two-tier sourcing."
 The `input-table` element is an editable table — users type values
 directly into cells, backed by a provisioned warehouse table.
 
-**Status (2026-07-02):** documented by upstream eng skill; no
-harvested exemplar in this skill's corpus yet. Practical value is
-limited until Sigma exposes actions (buttons that write cell values
-back to the warehouse) via the spec. Keep the docs minimal until
-that lands.
+**Status (2026-08-03) — corrected, no longer minimal.** Previously
+described as "no harvested exemplar in this skill's corpus yet." Verified
+via clean GET-spec (HTTP 200) against **27 input-table instances across
+5 real production workbooks**, and cross-confirmed against the real
+upstream `sigma-workbooks` skill's `tables.md` (a different source
+entirely — the platform team's own doc, not a harvested spec). The two
+sources agree exactly on the field names below, which is why the fix is
+high-confidence. Two previous statements were **wrong and would hard-fail
+POST**:
+
+- The column field is **`type`**, not `columnType` — `columnType` occurs
+  **zero** times across all 5 harvested specs; `type` is universal.
+- `source: {kind: "empty"}` is missing the **required** `connectionId`.
 
 ## Shape
 
@@ -448,27 +456,63 @@ Required fields: `id`, `kind: input-table`, `source`, `inputMode`.
 {
   "id": "input-forecast",
   "kind": "input-table",
-  "inputMode": "edit",
-  "source": { "kind": "empty" },
+  "inputMode": "explore",
+  "source": { "kind": "empty", "connectionId": "<connection-id>" },
   "columns": [
-    { "id": "col-region",   "name": "Region",   "columnType": "text" },
-    { "id": "col-forecast", "name": "Forecast", "columnType": "number" }
+    { "id": "col-region",   "name": "Region",   "type": "text" },
+    { "id": "col-forecast", "name": "Forecast", "type": "number" },
+    { "id": "col-approved", "name": "Approved", "type": "checkbox" },
+    { "id": "UPDATED_AT" },
+    { "id": "UPDATED_BY" }
   ]
 }
 ```
 
-- `inputMode`: `"edit"` observed. Inspect the OpenAPI for other modes.
-- `source.kind`: `"empty"` (blank editable table) or `"linked"` (backed
-  by an existing warehouse table).
-- Column shape differs from `table` — includes `columnType` and system
-  columns (audit fields). Pull the full schema before authoring:
+- `inputMode`: `"explore"` and `"view"` observed in the harvest;
+  `"edit"` documented upstream but not yet harvested. `explore` = users
+  with explore permission or greater can edit, in published view;
+  `view` = all users can edit, in published view; `edit` (per upstream) =
+  workbook editors only, in draft mode.
+- `source.kind`:
+  - `"empty"` + **required** `connectionId` — provisions a fresh, blank
+    warehouse table.
+  - `"linked"` + `from: "<elementId>"` — rows are linked to **another
+    workbook element** (not directly to a warehouse table); editable
+    rows are matched to that element's rows by the `key` columns below.
+    (Previously mis-described here as "backed by an existing warehouse
+    table" — corrected.)
+- **Six column shapes**, all confirmed in the harvest (upstream documents
+  the first four; `dropdown` and `file` are harvest-only findings):
+  - **System** — `{id}` where `id` is one of `ID`, `CREATED_AT`,
+    `CREATED_BY`, `UPDATED_AT`, `UPDATED_BY`. Protocol-managed; do not
+    set a `type` or pass a value for these in a writeback effect.
+  - **Key** — `{id, key}`, e.g. `{"id": "col-sku", "key":
+    "inode-<id>/SKU_NUMBER"}` — binds to a source column on
+    `source.from` for a `linked` table. Immutable once created.
+  - **Editable data** — `{id, type, name}` where
+    `type ∈ text | number | datetime | checkbox | file`. `file` observed
+    only in Bergey's Unified Insights (2026-08-03).
+  - **Dropdown** — an editable `type: "text"` column plus `values: [...]`
+    (the fixed option list) and `pills: "color-by-option"` for colored
+    pill rendering.
+  - **Formula** — `{id, formula, name}` — a computed column, same shape
+    as on any other table.
+  - Also supports `filters`, `sort`, and `conditionalFormats` with
+    `condition: "formula"` — same shapes as `table`.
+
+**Writeback** (buttons/agent tools writing rows) uses `insert-rows` /
+`delete-rows` effects targeting the input-table's `id` — see the actions
+chunk (pending; the effect vocabulary is documented separately once it
+ships). **`update-rows` does not exist** — the working pattern is
+append-only inserts plus a `Coalesce`/latest-row-wins read formula.
+
+Pull the full OpenAPI schema before authoring anything not covered above:
 
 ```bash
 jq --arg k input-table 'first(.. | objects | select((.allOf? and any(.allOf[]?; .properties?.kind?.enum==[$k])) or .properties?.kind?.enum==[$k]))' /tmp/sigma-api.json
 ```
 
-Also supports `filters`, `conditionalFormats` (see above), `sort`,
-`summary`, and the styled title-section `name` / `noDataText`.
+Also supports the styled title-section `name` / `noDataText`.
 
 ## Cross-references
 

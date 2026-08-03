@@ -24,20 +24,21 @@ detail table").
 ## Required reading before authoring (HARD GATE)
 
 Before writing ANY spec content, `Read` the chunk files mapped to the
-task type. This is not optional, and not a "scan the index then
-proceed." The agent must `Read` the actual chunk files in the current
-session and cite chunk + section in the plan.
+task type in **`SKILL.md` → "Required reading before authoring."** This
+is not optional, and not a "scan the index then proceed." The agent must
+`Read` the actual chunk files in the current session and cite chunk +
+section in the plan.
 
-| Task type | Required chunks |
-|---|---|
-| Every build (always) | `reference/conventions.md` + this file + `reference/specification/schema.md` + `reference/specification/layout.md` |
-| Viz-heavy build (>2 chart kinds, KPI rows, pivots) | + each `reference/specification/<kind>.md` for the kinds in the plan |
-| Formula-heavy build (custom calcs, metrics, Lookup, Rollup) | + `reference/specification/formulas.md` |
-| Conditional-formatting build (table/pivot cell coloring) | + `reference/specification/tables.md` |
-| Container-styling-heavy build (Capability 1 patterns) | + `reference/specification/containers.md` |
-| Image / divider / dynamic-text build (Capabilities 2-4) | + `reference/specification/others.md` + `reference/specification/text.md` |
-| Round-trip / edge-case work (POST failures, axis controls, schema drift) | + `reference/scope-and-edge-cases.md` + `reference/workflows/validate.md` |
-| From-image build (screenshot/mockup reproduction) | + `reference/workflows/from-image.md` (load BEFORE data discovery) |
+**Single-sourced 2026-08-03.** The task-type → chunk mapping table used
+to be duplicated here (and in `CLAUDE.md` and
+`docs/iteration-playbook.md`), and the copies had already drifted from
+`SKILL.md`'s version — missing the map-bearing row, carrying stale
+"Capability 1"/"Capabilities 2-4" labels from an old numbering scheme,
+and listing "schema drift" where `SKILL.md` said "format fields." That
+drift is the same failure class as the validator/`validate.md` doc-code
+mismatch (`reference/history.md`). `SKILL.md`'s table is now the only
+copy; this file, `CLAUDE.md`, and `docs/iteration-playbook.md` all point
+here instead of re-listing the rows.
 
 If chunks are skipped, the agent is operating on memory of prior
 sessions — which is exactly how the 2026-05-19 regression happened

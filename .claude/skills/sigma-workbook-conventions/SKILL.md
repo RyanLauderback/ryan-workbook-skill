@@ -207,7 +207,8 @@ session and cite chunk + section in the plan.
 | Container-styling-heavy build | + `reference/specification/containers.md` |
 | Image / divider / embed / dynamic-text build | + `reference/specification/others.md` + `reference/specification/text.md` |
 | Map-bearing build (`geography-map`, `point-map`, `region-map`) | + `reference/specification/maps.md` |
-| Round-trip / edge-case work (POST failures, format fields, axis controls) | + `reference/scope-and-edge-cases.md` + `reference/workflows/validate.md` |
+| Round-trip / edge-case work (POST failures, format fields, axis controls) | + `reference/scope-and-edge-cases.md` + `reference/workflows/validate.md` + `reference/capability-ledger.md` |
+| Deciding whether a feature is "supported" (before writing any "not supported" claim) | + `reference/capability-ledger.md` → the retest protocol, first |
 | From-image build (screenshot / mockup reproduction) | + `reference/workflows/from-image.md` (load BEFORE data discovery) |
 
 If chunks are skipped, the agent is operating on memory of prior sessions —
@@ -334,8 +335,17 @@ ID semantics and is separate from this workbook-spec behavior.
 
 - Partial updates are NOT supported — both CREATE and UPDATE require the complete spec.
 - A single model cannot contain multiple identically-named tables.
-- Input tables, Python elements, and references to other Sigma elements in custom
-  SQL are **not supported** by the round-trip endpoints. Avoid generating these.
+- Python elements, and references to other Sigma elements in custom
+  SQL are **not supported** by the *data-model* round-trip endpoints
+  (`sigma-data-models` skill scope). Avoid generating these in a data-model spec.
+  **Correction (2026-08-03):** this line previously also named input tables,
+  which read as a blanket prohibition and contradicted
+  `reference/specification/tables.md` → "Input tables". Input tables are a
+  *workbook* spec element (`kind: "input-table"`), not a data-model
+  construct — they are fully supported, verified via clean GET-spec
+  (HTTP 200) against 5 real production workbooks holding 27 input-table
+  instances combined. See `reference/capability-ledger.md`. This
+  constraint is scoped to data-model round-trip only.
 
 ### Secrets
 
@@ -436,7 +446,7 @@ mapping.
   wrapper.
 - `discover.md` — `mcp-search.sh` / `mcp-describe.sh` sequencing,
   REST fallbacks, friendly-vs-raw warehouse name normalization.
-- `validate.md` — `validate-spec.py` (pre-submit, 13 checks) +
+- `validate.md` — `validate-spec.py` (pre-submit, 14 checks) +
   `verify-workbook.sh` (SQL-compile check) +
   `audit-workbook-schema.sh` (data-layer schema audit, auto-run by
   `publish-workbook.sh`) + cryptic-error decoding table.
@@ -494,9 +504,16 @@ OpenAPI `jq` recipe.
   prefixes + friendly-name normalization.
 - `sources.md` — `table` / `data-model` / `join` / `union` / `sql` /
   `transpose` source kinds + two-tier sourcing pattern reference.
-- `example-full.yaml` — verbatim multi-page reference spec from the
-  upstream skill (KPIs, charts, join sources, controls, custom
-  layout). Read this when in doubt about overall shape.
+- `example-full.yaml` — multi-page reference spec (KPIs, charts, join
+  sources, controls, custom layout) authored locally for this skill.
+  **Correction (2026-08-03):** previously described as "verbatim ...
+  from the upstream skill" — the real upstream `sigma-workbooks` skill
+  (reviewed in full against a local copy of `sigma-agent-skills-dev`)
+  contains no such file. That was a false attribution of external
+  authority with no functional impact on the content itself, but it's
+  the same bug class as the `DivideSafe` incident (`reference/history.md`)
+  — a fabricated provenance claim rather than a fabricated function.
+  Read this when in doubt about overall shape.
 
 `examples/` — known-good specs to seed generation. Clone-and-modify rather
 than editing in place. Match your task to the closest exemplar below;

@@ -43,19 +43,15 @@ Step 1 (Recon).
 ### 0. Required reading (HARD GATE before any spec authoring)
 
 Before drafting a plan or writing any spec JSON, `Read` the chunk files
-mapped to the task type. This is not optional and not satisfied by reading
-the SKILL.md index alone.
+mapped to the task type in the skill's
+`.claude/skills/sigma-workbook-conventions/SKILL.md` →
+"Required reading before authoring." This is not optional and not
+satisfied by reading the SKILL.md index alone.
 
-| Task type | Required chunks |
-|---|---|
-| Every build | `.claude/skills/sigma-workbook-conventions/reference/conventions.md` + `.claude/skills/sigma-workbook-conventions/reference/workflows/plan.md` + `.claude/skills/sigma-workbook-conventions/reference/specification/schema.md` + `.claude/skills/sigma-workbook-conventions/reference/specification/layout.md` |
-| Viz-heavy build | + per-kind files under `.claude/skills/sigma-workbook-conventions/reference/specification/` (`charts.md`, `kpis.md`, `tables.md`, etc.) |
-| Formula-heavy build | + `.claude/skills/sigma-workbook-conventions/reference/specification/formulas.md` |
-| Map-bearing build | + `.claude/skills/sigma-workbook-conventions/reference/specification/maps.md` |
-| Round-trip / edge-case work | + `.claude/skills/sigma-workbook-conventions/reference/scope-and-edge-cases.md` + `.claude/skills/sigma-workbook-conventions/reference/workflows/validate.md` |
-
-For the full task-type → chunks table (with more categories), see the
-skill's `SKILL.md` → "Required reading before authoring."
+**Single-sourced 2026-08-03** — this file used to carry its own partial
+copy of the task-type → chunks table, which had already drifted (missing
+several rows `SKILL.md` had gained). `SKILL.md`'s table is now the only
+copy; do not re-add rows here.
 
 The plan in step 2 must include a `Chunks Read:` line listing files
 consulted. Plans without it are not approvable. This gate was added 2026-05-19

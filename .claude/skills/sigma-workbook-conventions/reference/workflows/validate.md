@@ -3,7 +3,7 @@
 Validation runs in three phases:
 
 1. **Pre-submit** — `scripts/validate-spec.py` catches what's visible
-   in the spec text (13 checks).
+   in the spec text (14 checks; see the note on JSON/YAML input below).
 2. **Post-create** — `scripts/api/verify-workbook.sh` catches
    unresolved / circular refs in the compiled SQL;
    `scripts/api/audit-workbook-schema.sh` catches `error`-typed
@@ -22,23 +22,42 @@ Load this before any POST or PUT.
 scripts/validate-spec.py workbooks/<name>/spec.json
 ```
 
-13 checks (as of 2026-07-02):
+Accepts `.json` or `.yaml`/`.yml` (YAML needs PyYAML or `yq` on PATH —
+added 2026-08-03, ported from upstream's `validate-spec.sh` fallback chain).
+
+**This table was reconciled against the actual `CHECKS` array on 2026-08-03.**
+It had drifted badly: 5 rows below described checks that did not exist in
+code (`id-uniqueness`, `schema-keys`, `layout-element-ids`,
+`metrics-existence`, and `name-required-on-passthrough` — the last one was
+implemented, calibrated against 12 canonical examples + 5 live production
+workbooks, found to false-positive at massive scale (587 hits on one working
+dashboard), and retracted rather than shipped — see the function's docstring
+in `validate-spec.py` and `reference/history.md`). 4 implemented checks had
+no row at all. The table below is the 14 entries in `CHECKS`, in order.
 
 | # | Check | What it catches |
 |---|---|---|
-| 1 | `passthrough-coverage` | Chart elements with ≤2 cols sourced from tables with ≥5 cols (the passthrough-collapse signature). FAIL on charts; WARN on thin-but-not-collapsed. KPIs excluded. See `reference/conventions.md` → "Passthrough mandate." |
-| 2 | `controlid-collision` | Controls whose `controlId` matches a column `name` or `id` on the filtered element. See `reference/conventions.md` → "Control/column ID collision." |
-| 3 | `name-required-on-passthrough` | Passthrough columns missing explicit `name` field. See `reference/conventions.md` → "Explicit-`name` rule." |
-| 4 | `id-uniqueness` | Duplicate element IDs or column IDs within scope. |
-| 5 | `bare-ref-resolution` | Bare `[column_name]` references (no `/`) that don't match any sibling column or controlId. **WARN-level** — Sigma auto-infers some column names (e.g. `DateTrunc("week", [Date])` → "Week of Date") that this regex-based check can't predict, so flags require inspection. Added 2026-05-21 — ported from upstream `validate-spec.sh`. See `reference/specification/formulas.md` → "The #1 formula mistake." |
-| 6 | `schema-keys` | Unknown top-level keys (warns when GET-spec metadata wasn't stripped before PUT). |
-| 7 | `layout-element-ids` | Layout XML `elementId` attrs that don't match any element on the page (silent-drop trap). |
-| 8 | `metrics-existence` | `[Metrics/<X>]` references that aren't in the data model's recon catalog (best-effort — requires recon JSON in `workbooks/<name>/recon/`). |
-| 9 | `control-filter-column-exists` | Control `filters[].columnId` values that don't exist on the target element. Catches typos that pass POST but silently break every downstream query on the page. Added 2026-07-02 after a fresh-agent build test surfaced this class of bug. Includes "did you mean" suggestions for near-match column IDs. |
-| 10 | `kpi-value-references-aggregation` | KPI value formulas that bare-ref sibling columns whose formulas contain aggregation functions (`Sum`, `Avg`, `Count*`, etc.). The bare ref evaluates per-row, an aggregation has no per-row value, and the KPI renders `null`. WARN-level — regex-based, so occasional false positives are possible. Fix: inline the aggregation into the value formula, or promote to a data-model metric. Added 2026-07-02 after `Marketing-and-Promotions-Performance`'s Promo Lift KPI rendered null. See `reference/specification/kpis.md` → "Value formula pitfall." |
-| 11 | `summary-calc-collision` | Column IDs that appear in both `summary[]` and a `groupings[].calculations[]` list on the same table. POST rejects with `Duplicate column or folder reference`. Fix: split into two column definitions with distinct IDs. Added 2026-07-02 after `exec-scorecard` v1 hit this mid-build. See `reference/specification/tables.md` → "summary — summary-bar pattern." |
-| 12 | `description-object-on-kpi-and-table` | Plain-string `description` on `kpi-chart`, `table`, `pivot-table`, or `input-table` elements. POST rejects with `Invalid object: string`. Fix: wrap as `{"text": "..."}` or `{"visibility": "hidden"}`. Chart elements accept the string form. Added 2026-07-02 after `inventory-health` build hit this. See `reference/specification/kpis.md` → "Description must be an object." |
-| 13 | `pivot-missing-rows-and-columns` | Pivot-tables that have `values` but neither `rowsBy` nor `columnsBy` — the pivot compiles cleanly (passes POST + verify) but renders as a single grand-total row. Fix: add at least one `rowsBy` or `columnsBy` entry (`[{"id": "<dim-col-id>"}]`). Added 2026-07-02 after `Product-and-Basket-Performance` shipped two pivots that rendered as grand-total-only in the UI. See `reference/specification/tables.md` → "Shape" (pivot section). |
+| 1 | `no-per-page-layout` | A per-page `pages[i].layout` field — Sigma silently discards it; layout must be the single top-level `layout` string with every `<Page>` as a sibling. |
+| 2 | `elements-placed-in-layout` | Every element `id` must appear as an `elementId` on a `<LayoutElement>`, `<GridContainer>`, or `<TabbedContainer>` tag. Fails outright if there's no top-level `layout` at all. (`TabbedContainer` added 2026-08-03 — its absence produced a false FAIL on every tabbed-container element; verified against 2 independent production workbooks.) |
+| 3 | `containers-have-children` | Every `kind:"container"` element has a matching `<GridContainer>` in the layout XML, **and** that `<GridContainer>` has nested children (not flat siblings). |
+| 4 | `layoutelement-has-children` | The forward case of #3: a `<LayoutElement>` (a leaf tag) with nested child tags — they parse without error but are silently dropped and never render. Added 2026-08-03, ported from upstream's manual checklist. |
+| 5 | `column-format-shape` | `column.format` must be an object carrying `kind` (verified shape: `{kind, formatString}`). The UI-export shape (`{type, format}`) is rejected with a misleading "Missing 'kind' field." |
+| 6 | `control-id-unique` | `controlId` must be workbook-wide unique — **except** when one side is `controlType:"synced"`, Sigma's first-class cross-page control-sync stub (a primary control on one page + thin `synced` placeholders on others, deliberately sharing a `controlId`). Only fails when a duplicate exists where *neither* side is `synced`. (Exemption added 2026-08-03 after Bergey's Unified Insights showed the exact mechanism — a `segmented` primary + 4 `synced` stubs sharing one `controlId`.) |
+| 7 | `passthrough-coverage` | Chart elements with ≤2 cols sourced from tables with ≥5 cols (the passthrough-collapse signature). FAIL on charts; WARN on thin-but-not-collapsed. KPIs excluded. See `reference/conventions.md` → "Passthrough mandate." |
+| 8 | `controlid-collision` | Controls whose `controlId` matches a column `name` or `id` on the filtered element. See `reference/conventions.md` → "Control/column ID collision." |
+| 9 | `bare-ref-resolution` | Bare `[column_name]` references (no `/`) that don't match any sibling column or controlId. **WARN-level** — Sigma auto-infers some column names (e.g. `DateTrunc("week", [Date])` → "Week of Date") that this regex-based check can't predict, so flags require inspection. Added 2026-05-21 — ported from upstream `validate-spec.sh`. See `reference/specification/formulas.md` → "The #1 formula mistake." |
+| 10 | `control-filter-column-exists` | Control `filters[].columnId` values that don't exist on the target element, and `filters[].source.elementId` values that don't exist on the workbook. Catches typos that pass POST but silently break every downstream query on the page. Added 2026-07-02 after a fresh-agent build test surfaced this class of bug. Includes "did you mean" suggestions for near-match column IDs. |
+| 11 | `kpi-value-references-aggregation` | KPI value formulas that bare-ref sibling columns whose formulas contain aggregation functions (`Sum`, `Avg`, `Count*`, etc.). The bare ref evaluates per-row, an aggregation has no per-row value, and the KPI renders `null`. WARN-level — regex-based, so occasional false positives are possible. Fix: inline the aggregation into the value formula, or promote to a data-model metric. Added 2026-07-02 after `Marketing-and-Promotions-Performance`'s Promo Lift KPI rendered null. See `reference/specification/kpis.md` → "Value formula pitfall." |
+| 12 | `summary-calc-collision` | Column IDs that appear in both `summary[]` and a `groupings[].calculations[]` list on the same table. POST rejects with `Duplicate column or folder reference`. Fix: split into two column definitions with distinct IDs. Added 2026-07-02 after `exec-scorecard` v1 hit this mid-build. See `reference/specification/tables.md` → "summary — summary-bar pattern." |
+| 13 | `description-object-on-kpi-and-table` | Plain-string `description` on `kpi-chart`, `table`, `pivot-table`, or `input-table` elements. POST rejects with `Invalid object: string`. Fix: wrap as `{"text": "..."}` or `{"visibility": "hidden"}`. Chart elements accept the string form. Note: a GET-spec readback of any of these 4 kinds emits `description` as a plain string — a harvested spec must be normalized before it can be re-POSTed. Added 2026-07-02 after `inventory-health` build hit this. See `reference/specification/kpis.md` → "Description must be an object." |
+| 14 | `pivot-missing-rows-and-columns` | Pivot-tables that have `values` but neither `rowsBy` nor `columnsBy` — the pivot compiles cleanly (passes POST + verify) but renders as a single grand-total row. Fix: add at least one `rowsBy` or `columnsBy` entry (`[{"id": "<dim-col-id>"}]`). Added 2026-07-02 after `Product-and-Basket-Performance` shipped two pivots that rendered as grand-total-only in the UI. See `reference/specification/tables.md` → "Shape" (pivot section). |
+
+**What this validator does not cover, even when it exits 0** (printed as a
+footer on every run): qualified `[Source/Column]` refs are not verified —
+the server checks those on publish; and no check yet verifies action/effect
+referential integrity (dangling `overlayId`/`control`/`table`/
+`tabbedContainer`/`agentId` on a `button` or `agents[].tools[].steps[]`
+effect) — that lands when the action/effect vocabulary is documented.
 
 Fix everything reported before continuing. If exit 0, proceed to the
 manual pass.

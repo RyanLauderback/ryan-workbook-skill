@@ -61,9 +61,13 @@ versions will require reading from a reference GET.
 
 ## Response-only fields
 
-`GET /v2/workbooks/<id>/spec` also returns these — they **must be
-stripped** before using the spec as a CREATE or UPDATE body. Sending
-unknown top-level fields is rejected:
+`GET /v2/workbooks/<id>/spec` also returns these. **Correction
+(2026-08-03):** previously stated they "must be stripped... sending
+unknown top-level fields is rejected" — the real upstream `sigma-workbooks`
+skill states the opposite: these fields are **ignored on write**
+(POST/PUT), so a GET response can be re-submitted without stripping them
+first, though doing so is cleaner and is still the recommended practice
+below:
 
 - `workbookId`
 - `url`
