@@ -373,3 +373,49 @@ Full capability decomposition, sequencing, and the remaining waves
 dynamic-value binding, visual media/theming, scenario-modeling pattern,
 plugin packaging) are tracked outside this file for the duration of the
 active work.
+
+## 2026-08-03 — Portability fixes + `composition.md` ported + dashboard-tier exemplar
+
+Continuation of the same session. Two more pieces landed:
+
+**Portability (C9-a).** Fixed the cwd-relative `.env` lookup that made
+auth only work when invoked from the repo root (`ENV_FILE` now anchors to
+the script's own directory); the discarded exit code on
+`eval "$(load-env.sh)"` that let a missing `.env` proceed silently with
+empty vars; the fixed, world-guessable `/tmp/.sigma_token` cache (moved
+to a per-user `$SIGMA_TOKEN_CACHE` path, `chmod 600` explicitly rather
+than relying on umask alone); and `sigma_curl`'s 401 self-heal sourcing
+the wrong path once inherited via `export -f`. Added `.gitattributes`
+(LF line endings — a Windows/CRLF checkout would otherwise turn every
+`.sh` into a "bad interpreter" failure under WSL) and fixed missing
+`encoding="utf-8"` in `workbook-manifest.py`/`validate-spec.py`. Decided:
+**WSL-only for Windows** — native Windows lacks a reliable `python3` on
+PATH, and threading a `$SIGMA_PYTHON` shim through 25 call sites for a
+platform with no CI coverage was judged not worth the permanent
+unenforced-drift risk. Added `scripts/doctor.sh` as a first-run
+diagnostic. Verified end-to-end: `bash scripts/api/whoami.sh` succeeds
+when invoked from an unrelated cwd (the actual bug), with a fresh token
+mint, the cached-token fast path, and correct `0600` permissions on the
+new cache path.
+
+**`reference/workflows/composition.md`** ported near-verbatim from the
+real upstream `sigma-workbooks` skill — design judgment (the sizing
+ladder, when to stop and ask, the hidden-base-table/sorted-ranking/
+no-exposed-joins defaults) that this skill had never carried; `plan.md`
+covers process, not judgment. Added to the "every build always" gate row.
+
+**New exemplar: `examples/dashboard-department-scorecard.json`** — the
+"dashboard" tier of the sizing ladder, modeled on Bergey's Unified
+Insights (the real production dashboard harvested during planning).
+Closes two gaps: no existing exemplar demonstrated the hidden-base-table
+default (the flagship 3-page exemplar puts its base table visibly on the
+dashboard page), and no exemplar demonstrated the exec-KPI recipe
+(`style.borderRadius:"round"` + `periodComparison` + `timeline` + styled
+`name`) verified present ~67 times in that real dashboard. Deliberately
+built from only already-established, already-battle-tested spec shapes —
+no buttons/actions/agents — since those hadn't yet been through the
+Wave 0 POST probe at authoring time; the sidecar `.prompt.md` says so
+explicitly. Validated clean (14/14 checks, 0 fail/warn). Also fixed a
+stale "buttons, modals unsupported" line in
+`data-model-sourced-sales-command-center.prompt.md` that had escaped the
+earlier retraction sweep.

@@ -1,0 +1,219 @@
+{
+  "name": "Department Scorecard",
+  "description": "Exec dashboard tier exemplar — modeled on composition.md's sizing ladder and on Bergey's Unified Insights, a real shipped production dashboard. Demonstrates: KPI row with period-comparison + timeline styling, a ranked chart and a ranked table both sorted by the metric they rank on, and the base/source table on a hidden page rather than exposed in the dashboard view.",
+  "folderId": "<destination-folder-id>",
+  "schemaVersion": 2,
+  "themeOverrides": {
+    "pageWidth": "large"
+  },
+  "pages": [
+    {
+      "id": "page-overview",
+      "name": "Overview",
+      "elements": [
+        {
+          "id": "txt-hero-title",
+          "kind": "text",
+          "text": "<h2>Department Scorecard</h2>"
+        },
+        {
+          "id": "ctrl-ov-date",
+          "kind": "control",
+          "controlId": "OvDateRange",
+          "name": "Date range",
+          "controlType": "date-range",
+          "mode": "last",
+          "value": 90,
+          "unit": "day",
+          "includeToday": true,
+          "includeNulls": "when-no-value-is-selected",
+          "style": {
+            "backgroundColor": "#F5F5F5",
+            "borderRadius": "round"
+          },
+          "filters": [
+            { "source": { "kind": "table", "elementId": "tbl-base" }, "columnId": "col-date" }
+          ]
+        },
+        {
+          "id": "kpi-ov-revenue",
+          "kind": "kpi-chart",
+          "source": { "kind": "table", "elementId": "tbl-base" },
+          "columns": [
+            {
+              "id": "kr-val",
+              "formula": "[Metrics/Total Revenue]",
+              "name": "Total Revenue",
+              "format": { "kind": "number", "formatString": "$,.0f" }
+            },
+            {
+              "id": "kr-month",
+              "formula": "DateTrunc(\"month\", [Base/Date])",
+              "name": "Month"
+            }
+          ],
+          "value": { "columnId": "kr-val" },
+          "name": {
+            "text": "Total Revenue",
+            "color": "#1a1a1a",
+            "fontWeight": "bold",
+            "fontSize": 16
+          },
+          "timeline": { "columnId": "kr-month" },
+          "periodComparison": "month",
+          "style": {
+            "borderRadius": "round",
+            "borderColor": "#e8dfd3",
+            "borderWidth": 1
+          }
+        },
+        {
+          "id": "kpi-ov-margin",
+          "kind": "kpi-chart",
+          "source": { "kind": "table", "elementId": "tbl-base" },
+          "columns": [
+            {
+              "id": "km-val",
+              "formula": "1 - Sum([Base/Cost]) / Sum([Base/Revenue])",
+              "name": "Gross Margin %",
+              "format": { "kind": "number", "formatString": ",.1%" }
+            },
+            {
+              "id": "km-month",
+              "formula": "DateTrunc(\"month\", [Base/Date])",
+              "name": "Month"
+            }
+          ],
+          "value": { "columnId": "km-val" },
+          "name": {
+            "text": "Gross Margin %",
+            "color": "#1a1a1a",
+            "fontWeight": "bold",
+            "fontSize": 16
+          },
+          "timeline": { "columnId": "km-month" },
+          "periodComparison": "month",
+          "style": {
+            "borderRadius": "round",
+            "borderColor": "#e8dfd3",
+            "borderWidth": 1
+          }
+        },
+        {
+          "id": "kpi-ov-orders",
+          "kind": "kpi-chart",
+          "source": { "kind": "table", "elementId": "tbl-base" },
+          "columns": [
+            {
+              "id": "ko-val",
+              "formula": "[Metrics/Distinct Orders]",
+              "name": "Orders",
+              "format": { "kind": "number", "formatString": ",.0f" }
+            },
+            {
+              "id": "ko-month",
+              "formula": "DateTrunc(\"month\", [Base/Date])",
+              "name": "Month"
+            }
+          ],
+          "value": { "columnId": "ko-val" },
+          "name": {
+            "text": "Orders",
+            "color": "#1a1a1a",
+            "fontWeight": "bold",
+            "fontSize": 16
+          },
+          "timeline": { "columnId": "ko-month" },
+          "periodComparison": "month",
+          "style": {
+            "borderRadius": "round",
+            "borderColor": "#e8dfd3",
+            "borderWidth": 1
+          }
+        },
+        {
+          "id": "chart-rev-by-region",
+          "kind": "bar-chart",
+          "source": { "kind": "table", "elementId": "tbl-base" },
+          "columns": [
+            { "id": "rbr-region", "formula": "[Base/Region]", "name": "Region" },
+            {
+              "id": "rbr-revenue",
+              "formula": "[Metrics/Total Revenue]",
+              "name": "Revenue",
+              "format": { "kind": "number", "formatString": "$,.0f" }
+            },
+            { "id": "rbr-store", "formula": "[Base/Store Name]", "name": "Store Name" },
+            { "id": "rbr-date", "formula": "[Base/Date]", "name": "Date" }
+          ],
+          "xAxis": {
+            "columnId": "rbr-region",
+            "sort": { "by": "rbr-revenue", "direction": "descending" }
+          },
+          "yAxis": { "columnIds": ["rbr-revenue"] },
+          "orientation": "vertical",
+          "stacking": "none"
+        },
+        {
+          "id": "tbl-top-stores",
+          "kind": "table",
+          "source": { "kind": "table", "elementId": "tbl-base" },
+          "name": "Top Stores by Revenue",
+          "columns": [
+            { "id": "tts-store", "formula": "[Base/Store Name]", "name": "Store Name" },
+            { "id": "tts-region", "formula": "[Base/Region]", "name": "Region" },
+            {
+              "id": "tts-revenue",
+              "formula": "[Metrics/Total Revenue]",
+              "name": "Revenue",
+              "format": { "kind": "number", "formatString": "$,.0f" }
+            },
+            {
+              "id": "tts-orders",
+              "formula": "[Metrics/Distinct Orders]",
+              "name": "Orders",
+              "format": { "kind": "number", "formatString": ",.0f" }
+            },
+            { "id": "tts-date", "formula": "[Base/Date]", "name": "Date" },
+            { "id": "tts-cost", "formula": "[Base/Cost]", "name": "Cost" }
+          ],
+          "order": ["tts-store", "tts-region", "tts-revenue", "tts-orders"],
+          "groupings": [
+            { "id": "grp-tts", "type": "categorize", "columnIds": ["tts-store", "tts-region"] }
+          ],
+          "summary": ["tts-revenue", "tts-orders"],
+          "sort": [
+            { "columnId": "tts-revenue", "direction": "descending" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "page-data-source",
+      "name": "Data Source",
+      "visibility": "hidden",
+      "elements": [
+        {
+          "id": "tbl-base",
+          "kind": "table",
+          "source": {
+            "kind": "data-model",
+            "dataModelId": "<data-model-id>",
+            "elementId": "<data-model-element-id>"
+          },
+          "name": "Base",
+          "columns": [
+            { "id": "col-date", "formula": "[<Data Model Element>/Date]", "name": "Date" },
+            { "id": "col-region", "formula": "[<Data Model Element>/Region]", "name": "Region" },
+            { "id": "col-store", "formula": "[<Data Model Element>/Store Name]", "name": "Store Name" },
+            { "id": "col-revenue", "formula": "[<Data Model Element>/Revenue]", "name": "Revenue" },
+            { "id": "col-cost", "formula": "[<Data Model Element>/Cost]", "name": "Cost" },
+            { "id": "col-order-id", "formula": "[<Data Model Element>/Order ID]", "name": "Order ID" }
+          ],
+          "order": ["col-date", "col-region", "col-store", "col-revenue", "col-cost", "col-order-id"]
+        }
+      ]
+    }
+  ],
+  "layout": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<Page type=\"grid\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\" id=\"page-overview\">\n  <GridContainer elementId=\"ctr-header\" type=\"grid\" gridColumn=\"1 / 25\" gridRow=\"1 / 4\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n    <LayoutElement elementId=\"txt-hero-title\" gridColumn=\"1 / 19\" gridRow=\"1 / 4\"/>\n    <LayoutElement elementId=\"ctrl-ov-date\" gridColumn=\"19 / 25\" gridRow=\"1 / 4\"/>\n  </GridContainer>\n  <GridContainer elementId=\"ctr-kpi-row\" type=\"grid\" gridColumn=\"1 / 25\" gridRow=\"4 / 12\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n    <LayoutElement elementId=\"kpi-ov-revenue\" gridColumn=\"1 / 9\" gridRow=\"1 / 9\"/>\n    <LayoutElement elementId=\"kpi-ov-margin\" gridColumn=\"9 / 17\" gridRow=\"1 / 9\"/>\n    <LayoutElement elementId=\"kpi-ov-orders\" gridColumn=\"17 / 25\" gridRow=\"1 / 9\"/>\n  </GridContainer>\n  <LayoutElement elementId=\"chart-rev-by-region\" gridColumn=\"1 / 25\" gridRow=\"12 / 24\"/>\n  <LayoutElement elementId=\"tbl-top-stores\" gridColumn=\"1 / 25\" gridRow=\"24 / 36\"/>\n</Page>\n<Page type=\"grid\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\" id=\"page-data-source\">\n  <LayoutElement elementId=\"tbl-base\" gridColumn=\"1 / 25\" gridRow=\"1 / 20\"/>\n</Page>\n"
+}

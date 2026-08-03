@@ -200,7 +200,7 @@ session and cite chunk + section in the plan.
 
 | Task type | Required chunks |
 |---|---|
-| Every build (always) | `reference/conventions.md` + `reference/workflows/plan.md` + `reference/specification/schema.md` + `reference/specification/layout.md` |
+| Every build (always) | `reference/conventions.md` + `reference/workflows/plan.md` + `reference/workflows/composition.md` + `reference/specification/schema.md` + `reference/specification/layout.md` |
 | Viz-heavy build (>2 chart kinds, KPI rows, pivots) | + each `reference/specification/<kind>.md` for the kinds in the plan (`charts.md`, `kpis.md`, `tables.md`, etc.) |
 | Formula-heavy build (custom calcs, metrics, Lookup, Rollup) | + `reference/specification/formulas.md` |
 | Conditional-formatting build (table/pivot cell coloring) | + `reference/specification/tables.md` |
@@ -441,6 +441,12 @@ mapping.
 
 - `plan.md` — the 6-section plan format, `Chunks Read:` requirement,
   plan-is-the-only-gate approval model. **Required on every build.**
+- `composition.md` — design judgment, not spec shape: the sizing ladder
+  (single thing / focused view / dashboard), when to stop and ask, three
+  defaults (hidden base tables, sort ranked tables by the ranked metric,
+  never expose intermediate joins), and surfacing structural choices in
+  the build summary. Ported 2026-08-03 from the real upstream
+  `sigma-workbooks` skill. **Required on every build.**
 - `crud.md` — POST/GET/PUT mechanics + ID preservation on POST +
   response-only fields to strip on PUT + the `publish-workbook.sh`
   wrapper.
@@ -522,6 +528,7 @@ than editing in place. Match your task to the closest exemplar below;
 - **Minimal / single-page:**
   - `data-model-sourced-overview.json` — smallest data-model-fed dashboard.
   - `data-model-sourced-single-page-inventory-health.json` (2026-07-02) — 10-element single-page dashboard with conditional formatting + two shared controls filtering multiple elements. Canonical minimal ops-triage exemplar. Paired with `.prompt.md`.
+  - `dashboard-department-scorecard.json` (2026-08-03) — the "dashboard" tier of `reference/workflows/composition.md`'s sizing ladder: KPI row (period-comparison + timeline styling, modeled on a real production dashboard), one ranked chart and one ranked table both sorted by the metric they rank on, base table on a hidden page. **First exemplar to load for a plain read-only exec dashboard build with no interactive/writeback features.** Paired with `.prompt.md`.
 - **Modern 3-page workbook (canonical):**
   - `data-model-sourced-sales-command-center.json` (2026-07-02) — 50-element 3-page workbook exercising every 2026-06/2026-07 skill fix (segmented control variants, `gap` safe default, distinct-column `holeValue`, KPI `value.columnId`, element `layout.anchor`, `themeOverrides`, styled `name`, card `style`, hierarchy control, `list + single`). Paired with `.prompt.md`. **First exemplar to load for any modern multi-page build.**
   - `data-model-sourced-exec-kpi-scorecard.json` (2026-07-02, post-fix) — 35-element exec-review workbook with pivot calculated PoP % delta column, US-state `region-map`, scatter for outlier detection, and two-tier anomaly-detection derived table (`groupings` + conditional-Sum, NOT `Rollup`). Paired with `.prompt.md`. Clone when the ask includes geographic viz or anomaly detection.
