@@ -688,3 +688,57 @@ either data-shape or layout-shape problems, not spec-shape problems.
 
 **Retest note:** full 12-example validator regression re-run clean after
 every fix in this entry (still 15/15, no regressions).
+
+## 2026-08-03 — Wave 2 / C3: the full action/effect vocabulary, live-POST verified
+
+Per this skill's own doctrine, the action/effect vocabulary was
+partially GET-spec-only until this session: the earlier wave-1-test
+build had live-POST-verified exactly 2 of 9 effects
+(`set-control-value`, `open-overlay`, via the map-click → modal
+interaction) plus the `on-select` trigger. The remaining 7 effects, the
+`button` element, and `on-click` had never been authored from scratch
+by this skill and POSTed.
+
+**Harvested the 2 already-confirmed effects directly from the real
+build** (`fe0140e9-3798-4a9a-a30b-03af8ddbc8ef`) rather than re-probing
+them — confirmed `set-control-value.control` and `clear-control.scope.control`
+reference a `controlId` (not the control element's own `id`), and
+`open-overlay.overlayId` references a modal page's `id` (not an element
+id).
+
+**Built a dedicated scratch probe** (`189db290-7674-4032-9ff7-7fad59dc14fa`,
+"Claude Testing" folder) with 8 buttons, one per remaining effect
+(`clear-control`, `navigate`, `select-tab`, `open-url`, `insert-rows`,
+`delete-rows`, `close-overlay`, plus a second `open-overlay` for
+completeness), a tabbed-container (for `select-tab`'s target), an
+input-table (for `insert-rows`/`delete-rows`), a second page (for
+`navigate`), and a modal page (for `open-overlay`/`close-overlay`).
+**POSTed clean on the first try** — no bisection needed this time,
+unlike the Wave 1 layout bugs. GET-back confirmed all 7 effects
+round-tripped byte-for-byte. A follow-up PUT to the same workbook added
+a `{type:"control"}` dynamic-value form (in `insert-rows.values`) and a
+`{{formula}}`-interpolated modal header title referencing a bare
+`[controlId]` — both also round-tripped byte-for-byte.
+
+**Result: all 9 effects and 4 of 5 dynamic-value forms are now
+live-POST verified** (`agent-input` remains GET-spec-only pending the
+agent surface). Referential semantics nailed down precisely:
+`set-control-value.control`/`clear-control.scope.control` = `controlId`;
+`open-overlay.overlayId`/`navigate.target.page` = page `id`;
+`select-tab.tabbedContainer` = element `id`, `selectedTab.index` is
+0-based; `insert-rows`/`delete-rows.table` = input-table element `id`.
+
+**Fix.** Added `reference/specification/actions.md` (the `button`
+element + all 9 effects) and `reference/specification/dynamic-values.md`
+(the 5-form value-binding matrix, plus `{{formula}}` string
+interpolation). Added the `action-refs-resolve` validator check (#11,
+16 total) closing the referential-integrity gap flagged when the
+vocabulary first shipped in Wave 1 — verifies every `control`/`table`/
+`overlayId`/`tabbedContainer`/`target.page` reference in every action
+resolves to something real, and that `select-tab.selectedTab.index` is
+in range. Positive-control tested: injected 5 deliberately-broken
+references into the probe spec and confirmed all 5 caught; then
+confirmed 0 false positives against all 5 harvested production
+workbooks with real actions (their references were all genuinely
+valid — a true negative, not a check that never fires). Full 12-example
+canonical regression re-run clean throughout.

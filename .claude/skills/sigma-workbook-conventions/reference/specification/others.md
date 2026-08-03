@@ -158,10 +158,10 @@ breaks are now **live-POST verified** (authored from scratch and
 POSTed, not just read via GET-spec) — see
 `reference/specification/pages.md` for the shapes and
 `reference/specification/layout.md` → "Five-tag grammar" for the layout
-XML. Buttons and action sequences are still GET-spec-only evidence
-pending their own chunk (actions — not yet written); see
-`reference/capability-ledger.md` for the full dated evidence table
-either way.
+XML. Buttons and action sequences are **also now live-POST verified**
+(Wave 2 / C3) — see `reference/specification/actions.md` for the
+`button` element and all 9 effects, and
+`reference/capability-ledger.md` for the full dated evidence table.
 
 This claim likely originated the way the real upstream `sigma-workbooks`
 skill's own docs warn against: a generic `Invalid kind` or a GET-spec 500

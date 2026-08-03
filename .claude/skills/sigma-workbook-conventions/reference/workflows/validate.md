@@ -3,7 +3,7 @@
 Validation runs in three phases:
 
 1. **Pre-submit** — `scripts/validate-spec.py` catches what's visible
-   in the spec text (15 checks; see the note on JSON/YAML input below).
+   in the spec text (16 checks; see the note on JSON/YAML input below).
 2. **Post-create** — `scripts/api/verify-workbook.sh` catches
    unresolved / circular refs in the compiled SQL;
    `scripts/api/audit-workbook-schema.sh` catches `error`-typed
@@ -36,7 +36,9 @@ in `validate-spec.py` and `reference/history.md`). 4 implemented checks had
 no row at all. The table below is the 14 entries in `CHECKS` from that
 reconciliation, plus a 15th (`schema-version`) added the same day after
 a live Wave 1 POST probe caught an invalid `schemaVersion` value that
-local validation alone couldn't have flagged without this check.
+local validation alone couldn't have flagged without this check. A 16th
+(`action-refs-resolve`) was added the same wave (Wave 2 / C3) alongside
+the action/effect vocabulary itself.
 
 | # | Check | What it catches |
 |---|---|---|
@@ -51,17 +53,18 @@ local validation alone couldn't have flagged without this check.
 | 8 | `controlid-collision` | Controls whose `controlId` matches a column `name` or `id` on the filtered element. See `reference/conventions.md` → "Control/column ID collision." |
 | 9 | `bare-ref-resolution` | Bare `[column_name]` references (no `/`) that don't match any sibling column or controlId. **WARN-level** — Sigma auto-infers some column names (e.g. `DateTrunc("week", [Date])` → "Week of Date") that this regex-based check can't predict, so flags require inspection. Added 2026-05-21 — ported from upstream `validate-spec.sh`. See `reference/specification/formulas.md` → "The #1 formula mistake." |
 | 10 | `control-filter-column-exists` | Control `filters[].columnId` values that don't exist on the target element, and `filters[].source.elementId` values that don't exist on the workbook. Catches typos that pass POST but silently break every downstream query on the page. Added 2026-07-02 after a fresh-agent build test surfaced this class of bug. Includes "did you mean" suggestions for near-match column IDs. |
-| 11 | `kpi-value-references-aggregation` | KPI value formulas that bare-ref sibling columns whose formulas contain aggregation functions (`Sum`, `Avg`, `Count*`, etc.). The bare ref evaluates per-row, an aggregation has no per-row value, and the KPI renders `null`. WARN-level — regex-based, so occasional false positives are possible. Fix: inline the aggregation into the value formula, or promote to a data-model metric. Added 2026-07-02 after `Marketing-and-Promotions-Performance`'s Promo Lift KPI rendered null. See `reference/specification/kpis.md` → "Value formula pitfall." |
-| 12 | `summary-calc-collision` | Column IDs that appear in both `summary[]` and a `groupings[].calculations[]` list on the same table. POST rejects with `Duplicate column or folder reference`. Fix: split into two column definitions with distinct IDs. Added 2026-07-02 after `exec-scorecard` v1 hit this mid-build. See `reference/specification/tables.md` → "summary — summary-bar pattern." |
-| 13 | `description-object-on-kpi-and-table` | Plain-string `description` on `kpi-chart`, `table`, `pivot-table`, or `input-table` elements. POST rejects with `Invalid object: string`. Fix: wrap as `{"text": "..."}` or `{"visibility": "hidden"}`. Chart elements accept the string form. Note: a GET-spec readback of any of these 4 kinds emits `description` as a plain string — a harvested spec must be normalized before it can be re-POSTed. Added 2026-07-02 after `inventory-health` build hit this. See `reference/specification/kpis.md` → "Description must be an object." |
-| 14 | `pivot-missing-rows-and-columns` | Pivot-tables that have `values` but neither `rowsBy` nor `columnsBy` — the pivot compiles cleanly (passes POST + verify) but renders as a single grand-total row. Fix: add at least one `rowsBy` or `columnsBy` entry (`[{"id": "<dim-col-id>"}]`). Added 2026-07-02 after `Product-and-Basket-Performance` shipped two pivots that rendered as grand-total-only in the UI. See `reference/specification/tables.md` → "Shape" (pivot section). |
+| 11 | `action-refs-resolve` | Every action/effect reference resolves to something real: `set-control-value`/`clear-control` target/source controls exist; `open-overlay.overlayId` matches a `type:"modal"` page; `navigate.target.page` matches a page; `select-tab.tabbedContainer` matches a tabbed-container element and `selectedTab.index` is in range; `insert-rows`/`delete-rows.table` matches an input-table element, and `insert-rows.values` keys match its columns. Added 2026-08-03 (Wave 2 / C3) alongside the action/effect vocabulary itself — positive-control tested against 5 deliberately-corrupted references (all caught) and 5 real production workbooks with actions (0 false positives). See `reference/specification/actions.md`. |
+| 12 | `kpi-value-references-aggregation` | KPI value formulas that bare-ref sibling columns whose formulas contain aggregation functions (`Sum`, `Avg`, `Count*`, etc.). The bare ref evaluates per-row, an aggregation has no per-row value, and the KPI renders `null`. WARN-level — regex-based, so occasional false positives are possible. Fix: inline the aggregation into the value formula, or promote to a data-model metric. Added 2026-07-02 after `Marketing-and-Promotions-Performance`'s Promo Lift KPI rendered null. See `reference/specification/kpis.md` → "Value formula pitfall." |
+| 13 | `summary-calc-collision` | Column IDs that appear in both `summary[]` and a `groupings[].calculations[]` list on the same table. POST rejects with `Duplicate column or folder reference`. Fix: split into two column definitions with distinct IDs. Added 2026-07-02 after `exec-scorecard` v1 hit this mid-build. See `reference/specification/tables.md` → "summary — summary-bar pattern." |
+| 14 | `description-object-on-kpi-and-table` | Plain-string `description` on `kpi-chart`, `table`, `pivot-table`, or `input-table` elements. POST rejects with `Invalid object: string`. Fix: wrap as `{"text": "..."}` or `{"visibility": "hidden"}`. Chart elements accept the string form. Note: a GET-spec readback of any of these 4 kinds emits `description` as a plain string — a harvested spec must be normalized before it can be re-POSTed. Added 2026-07-02 after `inventory-health` build hit this. See `reference/specification/kpis.md` → "Description must be an object." |
+| 15 | `pivot-missing-rows-and-columns` | Pivot-tables that have `values` but neither `rowsBy` nor `columnsBy` — the pivot compiles cleanly (passes POST + verify) but renders as a single grand-total row. Fix: add at least one `rowsBy` or `columnsBy` entry (`[{"id": "<dim-col-id>"}]`). Added 2026-07-02 after `Product-and-Basket-Performance` shipped two pivots that rendered as grand-total-only in the UI. See `reference/specification/tables.md` → "Shape" (pivot section). |
 
 **What this validator does not cover, even when it exits 0** (printed as a
 footer on every run): qualified `[Source/Column]` refs are not verified —
-the server checks those on publish; and no check yet verifies action/effect
-referential integrity (dangling `overlayId`/`control`/`table`/
-`tabbedContainer`/`agentId` on a `button` or `agents[].tools[].steps[]`
-effect) — that lands when the action/effect vocabulary is documented.
+the server checks those on publish; and `action-refs-resolve` (#11) does
+not yet cover `agentId` references in `agents[].tools[].steps[]` effects,
+since the agent surface has no chunk yet — that check extends once
+`agents.md` lands.
 
 Fix everything reported before continuing. If exit 0, proceed to the
 manual pass.

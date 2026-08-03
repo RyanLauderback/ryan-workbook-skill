@@ -38,6 +38,7 @@ CHECKS = [
     "controlid-collision",
     "bare-ref-resolution",
     "control-filter-column-exists",
+    "action-refs-resolve",
     "kpi-value-references-aggregation",
     "summary-calc-collision",
     "description-object-on-kpi-and-table",
@@ -638,6 +639,128 @@ def issues_control_filter_column_exists(spec: dict) -> list[tuple[str, str]]:
     return issues
 
 
+def issues_action_refs_resolve(spec: dict) -> list[tuple[str, str]]:
+    """Verify every action/effect reference resolves to something real.
+
+    Added 2026-08-03 (Wave 2 / C3) — a dangling `overlayId`, `control`,
+    `table`, `tabbedContainer`, or `navigate.target.page` fails silently
+    at runtime: POST succeeds, nothing renders or fires when clicked.
+    This is the referential-integrity gap flagged as a known omission
+    when the effect vocabulary shipped (see `reference/history.md`).
+
+    Checks, per effect (shapes verified via a live POST probe,
+    `reference/specification/actions.md`):
+    - `set-control-value`: `control` (target) and `value.control` (if
+      `value.type == "control"`) are known controlIds.
+    - `clear-control`: `scope.control` is a known controlId.
+    - `open-overlay`: `overlayId` matches a page `id` with `type:"modal"`.
+    - `navigate`: `target.page` matches any page `id`.
+    - `select-tab`: `tabbedContainer` matches a `kind:"tabbed-container"`
+      element `id`, and `selectedTab.index` is in range of that
+      element's `tabs[]` array.
+    - `insert-rows`/`delete-rows`: `table` matches a `kind:"input-table"`
+      element `id`; `insert-rows.values` keys match that table's column
+      `id`s, and any nested `{type:"control"}` value's `control` is a
+      known controlId.
+    """
+    issues = []
+    all_elements = _all_elements(spec)
+    control_ids = _collect_control_ids(spec)
+    elements_by_id = {el.get("id"): el for _, el in all_elements if el.get("id")}
+    modal_page_ids = {p.get("id") for p in spec.get("pages", []) if p.get("type") == "modal"}
+    all_page_ids = {p.get("id") for p in spec.get("pages", [])}
+
+    def _check_control(label: str, cid: str | None, loc: str):
+        if cid and cid not in control_ids:
+            issues.append((
+                "fail",
+                f"{loc}: {label} `{cid}` does not match any `controlId` in the spec. "
+                "The effect will silently no-op."
+            ))
+
+    for pi, el in all_elements:
+        el_label = el.get("id") or "(unnamed)"
+        for ai, action in enumerate(el.get("actions", []) or []):
+            for fi, fx in enumerate(action.get("effects", []) or []):
+                effect = fx.get("effect")
+                loc = f"pages[{pi}].elements ({el_label}).actions[{ai}].effects[{fi}] ({effect})"
+
+                if effect == "set-control-value":
+                    _check_control("target control", fx.get("control"), loc)
+                    value = fx.get("value") or {}
+                    if value.get("type") == "control":
+                        _check_control("source control", value.get("control"), loc)
+
+                elif effect == "clear-control":
+                    scope = fx.get("scope") or {}
+                    if scope.get("type") == "control":
+                        _check_control("scope control", scope.get("control"), loc)
+
+                elif effect == "open-overlay":
+                    overlay_id = fx.get("overlayId")
+                    if overlay_id and overlay_id not in modal_page_ids:
+                        issues.append((
+                            "fail",
+                            f"{loc}: overlayId `{overlay_id}` does not match any page with "
+                            "`type:\"modal\"`. The overlay will silently fail to open."
+                        ))
+
+                elif effect == "navigate":
+                    target = fx.get("target") or {}
+                    page_id = target.get("page")
+                    if page_id and page_id not in all_page_ids:
+                        issues.append((
+                            "fail",
+                            f"{loc}: target.page `{page_id}` does not match any page `id`. "
+                            "The navigation will silently no-op."
+                        ))
+
+                elif effect == "select-tab":
+                    tc_id = fx.get("tabbedContainer")
+                    tc_el = elements_by_id.get(tc_id)
+                    if tc_id and (tc_el is None or tc_el.get("kind") != "tabbed-container"):
+                        issues.append((
+                            "fail",
+                            f"{loc}: tabbedContainer `{tc_id}` does not match any "
+                            "`kind:\"tabbed-container\"` element. The tab switch will silently no-op."
+                        ))
+                    elif tc_el is not None:
+                        idx = (fx.get("selectedTab") or {}).get("index")
+                        n_tabs = len(tc_el.get("tabs") or [])
+                        if isinstance(idx, int) and not (0 <= idx < n_tabs):
+                            issues.append((
+                                "fail",
+                                f"{loc}: selectedTab.index {idx} is out of range for "
+                                f"`{tc_id}`, which has {n_tabs} tab(s) (valid: 0-{n_tabs - 1})."
+                            ))
+
+                elif effect in ("insert-rows", "delete-rows"):
+                    table_id = fx.get("table")
+                    table_el = elements_by_id.get(table_id)
+                    if table_id and (table_el is None or table_el.get("kind") != "input-table"):
+                        issues.append((
+                            "fail",
+                            f"{loc}: table `{table_id}` does not match any "
+                            "`kind:\"input-table\"` element. The write will silently no-op."
+                        ))
+                    elif table_el is not None and effect == "insert-rows":
+                        table_col_ids = {
+                            c.get("id") for c in (table_el.get("columns") or []) if c.get("id")
+                        }
+                        for col_id, val in (fx.get("values") or {}).items():
+                            if col_id not in table_col_ids:
+                                issues.append((
+                                    "fail",
+                                    f"{loc}: values key `{col_id}` does not match any column "
+                                    f"`id` on input-table `{table_id}`."
+                                ))
+                            if isinstance(val, dict) and val.get("type") == "control":
+                                _check_control(
+                                    f"values[{col_id!r}] control", val.get("control"), loc
+                                )
+    return issues
+
+
 # Sigma aggregation function names that make a column an "aggregation column"
 # — i.e. the column has no per-row value, so bare refs from a KPI value
 # formula resolve to null.
@@ -888,6 +1011,7 @@ def main() -> None:
         ("controlid-collision",       lambda: issues_controlid_collision(spec)),
         ("bare-ref-resolution",       lambda: issues_bare_ref_resolution(spec)),
         ("control-filter-column-exists", lambda: issues_control_filter_column_exists(spec)),
+        ("action-refs-resolve",       lambda: issues_action_refs_resolve(spec)),
         ("kpi-value-references-aggregation", lambda: issues_kpi_value_references_aggregation(spec)),
         ("summary-calc-collision",     lambda: issues_summary_calc_collision(spec)),
         ("description-object-on-kpi-and-table", lambda: issues_description_object_on_kpi_and_table(spec)),
@@ -903,10 +1027,10 @@ def main() -> None:
         "Note: these checks catch known failure signatures from past sessions "
         "— a clean run does not guarantee the spec renders correctly. "
         "`bare-ref-resolution` only catches bare (unqualified) refs; qualified "
-        "refs are not verified here (the server checks those on publish). No "
-        "check yet verifies action/effect referential integrity (dangling "
-        "overlayId/control/table/tabbedContainer/agentId) — always visually "
-        "verify after publish."
+        "refs are not verified here (the server checks those on publish). "
+        "`action-refs-resolve` verifies overlayId/control/table/tabbedContainer "
+        "references but not `agentId` (no agent-surface chunk yet) — always "
+        "visually verify after publish."
     )
 
     if not all_issues:

@@ -48,11 +48,12 @@ workbooks:
 
 | Feature | Workbooks (id, date checked) | What was checked |
 |---|---|---|
-| `button` element + `actions[]` | Claims Command Center (`0de447af-35f8-4831-af80-a2ea8eac32a2`), Insurance P4P Analytics (`691fa937-e296-4f88-bc81-afc10bb123ef`), Workbooks Demo 2026 (`9c0cb6a7-f25e-4045-a896-6de9e46a364b`), Marketing Control Center (`7eb36f00-5c3b-4471-861d-e8b679cab731`) — all 2026-08-03 | GET-spec 200; `kind:"button"` present with `actions:[{trigger, effects}]`; 9 distinct effect types observed across the corpus |
+| `button` element + `actions[]` | GET-spec: Claims Command Center (`0de447af-35f8-4831-af80-a2ea8eac32a2`), Insurance P4P Analytics (`691fa937-e296-4f88-bc81-afc10bb123ef`), Workbooks Demo 2026 (`9c0cb6a7-f25e-4045-a896-6de9e46a364b`), Marketing Control Center (`7eb36f00-5c3b-4471-861d-e8b679cab731`) — 2026-08-03. **POST-verified**: `189db290-7674-4032-9ff7-7fad59dc14fa` — 2026-08-03 (Wave 2 / C3 probe) | GET-spec 200; `kind:"button"` present with `actions:[{trigger, effects}]`. **Authored from scratch and POSTed** — 8 buttons, one per effect, all round-tripped byte-for-byte. See `actions.md`. |
 | `modal` pages (`type:"modal"`) | Claims Command Center (9 modal pages), Workbooks Demo 2026 (1), Marketing Control Center (1) — 2026-08-03 GET-spec; **`b9e4bc48-afa8-4085-b94d-fdd61c06bf0d` — 2026-08-03 POST-verified** | GET-spec 200; `pages[].type:"modal"` + `modal:{width,header,footer}` present. **Authored from scratch and POSTed** (Wave 1 probe) — confirmed the JSON shape round-trips AND discovered the modal page's layout grid is silently normalized to 12 columns (not 24) on GET-back. See `pages.md`. |
 | `tabbed-container` | Claims Command Center (5), Marketing Control Center (3), Bergey's Unified Insights (5) — 2026-08-03 GET-spec; **`b9e4bc48-afa8-4085-b94d-fdd61c06bf0d` — 2026-08-03 POST-verified** | GET-spec 200; `kind:"tabbed-container"` + `tabs:[{name}]` present; layout XML confirms `<TabbedContainer>`/`<Tab>` tags. **Authored from scratch and POSTed** — confirmed `<Tab>` has no `elementId` (positional binding to `tabs[]` order) and `<TabbedContainer>` is a direct child of `<Page>`, byte-for-byte round-trip. See `pages.md` + `layout.md` → "Five-tag grammar." |
 | `page-break` | Workbooks Demo 2026 — 2026-08-03 GET-spec; **`b9e4bc48-afa8-4085-b94d-fdd61c06bf0d` — 2026-08-03 POST-verified** | GET-spec 200; `kind:"page-break"` present. **Authored from scratch and POSTed** — round-trips with no fields beyond `id`/`kind`. |
-| Action sequences (multi-effect `actions[]`) | All 5 harvested workbooks — 2026-08-03 | GET-spec 200; effects observed: `set-control-value`, `open-overlay`, `clear-control`, `navigate`, `insert-rows`, `delete-rows`, `select-tab`, `close-overlay`, `open-url` |
+| All 9 effects (`set-control-value`, `clear-control`, `open-overlay`, `close-overlay`, `navigate`, `select-tab`, `open-url`, `insert-rows`, `delete-rows`) | GET-spec: all 5 harvested workbooks — 2026-08-03. **POST-verified**: `set-control-value`+`open-overlay` via a real build (`fe0140e9-3798-4a9a-a30b-03af8ddbc8ef`); the other 7 via `189db290-7674-4032-9ff7-7fad59dc14fa` (Wave 2 / C3 probe) — 2026-08-03 | **All 9 authored from scratch and POSTed**, byte-for-byte round-trip. Referential semantics confirmed: `set-control-value.control`/`clear-control.scope.control` = `controlId`; `open-overlay.overlayId`/`navigate.target.page` = page `id`; `select-tab.tabbedContainer` = element `id`, `selectedTab.index` 0-based; `insert-rows`/`delete-rows.table` = input-table element `id`. See `actions.md`. |
+| 4 of 5 dynamic-value forms (`constant`, `formula`, `column`, `control`) | Wave 2 / C3 probe — 2026-08-03 | **Authored from scratch and POSTed**, byte-for-byte round-trip, including `{{formula}}` string interpolation with a bare `[controlId]` reference in a modal header title. `agent-input` remains GET-spec-only pending the agent surface. See `dynamic-values.md`. |
 | `input-table` element | All 5 harvested workbooks (27 instances combined) — 2026-08-03 | GET-spec 200; field names cross-confirmed against the real upstream `sigma-workbooks` skill's `tables.md` (independent source, same conclusion: column field is `type`, not `columnType`) |
 | `agents[]` + `chat` element | Insurance P4P Analytics, Workbooks Demo 2026, Marketing Control Center, Bergey's Unified Insights — 2026-08-03 | GET-spec 200; `agents:[{id,name,instructions,dataSources,tools}]` present; `tools[].steps[]` reuse the same effect vocabulary as buttons |
 | `image` with `{{formula}}` URL | Workbooks Demo 2026 — 2026-08-03 | GET-spec 200; `image.source.url` containing `{{If(...)}}` |
@@ -65,14 +66,18 @@ workbooks:
 **POST-verification status.** `modal` pages, `tabbed-container`,
 `page-break`, and `navigation` were authored from scratch and POSTed as
 part of the Wave 1 / C2 probe (2026-08-03, workbook
-`b9e4bc48-afa8-4085-b94d-fdd61c06bf0d`, folder "Claude Testing") — those
-four are no longer GET-spec-only. Everything else in the table above
-(`button`+`actions[]`, action sequences, `input-table`, `agents[]`+
-`chat`, `image` variants, `plugin`) is still GET-spec (read) confirmation
-only — "supported" for those means "the live API emits this shape for a
-working, currently-rendering workbook," which is strong evidence but not
-proof that authoring it from scratch will be accepted identically. Probe
-each before asserting it as a canonical, clone-able shape.
+`b9e4bc48-afa8-4085-b94d-fdd61c06bf0d`, folder "Claude Testing"). `button`
++ all 9 effects + 4 of 5 dynamic-value forms were authored from scratch
+and POSTed as part of the Wave 2 / C3 probe (2026-08-03, workbook
+`189db290-7674-4032-9ff7-7fad59dc14fa`) plus a real build-mode session
+(`fe0140e9-3798-4a9a-a30b-03af8ddbc8ef`). None of those are GET-spec-only
+anymore. Everything else in the table above (`input-table`, `agents[]`+
+`chat`, `image` variants, `plugin`, `agent-input`) is still GET-spec
+(read) confirmation only — "supported" for those means "the live API
+emits this shape for a working, currently-rendering workbook," which is
+strong evidence but not proof that authoring it from scratch will be
+accepted identically. Probe each before asserting it as a canonical,
+clone-able shape.
 
 ## Unverified — probe pending (do not treat as fact either way)
 

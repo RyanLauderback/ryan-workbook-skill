@@ -205,9 +205,10 @@ session and cite chunk + section in the plan.
 | Formula-heavy build (custom calcs, metrics, Lookup, Rollup) | + `reference/specification/formulas.md` |
 | Conditional-formatting build (table/pivot cell coloring) | + `reference/specification/tables.md` |
 | Container-styling-heavy build | + `reference/specification/containers.md` |
-| Image / divider / embed / dynamic-text build | + `reference/specification/others.md` + `reference/specification/text.md` |
+| Image / divider / embed / dynamic-text build | + `reference/specification/others.md` + `reference/specification/text.md` + `reference/specification/dynamic-values.md` (for `{{formula}}` interpolation) |
 | Map-bearing build (`geography-map`, `point-map`, `region-map`) | + `reference/specification/maps.md` |
 | Multi-surface build (tabbed containers, modal pages, navigation, page breaks) | + `reference/specification/pages.md` + `reference/specification/layout.md` → "Five-tag grammar" |
+| Interactive build (buttons, on-select, overlays, tab-switching, input-table writeback) | + `reference/specification/actions.md` + `reference/specification/dynamic-values.md` |
 | Round-trip / edge-case work (POST failures, format fields, axis controls) | + `reference/scope-and-edge-cases.md` + `reference/workflows/validate.md` + `reference/capability-ledger.md` |
 | Deciding whether a feature is "supported" (before writing any "not supported" claim) | + `reference/capability-ledger.md` → the retest protocol, first |
 | From-image build (screenshot / mockup reproduction) | + `reference/workflows/from-image.md` (load BEFORE data discovery) |
@@ -453,7 +454,7 @@ mapping.
   wrapper.
 - `discover.md` — `mcp-search.sh` / `mcp-describe.sh` sequencing,
   REST fallbacks, friendly-vs-raw warehouse name normalization.
-- `validate.md` — `validate-spec.py` (pre-submit, 15 checks) +
+- `validate.md` — `validate-spec.py` (pre-submit, 16 checks) +
   `verify-workbook.sh` (SQL-compile check) +
   `audit-workbook-schema.sh` (data-layer schema audit, auto-run by
   `publish-workbook.sh`) + cryptic-error decoding table.
@@ -508,6 +509,15 @@ OpenAPI `jq` recipe.
 - `pages.md` — `tabbed-container` (labels-only element + flat
   tab-content siblings), `type:"modal"` pages, `navigation`,
   `page-break`. All four live-POST verified 2026-08-03 (Wave 1 probe).
+- `actions.md` — `button` element + the `actions[]`/`effects[]`
+  vocabulary: all 9 effects (`set-control-value`, `clear-control`,
+  `open-overlay`/`close-overlay`, `navigate`, `select-tab`,
+  `open-url`, `insert-rows`/`delete-rows`). All live-POST verified
+  2026-08-03 (Wave 2 / C3 — 2 via a real build, 7 via a dedicated probe).
+- `dynamic-values.md` — the slot → accepted-form matrix for dynamic
+  values: the 5 structured `{type: ...}` forms (`constant`, `formula`,
+  `column`, `control` all live-POST verified; `agent-input` GET-spec
+  evidence only) plus `{{formula}}` string interpolation.
 - `maps.md` — `geography-map` + `point-map` + `region-map` (with
   `regionType` enum) + single-vs-array shape gotcha on binding
   fields.
