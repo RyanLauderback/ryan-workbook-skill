@@ -4,8 +4,11 @@ Validation runs in three phases:
 
 1. **Pre-submit** — `scripts/validate-spec.py` catches what's visible
    in the spec text (13 checks).
-2. **Post-create** — `scripts/api/verify-workbook.sh` catches what
-   Sigma's compiler discovers but the spec parser tolerates.
+2. **Post-create** — `scripts/api/verify-workbook.sh` catches
+   unresolved / circular refs in the compiled SQL;
+   `scripts/api/audit-workbook-schema.sh` catches `error`-typed
+   columns in the schema. Both run automatically via
+   `publish-workbook.sh`.
 3. **Visual** — open the workbook URL and confirm it renders.
 
 Both API phases matter. Silent compilation failures are the largest
@@ -122,6 +125,23 @@ Most common causes of post-create failure:
 - **Circular reference.** A column named `Quarter` with formula
   `[Quarter]` — easy when copying warehouse column names verbatim
   into a sibling-reference position. Rename one side.
+
+### `audit-workbook-schema.sh` — the data-layer companion
+
+`verify-workbook.sh` grep's the compiled SQL text. It misses the
+class where SQL compiles but Sigma rejects the formula at query
+time — the column shows `type: error` in the schema and downstream
+renders as `Reference to errored column`. `audit-workbook-schema.sh`
+inspects the schema via `mcp-describe workbook-element` and reports
+`error`-typed columns with element + column + formula.
+
+Runs automatically after every POST/PUT via `publish-workbook.sh`;
+non-zero exit propagates so publish fails outright. Common causes:
+unknown functions (e.g. `NTile`), aggregation-across-element-boundary
+on grouped-source columns, `Rollup` arg3 mismatches. A cascade of
+errors usually traces to one upstream errored column — fix the root,
+downstream clears. Suppress with `SIGMA_SKIP_AUDIT=1`; standalone
+re-audit via `scripts/api/audit-workbook-schema.sh <wb-id>`.
 
 ## 5. Visual verify in the UI
 

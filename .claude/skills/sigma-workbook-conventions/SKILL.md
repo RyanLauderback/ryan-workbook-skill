@@ -387,9 +387,12 @@ violated, ship a broken workbook.
 ## Publishing
 
 Use `scripts/api/publish-workbook.sh` for POST / PUT / GET / metadata —
-it auto-runs `validate-spec.py` before writes, injects auth, and 401-retries
-via `sigma_curl`. Full subcommand reference, DELETE via direct-curl, and
-the response-only-fields-to-strip list live in `reference/workflows/crud.md`.
+it auto-runs `validate-spec.py` before writes, injects auth, 401-retries
+via `sigma_curl`, and auto-runs `audit-workbook-schema.sh` after every
+successful POST/PUT to catch `error`-typed columns that
+`verify-workbook.sh` misses. Full subcommand reference, DELETE via
+direct-curl, and the response-only-fields-to-strip list live in
+`reference/workflows/crud.md`.
 
 ## Reference and examples
 
@@ -425,8 +428,9 @@ mapping.
 - `discover.md` — `mcp-search.sh` / `mcp-describe.sh` sequencing,
   REST fallbacks, friendly-vs-raw warehouse name normalization.
 - `validate.md` — `validate-spec.py` (pre-submit, 13 checks) +
-  `verify-workbook.sh` (post-create compilation check) + cryptic-error
-  decoding table.
+  `verify-workbook.sh` (SQL-compile check) +
+  `audit-workbook-schema.sh` (data-layer schema audit, auto-run by
+  `publish-workbook.sh`) + cryptic-error decoding table.
 - `from-image.md` — image-to-spec workflow (screenshot, mockup,
   PDF, BI-tool export). Load BEFORE data discovery when the user
   supplies a target image.

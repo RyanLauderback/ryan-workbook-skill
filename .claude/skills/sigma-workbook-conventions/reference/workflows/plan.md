@@ -240,7 +240,10 @@ That contract puts the burden on the agent:
 2. **Validate** via `scripts/validate-spec.py workbooks/<name>/spec.json`.
    Fix everything reported.
 3. **POST** via `scripts/api/publish-workbook.sh post workbooks/<name>/spec.json`.
-   The wrapper runs validation first, then POSTs.
+   The wrapper runs validate-spec.py, POSTs, then auto-runs
+   `audit-workbook-schema.sh`. A non-zero exit means the audit found
+   errored columns; fix and PUT before proceeding. **Do not report
+   the workbook as built until audit returns clean.**
 4. **GET-back** via `scripts/api/publish-workbook.sh get-spec <wb-id>`.
    Save to `workbooks/<name>/spec.json` (overwriting the authored
    version) so subsequent PUTs start from the server's source of

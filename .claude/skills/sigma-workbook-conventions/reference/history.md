@@ -254,3 +254,22 @@ Rules going forward:
   HTML stops triggering false positives.
 - `scripts/api/harvest-workbook.sh` → fail-fast on `service_error`
   responses with diagnostic message + cleanup of bogus spec.json.
+
+## 2026-07-12 — `audit-workbook-schema.sh` added as post-POST data-layer gate
+
+Two consecutive builds shipped workbooks with `Reference to errored
+column` cascades despite `verify-workbook.sh` reporting `[ok]`:
+2026-07-03 retention hit `Rollup` arg3 mismatch; 2026-07-09 RFM
+cycled through `NTile`, inline `Percentile` sibling-ref, and a
+thresholds table with `Percentile([<GroupedSource>/<col>], 0.2)` —
+all three produced `type: error` on the score columns. Verify greps
+compiled SQL for unresolved-ref markers; it does not inspect schema
+types, so runtime-error columns with structurally valid SQL pass
+silently.
+
+**Fix.** `scripts/api/audit-workbook-schema.sh <wb-id>` iterates
+every element via `mcp-describe workbook-element`, parses the DDL
+for `error`-typed columns, and reports element + column + formula.
+`publish-workbook.sh` auto-invokes it after POST/PUT and propagates
+the exit code. Failure classes in
+`reference/workflows/validate.md` → §4 audit subsection.

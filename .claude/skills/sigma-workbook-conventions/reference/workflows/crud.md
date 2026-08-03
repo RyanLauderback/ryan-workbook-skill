@@ -28,10 +28,15 @@ scripts/api/publish-workbook.sh get-meta <workbookId>                 # url, nam
 
 The wrapper:
 - Sources `_env.sh` for auth (caches OAuth token at `/tmp/.sigma_token`)
-- Runs `scripts/validate-spec.py` before POST (fails fast on the
+- Runs `scripts/validate-spec.py` before POST/PUT (fails fast on the
   passthrough-coverage and controlid-collision gotchas)
 - Uses `sigma_curl` for auth-injected, 401-retrying requests
 - Reports the HTTP status alongside the body
+- Runs `scripts/api/audit-workbook-schema.sh` after every successful
+  POST/PUT — catches `error`-typed columns that `verify-workbook.sh`
+  misses. Non-zero exit propagates. See
+  `reference/workflows/validate.md` → §4. Suppress with
+  `SIGMA_SKIP_AUDIT=1`.
 
 **No `delete` subcommand** — DELETE goes via direct curl on purpose so
 it triggers the `ask` pattern in `.claude/settings.json`. See
