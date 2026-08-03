@@ -2,7 +2,7 @@
   "name": "Department Scorecard",
   "description": "Exec dashboard tier exemplar — modeled on composition.md's sizing ladder and on Bergey's Unified Insights, a real shipped production dashboard. Demonstrates: KPI row with period-comparison + timeline styling, a ranked chart and a ranked table both sorted by the metric they rank on, and the base/source table on a hidden page rather than exposed in the dashboard view.",
   "folderId": "<destination-folder-id>",
-  "schemaVersion": 2,
+  "schemaVersion": 1,
   "themeOverrides": {
     "pageWidth": "large"
   },

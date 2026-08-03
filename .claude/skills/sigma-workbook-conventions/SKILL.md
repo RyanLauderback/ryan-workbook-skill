@@ -207,6 +207,7 @@ session and cite chunk + section in the plan.
 | Container-styling-heavy build | + `reference/specification/containers.md` |
 | Image / divider / embed / dynamic-text build | + `reference/specification/others.md` + `reference/specification/text.md` |
 | Map-bearing build (`geography-map`, `point-map`, `region-map`) | + `reference/specification/maps.md` |
+| Multi-surface build (tabbed containers, modal pages, navigation, page breaks) | + `reference/specification/pages.md` + `reference/specification/layout.md` → "Five-tag grammar" |
 | Round-trip / edge-case work (POST failures, format fields, axis controls) | + `reference/scope-and-edge-cases.md` + `reference/workflows/validate.md` + `reference/capability-ledger.md` |
 | Deciding whether a feature is "supported" (before writing any "not supported" claim) | + `reference/capability-ledger.md` → the retest protocol, first |
 | From-image build (screenshot / mockup reproduction) | + `reference/workflows/from-image.md` (load BEFORE data discovery) |
@@ -452,7 +453,7 @@ mapping.
   wrapper.
 - `discover.md` — `mcp-search.sh` / `mcp-describe.sh` sequencing,
   REST fallbacks, friendly-vs-raw warehouse name normalization.
-- `validate.md` — `validate-spec.py` (pre-submit, 14 checks) +
+- `validate.md` — `validate-spec.py` (pre-submit, 15 checks) +
   `verify-workbook.sh` (SQL-compile check) +
   `audit-workbook-schema.sh` (data-layer schema audit, auto-run by
   `publish-workbook.sh`) + cryptic-error decoding table.
@@ -501,8 +502,12 @@ OpenAPI `jq` recipe.
   single-family font, paragraph alignment) + `{{formula}}` dynamic
   text embeds with d3 format suffix.
 - `others.md` — `divider` (with `direction`/`align`/`style`) +
-  `image` + `embed` elements + `{{formula}}` in URLs +
-  buttons/modals unsupported note.
+  `image` + `embed` elements + `{{formula}}` in URLs. **Correction
+  (2026-08-03):** previously ended with a "buttons/modals unsupported"
+  note — retracted, see `reference/capability-ledger.md`.
+- `pages.md` — `tabbed-container` (labels-only element + flat
+  tab-content siblings), `type:"modal"` pages, `navigation`,
+  `page-break`. All four live-POST verified 2026-08-03 (Wave 1 probe).
 - `maps.md` — `geography-map` + `point-map` + `region-map` (with
   `regionType` enum) + single-vs-array shape gotcha on binding
   fields.

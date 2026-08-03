@@ -60,11 +60,27 @@ case "$cmd" in
     python3 "$repo_root/scripts/validate-spec.py" "$spec"
     # Capture the response so we can parse the workbook ID for the audit,
     # then echo it back so callers still see the JSON they expect.
+    #
+    # `response=$(sigma_curl ...)` is a plain assignment from a command
+    # substitution — under `set -e`, sigma_curl returning non-zero (any
+    # HTTP >=400) makes THIS LINE ITSELF the failing command, and the
+    # script exits immediately, before the `echo "$response"` below ever
+    # runs. sigma_curl still prints the error body into $response, but it
+    # was silently discarded — a failed POST reported nothing about why.
+    # Bug found 2026-08-03 via a live Wave 1 probe. Fix: suspend `set -e`
+    # around the call so the echo always runs, then propagate the real
+    # exit code afterward.
+    set +e
     response=$(sigma_curl -X POST \
       -H "Content-Type: application/json" \
       --data-binary "@$spec" \
       "$SIGMA_BASE_URL/v2/workbooks/spec")
+    post_exit=$?
+    set -e
     echo "$response"
+    if [ "$post_exit" -ne 0 ]; then
+      exit "$post_exit"
+    fi
     wb_id=$(echo "$response" | jq -r '.workbookId // empty' 2>/dev/null || true)
     if [ -n "$wb_id" ] && [ "$wb_id" != "null" ]; then
       run_audit "$wb_id"
@@ -79,11 +95,20 @@ case "$cmd" in
     fi
     repo_root="$(cd "$(dirname "$0")/../.." && pwd)"
     python3 "$repo_root/scripts/validate-spec.py" "$spec"
+    # See the matching comment in the `post` case above — set +e around
+    # the capture so a failed PUT's error body still gets echoed before
+    # the script exits, instead of set -e silently discarding it.
+    set +e
     response=$(sigma_curl -X PUT \
       -H "Content-Type: application/json" \
       --data-binary "@$spec" \
       "$SIGMA_BASE_URL/v2/workbooks/$wb_id/spec")
+    put_exit=$?
+    set -e
     echo "$response"
+    if [ "$put_exit" -ne 0 ]; then
+      exit "$put_exit"
+    fi
     # PUT response echoes the workbookId back; if the caller passed a
     # bogus id and PUT returned an error, skip the audit.
     if echo "$response" | jq -e '.success == true' >/dev/null 2>&1; then

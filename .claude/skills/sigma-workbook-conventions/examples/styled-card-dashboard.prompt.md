@@ -95,8 +95,11 @@ expecting to find:
   uses `xAxis: {columnId: "..."}` / `yAxis: {columnIds: [...]}` — the
   canonical form documented in `reference/specification/charts.md`
   → "Axis shape — canonical." This exemplar surfaces it via harvest.
-- **Maps** (Capability 8 — and currently documented as unsupported in
-  workbooks-as-code).
+- **Maps** (Capability 8). **Correction (2026-08-03):** this line
+  previously said maps were "currently documented as unsupported" — that
+  was already stale when written. Maps have been verified supported
+  since 2026-07-02; see `reference/scope-and-edge-cases.md` → "Map
+  element status."
 
 ## Why no `.prompt.md` for the data inputs themselves
 

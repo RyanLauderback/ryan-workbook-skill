@@ -27,6 +27,7 @@ import xml.etree.ElementTree as ET
 
 
 CHECKS = [
+    "schema-version",
     "no-per-page-layout",
     "elements-placed-in-layout",
     "containers-have-children",
@@ -58,6 +59,33 @@ CHART_KINDS_WITH_PASSTHROUGH = {
     "scatter-chart",
 }
 PIVOT_KINDS = {"pivot-table"}
+
+
+def issues_schema_version(spec: dict) -> list[tuple[str, str]]:
+    """Warn when `schemaVersion` isn't the currently-known-good value.
+
+    Verified 2026-08-03 via a live POST: `schemaVersion: 2` is rejected
+    outright with `"schemaVersion: Invalid 1: number"` — every canonical
+    exemplar and every successful POST this skill has made uses `1`.
+    WARN, not FAIL: `reference/workflows/crud.md` already documents that
+    this value isn't guaranteed stable long-term and recommends reading
+    it from a reference GET rather than hardcoding — this check just
+    catches the common case of an unverified non-1 value before POST.
+    """
+    issues = []
+    sv = spec.get("schemaVersion")
+    if sv is not None and sv != 1:
+        issues.append((
+            "warn",
+            f"top-level `schemaVersion` is {sv!r}, not the currently-verified "
+            "value `1`. Every canonical exemplar and every successful POST "
+            "this skill has made uses `schemaVersion: 1`; `2` was live-tested "
+            "2026-08-03 and rejected outright. If you have a specific reason "
+            "to believe the value has changed, confirm via "
+            "`scripts/api/publish-workbook.sh get-spec <reference-workbook-id>` "
+            "first — see reference/workflows/crud.md → 'schemaVersion — don't hardcode'."
+        ))
+    return issues
 
 
 def issues_per_page_layout(spec: dict) -> list[tuple[str, str]]:
@@ -849,6 +877,7 @@ def main() -> None:
 
     all_issues: list[tuple[str, str, str]] = []
     for tag, fn in [
+        ("schema-version",            lambda: issues_schema_version(spec)),
         ("no-per-page-layout",        lambda: issues_per_page_layout(spec)),
         ("elements-placed-in-layout", lambda: issues_elements_placed(spec, root)),
         ("containers-have-children",  lambda: issues_containers_have_children(spec, root)),

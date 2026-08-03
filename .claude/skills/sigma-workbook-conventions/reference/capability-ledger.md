@@ -49,25 +49,30 @@ workbooks:
 | Feature | Workbooks (id, date checked) | What was checked |
 |---|---|---|
 | `button` element + `actions[]` | Claims Command Center (`0de447af-35f8-4831-af80-a2ea8eac32a2`), Insurance P4P Analytics (`691fa937-e296-4f88-bc81-afc10bb123ef`), Workbooks Demo 2026 (`9c0cb6a7-f25e-4045-a896-6de9e46a364b`), Marketing Control Center (`7eb36f00-5c3b-4471-861d-e8b679cab731`) — all 2026-08-03 | GET-spec 200; `kind:"button"` present with `actions:[{trigger, effects}]`; 9 distinct effect types observed across the corpus |
-| `modal` pages (`type:"modal"`) | Claims Command Center (9 modal pages), Workbooks Demo 2026 (1), Marketing Control Center (1) — 2026-08-03 | GET-spec 200; `pages[].type:"modal"` + `modal:{width,header,footer}` present |
-| `tabbed-container` | Claims Command Center (5), Marketing Control Center (3), Bergey's Unified Insights (5) — 2026-08-03 | GET-spec 200; `kind:"tabbed-container"` + `tabs:[{name}]` present; layout XML confirms `<TabbedContainer>`/`<Tab>` tags |
-| `page-break` | Workbooks Demo 2026 — 2026-08-03 | GET-spec 200; `kind:"page-break"` present |
+| `modal` pages (`type:"modal"`) | Claims Command Center (9 modal pages), Workbooks Demo 2026 (1), Marketing Control Center (1) — 2026-08-03 GET-spec; **`b9e4bc48-afa8-4085-b94d-fdd61c06bf0d` — 2026-08-03 POST-verified** | GET-spec 200; `pages[].type:"modal"` + `modal:{width,header,footer}` present. **Authored from scratch and POSTed** (Wave 1 probe) — confirmed the JSON shape round-trips AND discovered the modal page's layout grid is silently normalized to 12 columns (not 24) on GET-back. See `pages.md`. |
+| `tabbed-container` | Claims Command Center (5), Marketing Control Center (3), Bergey's Unified Insights (5) — 2026-08-03 GET-spec; **`b9e4bc48-afa8-4085-b94d-fdd61c06bf0d` — 2026-08-03 POST-verified** | GET-spec 200; `kind:"tabbed-container"` + `tabs:[{name}]` present; layout XML confirms `<TabbedContainer>`/`<Tab>` tags. **Authored from scratch and POSTed** — confirmed `<Tab>` has no `elementId` (positional binding to `tabs[]` order) and `<TabbedContainer>` is a direct child of `<Page>`, byte-for-byte round-trip. See `pages.md` + `layout.md` → "Five-tag grammar." |
+| `page-break` | Workbooks Demo 2026 — 2026-08-03 GET-spec; **`b9e4bc48-afa8-4085-b94d-fdd61c06bf0d` — 2026-08-03 POST-verified** | GET-spec 200; `kind:"page-break"` present. **Authored from scratch and POSTed** — round-trips with no fields beyond `id`/`kind`. |
 | Action sequences (multi-effect `actions[]`) | All 5 harvested workbooks — 2026-08-03 | GET-spec 200; effects observed: `set-control-value`, `open-overlay`, `clear-control`, `navigate`, `insert-rows`, `delete-rows`, `select-tab`, `close-overlay`, `open-url` |
 | `input-table` element | All 5 harvested workbooks (27 instances combined) — 2026-08-03 | GET-spec 200; field names cross-confirmed against the real upstream `sigma-workbooks` skill's `tables.md` (independent source, same conclusion: column field is `type`, not `columnType`) |
 | `agents[]` + `chat` element | Insurance P4P Analytics, Workbooks Demo 2026, Marketing Control Center, Bergey's Unified Insights — 2026-08-03 | GET-spec 200; `agents:[{id,name,instructions,dataSources,tools}]` present; `tools[].steps[]` reuse the same effect vocabulary as buttons |
 | `image` with `{{formula}}` URL | Workbooks Demo 2026 — 2026-08-03 | GET-spec 200; `image.source.url` containing `{{If(...)}}` |
 | `image` with inline `data:image/svg+xml;base64,...` | Marketing Control Center — 2026-08-03 | GET-spec 200; two lucide-icon SVGs decoded and confirmed valid |
-| `navigation` element | Workbooks Demo 2026 — 2026-08-03 | GET-spec 200; `kind:"navigation"` + `mode` present |
+| `navigation` element | Workbooks Demo 2026 — 2026-08-03 GET-spec; **`b9e4bc48-afa8-4085-b94d-fdd61c06bf0d` — 2026-08-03 POST-verified** | GET-spec 200; `kind:"navigation"` + `mode` present. **Authored from scratch and POSTed** — `mode:"auto"` round-trips unchanged. |
 | `plugin` element | Claims Command Center — 2026-08-03 | GET-spec 200; `kind:"plugin"` + `pluginId` + `config` present |
 | Page-level RBAC (`visibility.kind:"specific-users-and-teams"`) | Bergey's Unified Insights — 2026-08-03 | GET-spec 200; `assignments.teams:[uuid,...]` present on 6 pages |
 | `controlType:"synced"` (cross-page control sync) | Bergey's Unified Insights — 2026-08-03 | GET-spec 200; one primary `segmented` control + 4 `synced` stubs sharing one `controlId` |
 
-**Not yet POST-tested.** Every row above is a GET-spec (read) confirmation.
-None of these have been round-tripped through an actual `POST
-/v2/workbooks/spec` from this skill yet — that's the Wave 0 probe, still
-pending. "Supported" here means "the live API emits this shape for a
+**POST-verification status.** `modal` pages, `tabbed-container`,
+`page-break`, and `navigation` were authored from scratch and POSTed as
+part of the Wave 1 / C2 probe (2026-08-03, workbook
+`b9e4bc48-afa8-4085-b94d-fdd61c06bf0d`, folder "Claude Testing") — those
+four are no longer GET-spec-only. Everything else in the table above
+(`button`+`actions[]`, action sequences, `input-table`, `agents[]`+
+`chat`, `image` variants, `plugin`) is still GET-spec (read) confirmation
+only — "supported" for those means "the live API emits this shape for a
 working, currently-rendering workbook," which is strong evidence but not
-proof that authoring it from scratch will be accepted identically.
+proof that authoring it from scratch will be accepted identically. Probe
+each before asserting it as a canonical, clone-able shape.
 
 ## Unverified — probe pending (do not treat as fact either way)
 

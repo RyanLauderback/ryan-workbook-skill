@@ -466,3 +466,76 @@ reports "INCOMPLETE — 10 of 10 element(s) could not be checked" and
 exits 3, where it previously would have printed a false "0 queryable
 element(s) checked, no error-typed columns" / exit 0. Full 12-example
 validator regression re-run clean after these changes.
+
+## 2026-08-03 — Wave 1 / C2: live-POST probe for layout/page-structure, plus two more real bugs
+
+Per this skill's own doctrine ("only probe-confirmed behavior may be
+written as a rule"), the capability ledger's evidence for tabbed
+containers, modal pages, navigation, and page breaks was GET-spec-only
+(read from existing production workbooks) — never confirmed by
+authoring one from scratch and POSTing it. Before writing
+`specification/pages.md` or correcting `layout.md`'s grammar claim,
+authored a scratch probe workbook (folder "Claude Testing",
+`workbookId: b9e4bc48-afa8-4085-b94d-fdd61c06bf0d`) covering all four,
+POSTed it, GET'd it back, and diffed.
+
+**Result: full round-trip confirmed, plus one genuinely new fact.** The
+layout XML's `<TabbedContainer>`/`<Tab>` tags, the `tabbed-container`
+element's flat-sibling-content model, and the `navigation`/`page-break`
+element shapes all round-tripped byte-for-byte exactly as authored.
+**New discovery:** a `type:"modal"` page authored with
+`gridTemplateColumns="repeat(24, 1fr)"` (matching a normal page) came
+back on GET with that attribute silently rewritten to
+`repeat(12, 1fr)` — modal pages get a 12-column layout grid, not 24,
+regardless of what's authored. `layout.md` and `pages.md` updated
+accordingly; `layout.md`'s "two-tag grammar" / "closed attribute set"
+claims retired.
+
+**Along the way, the probe surfaced three more bugs, all real, all
+fixed:**
+
+1. **`publish-workbook.sh`'s `post`/`put` cases silently swallowed the
+   actual error body on failure.** `response=$(sigma_curl ...)` is a
+   plain assignment from a command substitution — under `set -e`,
+   sigma_curl returning non-zero (any HTTP ≥400) makes that assignment
+   itself the failing command, so the script exited immediately,
+   *before* the following `echo "$response"` line ever ran. sigma_curl
+   still printed the error body internally, but it was discarded before
+   reaching the caller — a failed POST reported nothing but a bare exit
+   1. Hit this directly: the probe's first two POST attempts each
+   failed with zero diagnostic output. Fixed by wrapping the capture in
+   `set +e`/`set -e` and echoing the response before propagating the
+   exit code, in both the `post` and `put` cases.
+2. **The new `dashboard-department-scorecard.json` exemplar (added in
+   the CW entry above) had never actually been POSTed** — it used
+   `schemaVersion: 2`, which the live API rejects outright
+   (`"schemaVersion: Invalid 1: number"`). Every other canonical
+   exemplar uses `1`; this was a plain authoring mistake, not a docs
+   gap (`crud.md` already correctly documents `1` as the working value).
+   Fixed the exemplar, and added a new WARN-level validator check
+   (`schema-version`, #15) so a non-`1` value gets flagged pre-POST
+   going forward.
+3. **The probe's own authoring mistakes were themselves useful
+   confirmations, not bugs**: `kind:"text"` needs `body`, not `text`
+   (already correctly documented in `text.md` — the probe's first draft
+   just didn't follow it), and raw `<h2>` is rejected by the live API's
+   inline-HTML allowlist (`<u>`, `<sub>`, `<sup>`, `<span>`, `<a>` only —
+   `text.md` updated to state this is the *complete* set, confirmed
+   verbatim from the rejection error, and to explicitly warn against
+   raw heading tags in favor of Markdown `#`/`##`/`###`).
+
+Also found and fixed one more stale instance of the retracted
+"unsupported" claim that escaped the original sweep:
+`examples/styled-card-dashboard.prompt.md` still called maps "currently
+documented as unsupported" — stale even before this session, since maps
+were verified supported back on 2026-07-02 (`scope-and-edge-cases.md` →
+"Map element status"). And `SKILL.md`'s `others.md` catalog gloss still
+ended with "buttons/modals unsupported note" — fixed to point at the
+retraction.
+
+Full 12-example validator regression (now 15 checks) re-run clean
+after all of the above. The scratch probe workbook
+(`b9e4bc48-afa8-4085-b94d-fdd61c06bf0d`, "Claude Testing" folder) is
+left in the live org pending user confirmation to delete — this skill's
+own convention requires asking before any DELETE, including for
+self-created test artifacts.

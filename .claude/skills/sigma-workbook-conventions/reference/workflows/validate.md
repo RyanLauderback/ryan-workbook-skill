@@ -3,7 +3,7 @@
 Validation runs in three phases:
 
 1. **Pre-submit** — `scripts/validate-spec.py` catches what's visible
-   in the spec text (14 checks; see the note on JSON/YAML input below).
+   in the spec text (15 checks; see the note on JSON/YAML input below).
 2. **Post-create** — `scripts/api/verify-workbook.sh` catches
    unresolved / circular refs in the compiled SQL;
    `scripts/api/audit-workbook-schema.sh` catches `error`-typed
@@ -33,10 +33,14 @@ implemented, calibrated against 12 canonical examples + 5 live production
 workbooks, found to false-positive at massive scale (587 hits on one working
 dashboard), and retracted rather than shipped — see the function's docstring
 in `validate-spec.py` and `reference/history.md`). 4 implemented checks had
-no row at all. The table below is the 14 entries in `CHECKS`, in order.
+no row at all. The table below is the 14 entries in `CHECKS` from that
+reconciliation, plus a 15th (`schema-version`) added the same day after
+a live Wave 1 POST probe caught an invalid `schemaVersion` value that
+local validation alone couldn't have flagged without this check.
 
 | # | Check | What it catches |
 |---|---|---|
+| 0 | `schema-version` | Top-level `schemaVersion` isn't `1` — the only value every canonical exemplar and every successful POST has used. **WARN**, not fail, since `conventions.md`/`crud.md` already flag this as potentially unstable long-term. Added 2026-08-03 after a live probe POST was rejected with `schemaVersion: Invalid 1: number` on a spec that used `2`. |
 | 1 | `no-per-page-layout` | A per-page `pages[i].layout` field — Sigma silently discards it; layout must be the single top-level `layout` string with every `<Page>` as a sibling. |
 | 2 | `elements-placed-in-layout` | Every element `id` must appear as an `elementId` on a `<LayoutElement>`, `<GridContainer>`, or `<TabbedContainer>` tag. Fails outright if there's no top-level `layout` at all. (`TabbedContainer` added 2026-08-03 — its absence produced a false FAIL on every tabbed-container element; verified against 2 independent production workbooks.) |
 | 3 | `containers-have-children` | Every `kind:"container"` element has a matching `<GridContainer>` in the layout XML, **and** that `<GridContainer>` has nested children (not flat siblings). |

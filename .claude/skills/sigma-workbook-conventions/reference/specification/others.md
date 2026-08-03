@@ -153,11 +153,15 @@ round-trippable through the spec (2026-07-02) against the harvested
 reality.** It said buttons, modals/popovers, tabbed containers, page
 breaks, and action sequences were "not supported as standalone element
 kinds" and that workbooks using them "break GET-spec." **All five are
-fully spec-able and were verified via clean `GET /v2/workbooks/<id>/spec`
-(HTTP 200) against 5 real production workbooks** — see
-`reference/capability-ledger.md` for the dated evidence, and
-`reference/specification/actions.md` / `pages.md` (new — see the plan
-that retracted this section) for the shapes.
+fully spec-able.** Modal pages, tabbed containers, navigation, and page
+breaks are now **live-POST verified** (authored from scratch and
+POSTed, not just read via GET-spec) — see
+`reference/specification/pages.md` for the shapes and
+`reference/specification/layout.md` → "Five-tag grammar" for the layout
+XML. Buttons and action sequences are still GET-spec-only evidence
+pending their own chunk (actions — not yet written); see
+`reference/capability-ledger.md` for the full dated evidence table
+either way.
 
 This claim likely originated the way the real upstream `sigma-workbooks`
 skill's own docs warn against: a generic `Invalid kind` or a GET-spec 500

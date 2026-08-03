@@ -1,7 +1,8 @@
 # Layout
 
-Top-level `layout` XML — when to write it, the two-tag grammar, and
-the silent-failure traps the OpenAPI doesn't surface.
+Top-level `layout` XML — when to write it, the **five-tag grammar**
+(corrected 2026-08-03 — see below), and the silent-failure traps the
+OpenAPI doesn't surface.
 
 **Default to writing explicit `layout` XML for multi-element workbooks.**
 
@@ -81,7 +82,15 @@ These are two different things using the same key name:
 Both can coexist — the XML places the KPI on the grid; the object
 sets the KPI content's vertical anchor within its allocated cell.
 
-## Two-tag grammar
+## Five-tag grammar
+
+**Corrected 2026-08-03.** Previously documented as a "two-tag grammar"
+with a "closed" attribute set — both claims were wrong. Live-POST
+verified (not just observed via GET-spec) against a scratch probe
+workbook: the grammar has **five** tags, and two of them
+(`TabbedContainer`, `Tab`) exist specifically to represent the
+`tabbed-container` element kind — see `pages.md` for that element's
+JSON shape.
 
 ```xml
 <?xml version="1.0" encoding="utf-8"?>
@@ -91,12 +100,59 @@ sets the KPI content's vertical anchor within its allocated cell.
     <LayoutElement elementId="<childId>" gridColumn="1 / 13" gridRow="1 / 4"/>
   </GridContainer>
   <LayoutElement elementId="<elementId>" gridColumn="1 / 25" gridRow="4 / 16"/>
+  <TabbedContainer elementId="<tabsElementId>" type="tabbed-container" gridColumn="1 / 25" gridRow="16 / 40">
+    <Tab gridTemplateColumns="repeat(12, 1fr)" gridTemplateRows="auto">
+      <LayoutElement elementId="<tabAContentId>" gridColumn="1 / 13" gridRow="1 / 6"/>
+    </Tab>
+    <Tab gridTemplateColumns="repeat(12, 1fr)" gridTemplateRows="auto">
+      <LayoutElement elementId="<tabBContentId>" gridColumn="1 / 13" gridRow="1 / 6"/>
+    </Tab>
+  </TabbedContainer>
 </Page>
 ```
 
 Each `<Page id>` matches a `pages[].id`. Each `elementId` matches an
 element on that page. `gridColumn` / `gridRow` use standard CSS grid
 line syntax (`start / end`); the default grid is **24 columns wide**.
+
+### `<TabbedContainer>` / `<Tab>` — the two tags the old grammar missed
+
+- **`<TabbedContainer elementId="X" type="tabbed-container" ...>`** —
+  positioned exactly like a `<GridContainer>` (same `gridColumn`/
+  `gridRow` attributes), but appears as a **direct child of `<Page>`**
+  in every observed case, not nested inside a `<GridContainer>`.
+  `elementId` matches the workbook's `kind:"tabbed-container"` element.
+  Verified: the whole tag round-trips byte-for-byte through POST → GET
+  when authored as shown above.
+- **`<Tab gridTemplateColumns="..." gridTemplateRows="...">`** — **no
+  `elementId` at all.** Tabs bind to the element's own `tabs[]` JSON
+  array **positionally** — the first `<Tab>` is `tabs[0]`, the second
+  is `tabs[1]`, and so on. This is a silent-failure class identical in
+  shape to the `<GridContainer>` vs `<LayoutElement>` trap below: get
+  the `<Tab>` order wrong (or add/remove one without updating both the
+  XML and the `tabs[]` array in lockstep) and content lands on the
+  wrong tab with no error. Each `<Tab>` carries its **own**
+  `gridTemplateColumns`/`gridTemplateRows` (independent of the parent
+  page's), and its children are ordinary `<LayoutElement>`/
+  `<GridContainer>` tags — tab content elements are declared as **flat
+  siblings on the same page** in the JSON (never nested inside the
+  tabbed-container element itself); only the layout XML expresses which
+  tab they belong to.
+- **TabbedContainers nest.** A `<Tab>` may contain another
+  `<TabbedContainer>` (observed in a harvested production workbook, not
+  yet independently POST-verified by this skill).
+
+### Modal pages get a 12-column grid, not 24
+
+**Live-POST discovery, 2026-08-03:** a page with `type:"modal"` in its
+JSON authored with `gridTemplateColumns="repeat(24, 1fr)"` (matching a
+normal page) round-tripped with that attribute **silently rewritten to
+`repeat(12, 1fr)`** on GET-back — Sigma normalizes modal pages to a
+12-column grid regardless of what's authored. `gridColumn` values
+written for a 24-column span (e.g. `"1 / 25"`) were still accepted and
+stored without a clamp/error, but author modal-page content against a
+**12-column** grid (e.g. `"1 / 13"` for full width) to avoid relying on
+this normalization. See `pages.md` for the modal page's JSON shape.
 
 ## `<GridContainer>` vs `<LayoutElement>` — silent failure
 
@@ -208,6 +264,10 @@ corollary, summary-bar pattern — see `reference/conventions.md`.
 - `ContainerSpacing` / inter-element gap — UI-only.
 - `gap` between grid cells — UI-only.
 
-Layout XML attributes are limited to `gridColumn`, `gridRow`,
+Layout XML attributes observed so far: `gridColumn`, `gridRow`,
 `gridTemplateColumns`, `gridTemplateRows`, `elementId`, `type`, `id`.
-See `containers.md` → "What style does NOT capture."
+**Correction (2026-08-03):** this was previously called a closed set —
+it isn't. `<Tab>` carries no `elementId` at all (positional binding —
+see "Five-tag grammar" above), and the set may not be exhaustive beyond
+that; treat it as "observed," not "closed." See `containers.md` → "What
+style does NOT capture."
