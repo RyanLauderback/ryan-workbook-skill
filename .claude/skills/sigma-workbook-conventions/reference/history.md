@@ -1339,3 +1339,51 @@ to POST-verified, and removed the now-resolved inline-SVG-WAF-403
 
 **Retest note:** full 13-example validator regression re-run clean
 after every fix in this entry.
+
+## 2026-08-04 — Wave 4 / C8: scenario modeling pattern, 2 structural gotchas checked
+
+Per the plan, scenario/forecasting is deliberately **not** a
+`specification/` chunk — it's a composition of already-verified
+primitives (parameter controls, input-table writeback, multi-series
+line charts), filed under a new `reference/patterns/` directory so it
+doesn't read as a dedicated Sigma feature (the same hallucination
+shape the `DivideSafe` incident warns against).
+
+**Confirmed real:** `CallVariant` — the forecasting mechanism's core
+function — via Sigma's own function docs (`CallVariant(functionName,
+arg1, ...)`, calls a warehouse UDF returning a `Variant`). The specific
+UDF example from harvest evidence (`SNOWPARK_UDF.AUTO_TIMESERIES_MODEL`)
+and its `.Prediction`/`.Lower_CI`/`.Upper_CI` accessor names remain
+harvest-only — this session had no real forecasting UDF available to
+test against, and those accessor names are almost certainly
+UDF-specific, not a Sigma convention.
+
+**Structural gotcha #1, partially confirmed:** live-POSTed a control
+with `filters[]` targeting a real input-table (reusing the Wave 3
+probe workbook). **The spec accepts it outright** — clean POST,
+byte-for-byte GET-back, no rejection or stripping. This means the
+millersigma claim ("controls cannot filter input tables or pivots") is
+not a POST-time validation rule; this skill has not independently
+confirmed the other half of the claim (that the filter is a silent
+functional no-op in the rendered UI), since that requires visual
+inspection this session has no tool for. Documented as
+partially-confirmed, with the practical guidance (bind to a derived
+normal table instead) stated as a precaution, not a proven requirement.
+
+**Structural gotcha #2, confirmed at the schema level:** inspected the
+live OpenAPI's complete field list for the `input-table` element kind
+— `id`, `kind`, `source`, `inputMode`, `name`, `description`, `style`,
+`noDataText`, `tableComponents`, `tableStyle`, `columns`,
+`conditionalFormats`, `summary`, `sort`, `filters`. **No field exists
+anywhere for seed/initial row data** — the only ways rows enter an
+input table are user entry or the `insert-rows` effect. This
+structurally confirms the "input-table rows cannot be seeded from
+code" claim rather than just repeating it from harvest.
+
+**Fix.** Added `reference/patterns/scenario-modeling.md`, citing the
+already-verified primitive chunk for each piece (`formulas.md` for
+`CallVariant`, `controls.md` for parameter controls,
+`input-tables.md`/`actions.md` for writeback, `charts.md` for the
+confidence-band line chart), and clearly separating what this wave
+confirmed from what remains harvest-only. Added the "Scenario /
+what-if / forecast build" gate row to `SKILL.md`.

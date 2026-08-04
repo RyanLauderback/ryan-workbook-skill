@@ -211,6 +211,7 @@ session and cite chunk + section in the plan.
 | Interactive build (buttons, on-select, overlays, tab-switching, input-table writeback) | + `reference/specification/actions.md` + `reference/specification/dynamic-values.md` |
 | Editable / writeback build (input tables, `insert-rows`/`delete-rows`) | + `reference/specification/input-tables.md` + `reference/specification/actions.md` |
 | Agent / chat build (`agents[]`, `chat` element, agent tools) | + `reference/specification/agents.md` + `reference/specification/actions.md` + `reference/specification/dynamic-values.md` |
+| Scenario / what-if / forecast build | + `reference/patterns/scenario-modeling.md` + `reference/specification/controls.md` + `reference/specification/input-tables.md` |
 | Round-trip / edge-case work (POST failures, format fields, axis controls) | + `reference/scope-and-edge-cases.md` + `reference/workflows/validate.md` + `reference/capability-ledger.md` |
 | Deciding whether a feature is "supported" (before writing any "not supported" claim) | + `reference/capability-ledger.md` → the retest protocol, first |
 | From-image build (screenshot / mockup reproduction) | + `reference/workflows/from-image.md` (load BEFORE data discovery) |
@@ -548,6 +549,15 @@ OpenAPI `jq` recipe.
   prefixes + friendly-name normalization.
 - `sources.md` — `table` / `data-model` / `join` / `union` / `sql` /
   `transpose` source kinds + two-tier sourcing pattern reference.
+- `reference/patterns/scenario-modeling.md` — forecasting via
+  `CallVariant` (a real function, confirmed 2026-08-04; the specific
+  UDF/accessor names are harvest-only) + what-if via parameter
+  controls + 2 structural gotchas (controls can't usefully filter
+  input-tables/pivots; input-table rows can't be seeded from code —
+  the latter confirmed at the schema level 2026-08-04). Deliberately
+  filed under `patterns/`, not `specification/` — a composition of
+  already-verified primitives, not a spec surface of its own. New
+  2026-08-04 (Wave 4 / C8).
 - `example-full.yaml` — multi-page reference spec (KPIs, charts, join
   sources, controls, custom layout) authored locally for this skill.
   **Correction (2026-08-03):** previously described as "verbatim ...
