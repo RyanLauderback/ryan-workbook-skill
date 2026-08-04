@@ -1,0 +1,126 @@
+{
+  "name": "Scenario Planner",
+  "description": "Wave 3 / C5+C6 exemplar — editable input-table (writeback) paired with an AI agent that writes to it. Modeled directly on the live-POST-verified probe in reference/history.md -> \"2026-08-04 -- Wave 3 / C5+C6\". Demonstrates: input-table with all 6 column shapes, insert-rows/delete-rows via buttons, and an agent tool that writes to the same table via agent-input values.",
+  "folderId": "<destination-folder-id>",
+  "schemaVersion": 1,
+  "pages": [
+    {
+      "id": "page-scenarios",
+      "name": "Scenario Planner",
+      "elements": [
+        {
+          "id": "elem-ctrl-region",
+          "kind": "control",
+          "controlId": "ctrl-region",
+          "name": "Region",
+          "controlType": "segmented",
+          "source": {
+            "kind": "manual",
+            "valueType": "text",
+            "values": ["East", "West"],
+            "labels": ["East", "West"]
+          },
+          "value": "East"
+        },
+        {
+          "id": "input-tbl-scenarios",
+          "kind": "input-table",
+          "inputMode": "explore",
+          "source": { "kind": "empty", "connectionId": "<connection-id>" },
+          "columns": [
+            { "id": "ID" },
+            { "id": "CREATED_AT" },
+            { "id": "CREATED_BY" },
+            { "id": "UPDATED_AT" },
+            { "id": "UPDATED_BY" },
+            { "id": "col-name", "name": "Name", "type": "text" },
+            { "id": "col-forecast", "name": "Forecast", "type": "number" },
+            { "id": "col-target-date", "name": "Target Date", "type": "datetime" },
+            { "id": "col-approved", "name": "Approved", "type": "checkbox" },
+            { "id": "col-status", "name": "Status", "type": "text", "values": ["Draft", "Submitted", "Approved"], "pills": "color-by-option" },
+            { "id": "col-adjusted", "name": "Adjusted Forecast", "formula": "[Forecast] * 1.1" }
+          ]
+        },
+        {
+          "id": "btn-add-scenario",
+          "kind": "button",
+          "text": "Add Scenario",
+          "appearance": "filled",
+          "actions": [
+            {
+              "id": "act-add-scenario",
+              "trigger": "on-click",
+              "effects": [
+                {
+                  "effect": "insert-rows",
+                  "table": "input-tbl-scenarios",
+                  "values": {
+                    "col-name": { "type": "constant", "value": { "type": "text", "value": "New Scenario" } },
+                    "col-forecast": { "type": "constant", "value": { "type": "number", "value": 0 } },
+                    "col-approved": { "type": "constant", "value": { "type": "boolean", "value": false } },
+                    "col-status": { "type": "constant", "value": { "type": "text", "value": "Draft" } }
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "btn-delete-scenario",
+          "kind": "button",
+          "text": "Delete Draft Scenarios",
+          "appearance": "outline",
+          "actions": [
+            {
+              "id": "act-delete-scenario",
+              "trigger": "on-click",
+              "effects": [
+                {
+                  "effect": "delete-rows",
+                  "table": "input-tbl-scenarios",
+                  "whichRows": { "type": "formula", "formula": "[Status] = \"Draft\"" }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "chat-scenario-agent",
+          "kind": "chat",
+          "agentId": "agent-scenario"
+        }
+      ]
+    }
+  ],
+  "agents": [
+    {
+      "id": "agent-scenario",
+      "name": "Scenario Assistant",
+      "instructions": "Help the user manage revenue scenarios. Current region filter: {{[ctrl-region]}}. When the user describes a new scenario in conversation, use the Add Scenario tool to record it as a Draft row rather than telling them to use the form.",
+      "dataSources": [
+        { "kind": "table", "elementId": "input-tbl-scenarios" }
+      ],
+      "tools": [
+        {
+          "toolId": "tool-add-scenario",
+          "kind": "action",
+          "name": "Add Scenario",
+          "description": "Adds a new scenario row with a model-supplied name and forecast value.",
+          "steps": [
+            {
+              "kind": "effect",
+              "effect": "insert-rows",
+              "table": "input-tbl-scenarios",
+              "values": {
+                "col-name": { "type": "agent-input", "inputName": "scenarioName" },
+                "col-forecast": { "type": "agent-input", "inputName": "forecastValue" },
+                "col-status": { "type": "constant", "value": { "type": "text", "value": "Draft" } }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "layout": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<Page type=\"grid\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\" id=\"page-scenarios\">\n  <LayoutElement elementId=\"elem-ctrl-region\" gridColumn=\"1 / 7\" gridRow=\"1 / 4\"/>\n  <LayoutElement elementId=\"btn-add-scenario\" gridColumn=\"7 / 13\" gridRow=\"1 / 4\"/>\n  <LayoutElement elementId=\"btn-delete-scenario\" gridColumn=\"13 / 19\" gridRow=\"1 / 4\"/>\n  <LayoutElement elementId=\"input-tbl-scenarios\" gridColumn=\"1 / 19\" gridRow=\"4 / 20\"/>\n  <LayoutElement elementId=\"chat-scenario-agent\" gridColumn=\"19 / 25\" gridRow=\"1 / 20\"/>\n</Page>\n"
+}

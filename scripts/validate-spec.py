@@ -648,6 +648,15 @@ def issues_action_refs_resolve(spec: dict) -> list[tuple[str, str]]:
     This is the referential-integrity gap flagged as a known omission
     when the effect vocabulary shipped (see `reference/history.md`).
 
+    Extended 2026-08-04 (Wave 3 / C5+C6) to also walk
+    `agents[].tools[].steps[]` — confirmed via a live POST probe
+    (`reference/specification/agents.md`) to reuse this exact same
+    effect vocabulary, just with an added `kind:"effect"` sibling key
+    on each step — and to check `chat.agentId` against `agents[].id`.
+    Previously this check only covered `actions[].effects[]` on page
+    elements; a dangling reference from an agent tool step failed just
+    as silently and was unchecked.
+
     Checks, per effect (shapes verified via a live POST probe,
     `reference/specification/actions.md`):
     - `set-control-value`: `control` (target) and `value.control` (if
@@ -662,6 +671,7 @@ def issues_action_refs_resolve(spec: dict) -> list[tuple[str, str]]:
       element `id`; `insert-rows.values` keys match that table's column
       `id`s, and any nested `{type:"control"}` value's `control` is a
       known controlId.
+    - `chat.agentId` matches a known `agents[].id`.
     """
     issues = []
     all_elements = _all_elements(spec)
@@ -669,6 +679,7 @@ def issues_action_refs_resolve(spec: dict) -> list[tuple[str, str]]:
     elements_by_id = {el.get("id"): el for _, el in all_elements if el.get("id")}
     modal_page_ids = {p.get("id") for p in spec.get("pages", []) if p.get("type") == "modal"}
     all_page_ids = {p.get("id") for p in spec.get("pages", [])}
+    agent_ids = {a.get("id") for a in (spec.get("agents") or []) if a.get("id")}
 
     def _check_control(label: str, cid: str | None, loc: str):
         if cid and cid not in control_ids:
@@ -678,86 +689,109 @@ def issues_action_refs_resolve(spec: dict) -> list[tuple[str, str]]:
                 "The effect will silently no-op."
             ))
 
+    def _check_effect(fx: dict, loc: str):
+        effect = fx.get("effect")
+        loc = f"{loc} ({effect})"
+
+        if effect == "set-control-value":
+            _check_control("target control", fx.get("control"), loc)
+            value = fx.get("value") or {}
+            if value.get("type") == "control":
+                _check_control("source control", value.get("control"), loc)
+
+        elif effect == "clear-control":
+            scope = fx.get("scope") or {}
+            if scope.get("type") == "control":
+                _check_control("scope control", scope.get("control"), loc)
+
+        elif effect == "open-overlay":
+            overlay_id = fx.get("overlayId")
+            if overlay_id and overlay_id not in modal_page_ids:
+                issues.append((
+                    "fail",
+                    f"{loc}: overlayId `{overlay_id}` does not match any page with "
+                    "`type:\"modal\"`. The overlay will silently fail to open."
+                ))
+
+        elif effect == "navigate":
+            target = fx.get("target") or {}
+            page_id = target.get("page")
+            if page_id and page_id not in all_page_ids:
+                issues.append((
+                    "fail",
+                    f"{loc}: target.page `{page_id}` does not match any page `id`. "
+                    "The navigation will silently no-op."
+                ))
+
+        elif effect == "select-tab":
+            tc_id = fx.get("tabbedContainer")
+            tc_el = elements_by_id.get(tc_id)
+            if tc_id and (tc_el is None or tc_el.get("kind") != "tabbed-container"):
+                issues.append((
+                    "fail",
+                    f"{loc}: tabbedContainer `{tc_id}` does not match any "
+                    "`kind:\"tabbed-container\"` element. The tab switch will silently no-op."
+                ))
+            elif tc_el is not None:
+                idx = (fx.get("selectedTab") or {}).get("index")
+                n_tabs = len(tc_el.get("tabs") or [])
+                if isinstance(idx, int) and not (0 <= idx < n_tabs):
+                    issues.append((
+                        "fail",
+                        f"{loc}: selectedTab.index {idx} is out of range for "
+                        f"`{tc_id}`, which has {n_tabs} tab(s) (valid: 0-{n_tabs - 1})."
+                    ))
+
+        elif effect in ("insert-rows", "delete-rows"):
+            table_id = fx.get("table")
+            table_el = elements_by_id.get(table_id)
+            if table_id and (table_el is None or table_el.get("kind") != "input-table"):
+                issues.append((
+                    "fail",
+                    f"{loc}: table `{table_id}` does not match any "
+                    "`kind:\"input-table\"` element. The write will silently no-op."
+                ))
+            elif table_el is not None and effect == "insert-rows":
+                table_col_ids = {
+                    c.get("id") for c in (table_el.get("columns") or []) if c.get("id")
+                }
+                for col_id, val in (fx.get("values") or {}).items():
+                    if col_id not in table_col_ids:
+                        issues.append((
+                            "fail",
+                            f"{loc}: values key `{col_id}` does not match any column "
+                            f"`id` on input-table `{table_id}`."
+                        ))
+                    if isinstance(val, dict) and val.get("type") == "control":
+                        _check_control(
+                            f"values[{col_id!r}] control", val.get("control"), loc
+                        )
+
     for pi, el in all_elements:
         el_label = el.get("id") or "(unnamed)"
         for ai, action in enumerate(el.get("actions", []) or []):
             for fi, fx in enumerate(action.get("effects", []) or []):
-                effect = fx.get("effect")
-                loc = f"pages[{pi}].elements ({el_label}).actions[{ai}].effects[{fi}] ({effect})"
+                loc = f"pages[{pi}].elements ({el_label}).actions[{ai}].effects[{fi}]"
+                _check_effect(fx, loc)
 
-                if effect == "set-control-value":
-                    _check_control("target control", fx.get("control"), loc)
-                    value = fx.get("value") or {}
-                    if value.get("type") == "control":
-                        _check_control("source control", value.get("control"), loc)
+        if el.get("kind") == "chat":
+            agent_id = el.get("agentId")
+            if agent_id and agent_id not in agent_ids:
+                issues.append((
+                    "fail",
+                    f"pages[{pi}].elements ({el_label}): agentId `{agent_id}` does not "
+                    "match any `agents[].id` in the spec. The chat element will render "
+                    "with no agent attached."
+                ))
 
-                elif effect == "clear-control":
-                    scope = fx.get("scope") or {}
-                    if scope.get("type") == "control":
-                        _check_control("scope control", scope.get("control"), loc)
+    for gi, agent in enumerate(spec.get("agents") or []):
+        agent_label = agent.get("id") or "(unnamed)"
+        for ti, tool in enumerate(agent.get("tools", []) or []):
+            tool_label = tool.get("toolId") or "(unnamed)"
+            for si, step in enumerate(tool.get("steps", []) or []):
+                loc = f"agents[{gi}] ({agent_label}).tools[{ti}] ({tool_label}).steps[{si}]"
+                _check_effect(step, loc)
 
-                elif effect == "open-overlay":
-                    overlay_id = fx.get("overlayId")
-                    if overlay_id and overlay_id not in modal_page_ids:
-                        issues.append((
-                            "fail",
-                            f"{loc}: overlayId `{overlay_id}` does not match any page with "
-                            "`type:\"modal\"`. The overlay will silently fail to open."
-                        ))
-
-                elif effect == "navigate":
-                    target = fx.get("target") or {}
-                    page_id = target.get("page")
-                    if page_id and page_id not in all_page_ids:
-                        issues.append((
-                            "fail",
-                            f"{loc}: target.page `{page_id}` does not match any page `id`. "
-                            "The navigation will silently no-op."
-                        ))
-
-                elif effect == "select-tab":
-                    tc_id = fx.get("tabbedContainer")
-                    tc_el = elements_by_id.get(tc_id)
-                    if tc_id and (tc_el is None or tc_el.get("kind") != "tabbed-container"):
-                        issues.append((
-                            "fail",
-                            f"{loc}: tabbedContainer `{tc_id}` does not match any "
-                            "`kind:\"tabbed-container\"` element. The tab switch will silently no-op."
-                        ))
-                    elif tc_el is not None:
-                        idx = (fx.get("selectedTab") or {}).get("index")
-                        n_tabs = len(tc_el.get("tabs") or [])
-                        if isinstance(idx, int) and not (0 <= idx < n_tabs):
-                            issues.append((
-                                "fail",
-                                f"{loc}: selectedTab.index {idx} is out of range for "
-                                f"`{tc_id}`, which has {n_tabs} tab(s) (valid: 0-{n_tabs - 1})."
-                            ))
-
-                elif effect in ("insert-rows", "delete-rows"):
-                    table_id = fx.get("table")
-                    table_el = elements_by_id.get(table_id)
-                    if table_id and (table_el is None or table_el.get("kind") != "input-table"):
-                        issues.append((
-                            "fail",
-                            f"{loc}: table `{table_id}` does not match any "
-                            "`kind:\"input-table\"` element. The write will silently no-op."
-                        ))
-                    elif table_el is not None and effect == "insert-rows":
-                        table_col_ids = {
-                            c.get("id") for c in (table_el.get("columns") or []) if c.get("id")
-                        }
-                        for col_id, val in (fx.get("values") or {}).items():
-                            if col_id not in table_col_ids:
-                                issues.append((
-                                    "fail",
-                                    f"{loc}: values key `{col_id}` does not match any column "
-                                    f"`id` on input-table `{table_id}`."
-                                ))
-                            if isinstance(val, dict) and val.get("type") == "control":
-                                _check_control(
-                                    f"values[{col_id!r}] control", val.get("control"), loc
-                                )
     return issues
 
 
@@ -1028,8 +1062,8 @@ def main() -> None:
         "— a clean run does not guarantee the spec renders correctly. "
         "`bare-ref-resolution` only catches bare (unqualified) refs; qualified "
         "refs are not verified here (the server checks those on publish). "
-        "`action-refs-resolve` verifies overlayId/control/table/tabbedContainer "
-        "references but not `agentId` (no agent-surface chunk yet) — always "
+        "`action-refs-resolve` verifies overlayId/control/table/tabbedContainer/"
+        "agentId references, including inside agents[].tools[].steps[] — always "
         "visually verify after publish."
     )
 

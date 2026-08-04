@@ -209,6 +209,8 @@ session and cite chunk + section in the plan.
 | Map-bearing build (`geography-map`, `point-map`, `region-map`) | + `reference/specification/maps.md` |
 | Multi-surface build (tabbed containers, modal pages, navigation, page breaks) | + `reference/specification/pages.md` + `reference/specification/layout.md` → "Five-tag grammar" |
 | Interactive build (buttons, on-select, overlays, tab-switching, input-table writeback) | + `reference/specification/actions.md` + `reference/specification/dynamic-values.md` |
+| Editable / writeback build (input tables, `insert-rows`/`delete-rows`) | + `reference/specification/input-tables.md` + `reference/specification/actions.md` |
+| Agent / chat build (`agents[]`, `chat` element, agent tools) | + `reference/specification/agents.md` + `reference/specification/actions.md` + `reference/specification/dynamic-values.md` |
 | Round-trip / edge-case work (POST failures, format fields, axis controls) | + `reference/scope-and-edge-cases.md` + `reference/workflows/validate.md` + `reference/capability-ledger.md` |
 | Deciding whether a feature is "supported" (before writing any "not supported" claim) | + `reference/capability-ledger.md` → the retest protocol, first |
 | From-image build (screenshot / mockup reproduction) | + `reference/workflows/from-image.md` (load BEFORE data discovery) |
@@ -342,12 +344,13 @@ ID semantics and is separate from this workbook-spec behavior.
   (`sigma-data-models` skill scope). Avoid generating these in a data-model spec.
   **Correction (2026-08-03):** this line previously also named input tables,
   which read as a blanket prohibition and contradicted
-  `reference/specification/tables.md` → "Input tables". Input tables are a
+  `reference/specification/input-tables.md`. Input tables are a
   *workbook* spec element (`kind: "input-table"`), not a data-model
-  construct — they are fully supported, verified via clean GET-spec
-  (HTTP 200) against 5 real production workbooks holding 27 input-table
-  instances combined. See `reference/capability-ledger.md`. This
-  constraint is scoped to data-model round-trip only.
+  construct — they are fully supported, **live-POST verified**
+  (2026-08-04, Wave 3 / C5) after starting from GET-spec confirmation
+  against 5 real production workbooks holding 27 input-table instances
+  combined. See `reference/capability-ledger.md`. This constraint is
+  scoped to data-model round-trip only.
 
 ### Secrets
 
@@ -489,9 +492,10 @@ OpenAPI `jq` recipe.
 - `kpis.md` — `kpi-chart` shape (`value.columnId`), sparkline via
   date dimension, styled-name object form, element-level `layout`
   object (`anchor`), polymorphic `description`, no-delta limitation.
-- `tables.md` — `table` + `pivot-table` + `input-table` (minimal) +
+- `tables.md` — `table` + `pivot-table` +
   `conditionalFormats` (4 variants) + `tableStyle` +
   `tableComponents` + styled-name + `noDataText` + `summary` bar.
+  (`input-table` moved to `input-tables.md`.)
 - `controls.md` — 11 accepted controlTypes (`list`, `date-range`,
   `date`, `text`, `text-area`, `number`, `number-range`, `slider`,
   `range-slider`, `toggle`/`switch`/`checkbox`, `segmented`,
@@ -515,9 +519,17 @@ OpenAPI `jq` recipe.
   `open-url`, `insert-rows`/`delete-rows`). All live-POST verified
   2026-08-03 (Wave 2 / C3 — 2 via a real build, 7 via a dedicated probe).
 - `dynamic-values.md` — the slot → accepted-form matrix for dynamic
-  values: the 5 structured `{type: ...}` forms (`constant`, `formula`,
-  `column`, `control` all live-POST verified; `agent-input` GET-spec
-  evidence only) plus `{{formula}}` string interpolation.
+  values: all 5 structured `{type: ...}` forms (`constant`, `formula`,
+  `column`, `control`, `agent-input`) live-POST verified, plus
+  `{{formula}}` string interpolation.
+- `input-tables.md` — `input-table` element: `empty`/`linked` source,
+  all 6 column shapes (system, key, editable, dropdown, formula, plus
+  `filters`/`sort`/`conditionalFormats`), `insert-rows`/`delete-rows`
+  writeback. All live-POST verified 2026-08-04 (Wave 3 / C5).
+- `agents.md` — top-level `agents[]` + `chat` element + agent
+  `tools[].steps[]` (reusing the `actions.md` effect vocabulary,
+  `agent-input` for model-supplied values) + `{{formula}}` in
+  `instructions`. All live-POST verified 2026-08-04 (Wave 3 / C6).
 - `maps.md` — `geography-map` + `point-map` + `region-map` (with
   `regionType` enum) + single-vs-array shape gotcha on binding
   fields.
@@ -551,6 +563,8 @@ than editing in place. Match your task to the closest exemplar below;
   - `data-model-sourced-multi-element-catalog.json` — 6 chart kinds, 3 KPIs, 4 control types, multi-level `groupings`.
   - `data-model-sourced-multi-level-aggregated-table.json` — combo-chart shape reference.
   - `additional-workbook-features-chart-and-control-catalog.json` — area stacking, pie chart, scatter.
+- **Editable / agent-enabled:**
+  - `input-table-agent-scenario-planner.json` (2026-08-04) — editable input-table with all 6 column shapes, `insert-rows`/`delete-rows` writeback via buttons, and an AI agent whose tool writes to the same table via `agent-input` values. **First exemplar to load for any build involving writeback or an agent.** Paired with `.prompt.md`.
 - **Pattern-specific:**
   - `data-model-sourced-cohort-pivot.json` — two-tier sourcing (raw → derived) + `Rollup` + weeks-since-first-action pivot. Clone for cohort/retention.
   - `data-model-sourced-multi-page-profitability-attrition.json` — 4-page reference with per-page source tables + `Lookup()` demographic passthrough.

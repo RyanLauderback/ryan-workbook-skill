@@ -185,20 +185,22 @@ each existing row; matching rows are removed. The formula's bare
 (`"Note"`, the `name` on `col-note`) — same bare-ref resolution rules as
 any other element.
 
-Agent tools (`agents[].tools[].steps[]`, once that chunk exists) reuse
-this exact same effect vocabulary, with one addition:
-`{type: "agent-input", inputName}` as a dynamic-value form the model
-supplies at call time — see `dynamic-values.md`.
+Agent tools (`agents[].tools[].steps[]`) reuse this exact same effect
+vocabulary, with one addition: `{type: "agent-input", inputName}` as a
+dynamic-value form the model supplies at call time — see
+`dynamic-values.md`. **Live-POST verified** (Wave 3 / C5+C6 probe):
+each step is shaped exactly like a button's effect object, plus one
+added sibling key, `kind:"effect"`. See `agents.md`.
 
 ## What's still unverified
 
-- **Referential integrity is not yet enforced by `validate-spec.py`.** A
-  dangling `overlayId`, `control`, `table`, `tabbedContainer`, or
-  `navigate.target.page` currently fails silently at runtime — POST
-  succeeds, nothing renders or fires when clicked. See the new
-  `action-refs-resolve` check (added alongside this chunk).
-- `agents[].tools[].steps[]` reusing this vocabulary — GET-spec-only
-  evidence (harvested production workbooks), not yet independently
-  authored-and-POSTed by this skill. Covered once the agent surface
-  chunk lands.
+- **Referential integrity is enforced by `validate-spec.py` for
+  `actions[].effects[]`; also extended to `agents[].tools[].steps[]`
+  and `chat.agentId` this wave.** A dangling `overlayId`, `control`,
+  `table`, `tabbedContainer`, `navigate.target.page`, or `agentId`
+  fails silently at runtime otherwise — POST succeeds, nothing renders
+  or fires when clicked. See the `action-refs-resolve` check.
+- Whether tool steps support the full 9-effect vocabulary or only
+  `insert-rows`/`delete-rows` — only `insert-rows` was independently
+  probed as a tool step so far. See `agents.md`.
 - Effect `style` fields on buttons beyond `appearance` (see above).

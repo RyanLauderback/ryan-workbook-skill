@@ -5,7 +5,8 @@ didn't know values could be dynamic" — it's "I used the wrong form in
 this slot," and no field name tells you which. This file is a **slot →
 accepted-form matrix**, not a tutorial on any one form. Consumed by
 `actions.md` (effect fields), `pages.md` (modal header title), `agents.md`
-(once it exists), and any dynamic-text build (`text.md`).
+(agent instructions + tool `agent-input`), and any dynamic-text build
+(`text.md`).
 
 Two independent mechanisms exist. Don't conflate them:
 
@@ -28,7 +29,7 @@ structured object.
 | `formula` | `{type:"formula", formula:"<expr>"}` | **Live-POST verified** (same probe) | `delete-rows.whichRows`; plausible anywhere else a computed value is needed (unconfirmed beyond `whichRows`) |
 | `column` | `{type:"column", column:"<columnId>"}` | **Live-POST verified**, via a real build (`fe0140e9-...`) — reads a column's value from the element that triggered the action (e.g. the clicked map region) | `set-control-value.value` |
 | `control` | `{type:"control", control:"<controlId>"}` | **Live-POST verified** (Wave 2 / C3 probe, second round) — reads a control's current value | `insert-rows.values[col]`; also documented (harvest evidence only) as usable in `set-control-value.value` |
-| `agent-input` | `{type:"agent-input", inputName:"<name>"}` | **GET-spec / harvest evidence only** — observed in production workbooks' `agents[].tools[].steps[]`, not yet independently authored-and-POSTed by this skill. The model supplies the value at call time. Confirm once the agent-surface chunk lands. |
+| `agent-input` | `{type:"agent-input", inputName:"<name>"}` | **Live-POST verified** (Wave 3 / C5+C6 probe, `b7fead6d-504e-48e7-b623-e41576ce8eb5`) — used in an agent tool's `insert-rows.values`, round-tripped byte-for-byte. The model supplies the value at call time, based on `inputName` and the tool's `description`. |
 
 All five forms share the outer `{type: ...}` discriminator. Effect
 fields document *which* forms they accept in `actions.md`; when in
@@ -55,7 +56,7 @@ Confirmed slots for `{{formula}}`, by evidence tier:
 | `modal.header.title` | **Live-POST verified** (this skill's own C3 probe) |
 | `image.source.url` | GET-spec/harvest evidence (a real production workbook selects between several image URLs via `{{If(...)}}`) — not yet independently POSTed by this skill |
 | `text` element `body` | Documented elsewhere in this skill (`text.md`) as an established, pre-Wave-2 pattern with a d3-format-suffix convention |
-| `agents[].instructions` | GET-spec/harvest evidence only — e.g. `{{[pProductName]}}` interpolated into an agent's system prompt |
+| `agents[].instructions` | **Live-POST verified** (Wave 3 / C5+C6 probe) — a bare `{{[controlId]}}` reference round-tripped byte-for-byte, same mechanism as the modal-header-title probe |
 
 **Bare `[controlId]` references work both inside `{{}}` interpolation
 and directly in ordinary formulas** — see `controls.md` → "Numeric
@@ -77,8 +78,9 @@ in a build where it's load-bearing.
 
 ## What's still unverified
 
-- `agent-input` as a value-binding form — needs the agent surface (C6)
-  to exist before it can be probed meaningfully.
-- `{{formula}}` in `image.source.url` and `agents[].instructions` —
-  harvest evidence only, not this skill's own POST.
+- `{{formula}}` in `image.source.url` — harvest evidence only, not this
+  skill's own POST.
 - `[<control>].start`/`.end` accessors — harvest evidence only.
+- Whether `agent-input` is usable outside agent tool steps (e.g. in a
+  button's `set-control-value.value`) — only probed inside
+  `insert-rows.values` this wave.

@@ -54,8 +54,8 @@ workbooks:
 | `page-break` | Workbooks Demo 2026 — 2026-08-03 GET-spec; **`b9e4bc48-afa8-4085-b94d-fdd61c06bf0d` — 2026-08-03 POST-verified** | GET-spec 200; `kind:"page-break"` present. **Authored from scratch and POSTed** — round-trips with no fields beyond `id`/`kind`. |
 | All 9 effects (`set-control-value`, `clear-control`, `open-overlay`, `close-overlay`, `navigate`, `select-tab`, `open-url`, `insert-rows`, `delete-rows`) | GET-spec: all 5 harvested workbooks — 2026-08-03. **POST-verified**: `set-control-value`+`open-overlay` via a real build (`fe0140e9-3798-4a9a-a30b-03af8ddbc8ef`); the other 7 via `189db290-7674-4032-9ff7-7fad59dc14fa` (Wave 2 / C3 probe) — 2026-08-03 | **All 9 authored from scratch and POSTed**, byte-for-byte round-trip. Referential semantics confirmed: `set-control-value.control`/`clear-control.scope.control` = `controlId`; `open-overlay.overlayId`/`navigate.target.page` = page `id`; `select-tab.tabbedContainer` = element `id`, `selectedTab.index` 0-based; `insert-rows`/`delete-rows.table` = input-table element `id`. See `actions.md`. |
 | 4 of 5 dynamic-value forms (`constant`, `formula`, `column`, `control`) | Wave 2 / C3 probe — 2026-08-03 | **Authored from scratch and POSTed**, byte-for-byte round-trip, including `{{formula}}` string interpolation with a bare `[controlId]` reference in a modal header title. `agent-input` remains GET-spec-only pending the agent surface. See `dynamic-values.md`. |
-| `input-table` element | All 5 harvested workbooks (27 instances combined) — 2026-08-03 | GET-spec 200; field names cross-confirmed against the real upstream `sigma-workbooks` skill's `tables.md` (independent source, same conclusion: column field is `type`, not `columnType`) |
-| `agents[]` + `chat` element | Insurance P4P Analytics, Workbooks Demo 2026, Marketing Control Center, Bergey's Unified Insights — 2026-08-03 | GET-spec 200; `agents:[{id,name,instructions,dataSources,tools}]` present; `tools[].steps[]` reuse the same effect vocabulary as buttons |
+| `input-table` element (`empty`+`linked` source, all 6 column shapes, `insert-rows`/`delete-rows` writeback) | GET-spec: all 5 harvested workbooks (27 instances combined) — 2026-08-03. **POST-verified**: `b7fead6d-504e-48e7-b623-e41576ce8eb5` — 2026-08-04 (Wave 3 / C5 probe) | GET-spec 200; field names cross-confirmed against the real upstream `sigma-workbooks` skill's `tables.md` (independent source, same conclusion: column field is `type`, not `columnType`). **Authored from scratch and POSTed** — both `empty` (real connectionId) and `linked` (`from` + bare-column-id `key`, correcting the harvest's `inode-<id>/COL` assumption) source variants, all 6 column shapes, and both writeback effects via a button, all round-tripped byte-for-byte. See `input-tables.md`. |
+| `agents[]` + `chat` element (incl. agent tool `insert-rows` writeback + `agent-input` values) | GET-spec: Insurance P4P Analytics, Workbooks Demo 2026, Marketing Control Center, Bergey's Unified Insights — 2026-08-03. **POST-verified**: `b7fead6d-504e-48e7-b623-e41576ce8eb5` — 2026-08-04 (Wave 3 / C6 probe, same workbook as the input-table probe) | GET-spec 200; `agents:[{id,name,instructions,dataSources,tools}]` present; `tools[].steps[]` reuse the same effect vocabulary as buttons. **Authored from scratch and POSTed** — `chat` element + `agents[]` with a tool writing to a real input-table via `insert-rows` + `agent-input` dynamic values + `{{formula}}`-interpolated `instructions`, all round-tripped byte-for-byte. See `agents.md`. |
 | `image` with `{{formula}}` URL | Workbooks Demo 2026 — 2026-08-03 | GET-spec 200; `image.source.url` containing `{{If(...)}}` |
 | `image` with inline `data:image/svg+xml;base64,...` | Marketing Control Center — 2026-08-03 | GET-spec 200; two lucide-icon SVGs decoded and confirmed valid |
 | `navigation` element | Workbooks Demo 2026 — 2026-08-03 GET-spec; **`b9e4bc48-afa8-4085-b94d-fdd61c06bf0d` — 2026-08-03 POST-verified** | GET-spec 200; `kind:"navigation"` + `mode` present. **Authored from scratch and POSTed** — `mode:"auto"` round-trips unchanged. |
@@ -70,11 +70,15 @@ part of the Wave 1 / C2 probe (2026-08-03, workbook
 + all 9 effects + 4 of 5 dynamic-value forms were authored from scratch
 and POSTed as part of the Wave 2 / C3 probe (2026-08-03, workbook
 `189db290-7674-4032-9ff7-7fad59dc14fa`) plus a real build-mode session
-(`fe0140e9-3798-4a9a-a30b-03af8ddbc8ef`). None of those are GET-spec-only
-anymore. Everything else in the table above (`input-table`, `agents[]`+
-`chat`, `image` variants, `plugin`, `agent-input`) is still GET-spec
-(read) confirmation only — "supported" for those means "the live API
-emits this shape for a working, currently-rendering workbook," which is
+(`fe0140e9-3798-4a9a-a30b-03af8ddbc8ef`). `input-table` (both source
+variants, all 6 column shapes), `agents[]` + `chat`, agent tool
+`insert-rows` writeback, and the 5th dynamic-value form (`agent-input`)
+were authored from scratch and POSTed as part of the Wave 3 / C5+C6
+probe (2026-08-04, workbook `b7fead6d-504e-48e7-b623-e41576ce8eb5`).
+None of those are GET-spec-only anymore. Everything else in the table
+above (`image` variants, `plugin`) is still GET-spec (read)
+confirmation only — "supported" for those means "the live API emits
+this shape for a working, currently-rendering workbook," which is
 strong evidence but not proof that authoring it from scratch will be
 accepted identically. Probe each before asserting it as a canonical,
 clone-able shape.

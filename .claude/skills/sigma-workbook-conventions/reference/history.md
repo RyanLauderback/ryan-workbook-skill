@@ -985,3 +985,85 @@ after every fix in this entry and the prior one (still 12/12 example
 files — canonical count is smaller than the historical "12-example"
 figure quoted in earlier entries, which included harvested production
 workbooks not currently in this repo's own `examples/` directory).
+
+## 2026-08-04 — Wave 3 / C5+C6: input tables + agent surface, live-POST verified
+
+Per this skill's own doctrine, both `input-table` (C5) and `agents[]`+
+`chat` (C6) were GET-spec-only until this wave: all 27 harvested
+input-table instances and all 4 harvested agent-bearing workbooks were
+read confirmation, never authored from scratch and POSTed by this
+skill.
+
+**Built one combined probe** (`b7fead6d-504e-48e7-b623-e41576ce8eb5`,
+"Claude Testing" folder) exercising both capabilities together, since
+C6's most useful pattern — an agent tool writing to an input table — is
+the natural connection point between them: a `segmented` manual
+control, an `empty`-source input-table with all 6 column shapes
+(system ×5, editable text/number/datetime/checkbox, dropdown with
+`values`+`pills`, formula), two buttons (`insert-rows` with constant
+values, `delete-rows` with a formula `whichRows`), a `chat` element,
+and a top-level `agents[]` entry with `dataSources`, `instructions`
+using `{{[controlId]}}` interpolation, and one tool whose single step
+writes to the input-table via `insert-rows` with `agent-input` values
+for the model-supplied fields.
+
+**One real bug hit and fixed before the first successful POST**: the
+control used the same string for both its element `id` and its
+`controlId` (`"ctrl-region"` for both) — rejected with `Duplicate id`.
+This is exactly the documented "control/column ID collision" rule in
+`conventions.md`; fixed by giving the element a distinct `id`
+(`elem-ctrl-region`) while keeping `controlId: "ctrl-region"`. After
+that fix, **the entire combined probe POSTed clean on the first
+attempt** — no further bisection needed, unlike Wave 1's layout bugs.
+
+**GET-back confirmed everything round-tripped byte-for-byte**,
+including the previously-uncertain shapes:
+- The hypothesized agent tool step shape — `{kind:"effect", effect:
+  "insert-rows", table, values}`, i.e. exactly a button's effect
+  object plus one added sibling key — matched the live API exactly on
+  the first attempt.
+- `{{[ctrl-region]}}` interpolation inside `agents[].instructions`
+  round-tripped unchanged, same mechanism as the Wave 2 modal-header-
+  title probe.
+
+**A follow-up PUT to the same workbook added the `linked` input-table
+variant** (a real data-model-sourced `table` element as the `from`
+target, plus an input-table with `source:{kind:"linked", from:
+"tbl-products"}` and a key column). This corrected a harvest-only
+claim: `tables.md` previously documented the `key` field as
+`"inode-<id>/SKU_NUMBER"` (an inode-prefixed path). Live-POST testing
+shows **`key` is just the bare column `id` of the referenced `from`
+element's own column** (`"col-sku"` in the probe) — no inode prefix
+required. The original harvest's inode-style value was an artifact of
+that particular `from` element happening to be a raw data-model
+passthrough table with inode-style column IDs, not a required format.
+
+**One GET-back normalization found, documented as a caution, not a
+bug**: input-table columns come back reordered by category (editable
+columns first, then system columns, then formula columns), not in
+submission order. Field content is unaffected — only array position.
+Don't diff a re-fetched input-table's `columns` array positionally;
+diff by column `id`.
+
+**Fix.** Added `reference/specification/input-tables.md` (split out of
+`tables.md`, which now just points to it) and
+`reference/specification/agents.md` (new). Extended
+`validate-spec.py`'s `action-refs-resolve` check (refactored the
+per-effect logic into a shared `_check_effect` helper) to also walk
+`agents[].tools[].steps[]` with the same referential checks already
+applied to `actions[].effects[]`, and added a new check that
+`chat.agentId` resolves to a real `agents[].id` — closing the gap
+explicitly flagged when the check first shipped in Wave 2 ("not
+`agentId` — no agent-surface chunk yet"). Positive-control tested:
+deliberately broke both a `chat.agentId` reference and an agent tool
+step's `table` reference, confirmed both caught with clear messages,
+then confirmed the full 12-example regression stayed clean (no false
+positives from the refactor). Updated `dynamic-values.md` (`agent-input`
+and `{{formula}}` in `agents[].instructions` now live-POST verified,
+not harvest-only), `actions.md` (agent tool steps confirmed, not
+GET-spec-only), and `SKILL.md` (two new required-reading gate rows:
+"Editable / writeback build" and "Agent / chat build", plus updated
+per-file capability summaries).
+
+**Retest note:** full 12-example validator regression re-run clean
+after every fix in this entry.
