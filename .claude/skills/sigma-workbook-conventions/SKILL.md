@@ -204,7 +204,7 @@ session and cite chunk + section in the plan.
 | Viz-heavy build (>2 chart kinds, KPI rows, pivots) | + each `reference/specification/<kind>.md` for the kinds in the plan (`charts.md`, `kpis.md`, `tables.md`, etc.) |
 | Formula-heavy build (custom calcs, metrics, Lookup, Rollup) | + `reference/specification/formulas.md` |
 | Conditional-formatting build (table/pivot cell coloring) | + `reference/specification/tables.md` |
-| Container-styling-heavy build | + `reference/specification/containers.md` |
+| Styling / theming build (container styling, background images, `themeOverrides`, theme color references) | + `reference/specification/containers.md` + `reference/specification/theming.md` |
 | Image / divider / embed / dynamic-text build | + `reference/specification/others.md` + `reference/specification/text.md` + `reference/specification/dynamic-values.md` (for `{{formula}}` interpolation) |
 | Map-bearing build (`geography-map`, `point-map`, `region-map`) | + `reference/specification/maps.md` |
 | Multi-surface build (tabbed containers, modal pages, navigation, page breaks) | + `reference/specification/pages.md` + `reference/specification/layout.md` → "Five-tag grammar" |
@@ -483,7 +483,8 @@ OpenAPI `jq` recipe.
   silent failure, `gridTemplateRows` normalization quirk,
   page-structure pattern.
 - `containers.md` — `kind: container` + `style` (bg + border) +
-  `backgroundImage` (object with fit/align/tiling), 5-recipe catalog.
+  `backgroundImage` (`source:{kind:"url"|"upload"}` + fit/align/tiling
+  style — corrected 2026-08-04, live-POST verified), 5-recipe catalog.
 - `charts.md` — bar/line/area/combo/scatter/pie/donut + canonical
   `columnId`/`columnIds` axis shape + `refMarks` + `trendlines` +
   `dataLabel`/`seriesDataLabel` + 3-variant `color` channel
@@ -507,9 +508,19 @@ OpenAPI `jq` recipe.
   single-family font, paragraph alignment) + `{{formula}}` dynamic
   text embeds with d3 format suffix.
 - `others.md` — `divider` (with `direction`/`align`/`style`) +
-  `image` + `embed` elements + `{{formula}}` in URLs. **Correction
+  `image` + `embed` elements + `{{formula}}` in URLs +
+  `data:image/svg+xml;base64,...` inline SVG. **Correction
   (2026-08-03):** previously ended with a "buttons/modals unsupported"
-  note — retracted, see `reference/capability-ledger.md`.
+  note — retracted, see `reference/capability-ledger.md`. **Correction
+  (2026-08-04):** `image`'s field shape was wrong (flat `url` — real
+  shape is `source:{kind:"url"|"upload"}`), live-POST verified.
+- `theming.md` — top-level `themeOverrides` (`pageWidth`, `space`, +
+  14 more fields cataloged from the live schema) + the reusable
+  `{kind:"theme", ref}` color-value form usable across many elements'
+  color fields. **Correction (2026-08-04):** an earlier version of
+  `schema.md` described this as a standalone element kind — live-POST
+  rejected; it's a color-value form, not an element. New 2026-08-04
+  (Wave 4 / C7).
 - `pages.md` — `tabbed-container` (labels-only element + flat
   tab-content siblings), `type:"modal"` pages, `navigation`,
   `page-break`. All four live-POST verified 2026-08-03 (Wave 1 probe).

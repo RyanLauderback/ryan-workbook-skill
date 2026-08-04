@@ -1250,3 +1250,92 @@ gap in how this skill's agents self-verify fixes, not a Sigma platform
 behavior — no fix is proposed to any script over it in this session;
 noted here as a caution for future sessions relying on "I checked and
 it's clean" as sufficient grounds to report a fix as done.
+
+## 2026-08-04 — Wave 4 / C7: visual media + theming, live-POST verified, 2 real field-shape bugs found
+
+Per this skill's own doctrine, `image`, container `backgroundImage`,
+`themeOverrides`, and the `{kind:"theme", ref}` color form were
+GET-spec-only until this wave — every prior claim came from reading
+harvested production workbooks, never authoring one from scratch and
+POSTing it.
+
+**Built a combined probe** (`b77b5b05-d1f5-40ba-96eb-00458726da29`,
+"Claude Testing" folder): a segmented control, an `image` element with
+a `{{formula}}` URL referencing that control, a second `image` element
+with an inline `data:image/svg+xml;base64,...` icon, a `container`
+with both `backgroundImage` and a `style.borderColor` set to a
+theme-color reference, and top-level `themeOverrides`
+(`pageWidth`/`space`).
+
+**First POST attempt rejected**, `Invalid kind: "image"` — the same
+misleading error class as the Wave 3 bar-chart `orientation` bug
+(inner shape wrong, not the kind itself). Pulled the live OpenAPI
+schema directly (`CommonElement` discriminated by `enum:["image"]`)
+rather than guessing: the real shape is `{id, kind, source:
+{kind:"url", url}}` (or `{kind:"upload", key}` for a reference to an
+image already uploaded into Sigma — GET/PUT-only, the spec cannot
+upload a new one). Every version of `others.md` prior to this wave —
+and every harvested workbook this skill had read — showed a flat
+top-level `url` field instead. This is a real, previously-undocumented
+bug that would have hard-failed any build using an `image` element,
+not just a documentation gap.
+
+**Same bug, same fix, on `backgroundImage`.** After correcting the
+`image` elements, the next rejection was `backgroundImage.source:
+Invalid value: undefined` — `containers.md` had the identical flat-`url`
+bug on `backgroundImage`. Same fix: `backgroundImage.source:
+{kind:"url", url}`.
+
+**A false claim caught and retracted: `theme` is not a standalone
+element kind.** The next rejection was `Invalid kind: "theme"` on a
+`{kind:"theme", ref:"colors-textNeutral"}` element — `schema.md` had
+documented this (from harvest evidence in `sales-mbr-sentinel`) as a
+page element in its own right. Searching the OpenAPI for an exact
+`enum:["theme"]` discriminator match, scoped to `CommonElement`, found
+no such standalone element — instead, `{kind:"theme", ref}` appears
+repeatedly as a `oneOf` alternative *inside color-typed fields*
+(`style.color`, `style.borderColor`, `style.backgroundColor`,
+`name.color`, `description.color`, `sparkline.color`, and the
+`tableStyles`/`themeOverrides` color fields) across many element kinds.
+The original harvest almost certainly misread one of these nested
+color-reference objects as if it were a top-level element. Corrected
+the probe to use it as `container.style.borderColor` instead — POSTed
+and round-tripped clean.
+
+**Second POST succeeded** after all three fixes. GET-back confirmed
+every shape round-tripped byte-for-byte: both `image` variants
+(`{{formula}}` URL and inline SVG), `backgroundImage.source` +
+`backgroundImage.style`, `container.style.borderColor` as a theme
+color reference, and top-level `themeOverrides`.
+
+**Resolved a previously-open question**, flagged in
+`capability-ledger.md` → "Unresolved contradictions" since planning: a
+third-party fork had claimed inline `data:image/svg+xml` data URIs get
+WAF-403'd on POST. **Not observed** — the exact same `source.url`
+field that accepts a hosted HTTPS URL also accepted the inline SVG data
+URI with no rejection, at any point in this probe.
+
+**Bonus find while documenting `themeOverrides`:** the live OpenAPI
+schema shows 16 top-level fields, not the 2 (`pageWidth`, `space`)
+previously documented — including `borderRadius`, `hasCards`,
+`invertTooltipColors`, `categoricalScheme`/`sequentialScheme`/
+`divergingScheme`, `colorOverrides`, `elementBorder`, `tableStyles`
+(workbook-wide table defaults, same shape family as a per-table
+`tableStyle`), `fonts`, `titleFont`. Cataloged all 16 with type/enum
+from the schema; only `pageWidth`/`space` are live-POST verified — the
+rest are flagged as schema-confirmed-present but individually unprobed.
+
+**Fix.** Corrected `others.md` → "Image" and `containers.md` →
+"backgroundImage" (flat `url` → `source:{kind:"url"|"upload"}`).
+Replaced `schema.md`'s wrong "theme element kind" section with a
+pointer to a new `reference/specification/theming.md`, which documents
+`themeOverrides` (all 16 fields) and the corrected `{kind:"theme",
+ref}` color-value form. Renamed the `SKILL.md` gate row
+"Container-styling-heavy build" → "Styling / theming build" per the
+original plan (zero net new rows). Updated `capability-ledger.md`:
+moved `image`/`backgroundImage`/theme-color-reference from GET-spec-only
+to POST-verified, and removed the now-resolved inline-SVG-WAF-403
+"probe pending" row.
+
+**Retest note:** full 13-example validator regression re-run clean
+after every fix in this entry.

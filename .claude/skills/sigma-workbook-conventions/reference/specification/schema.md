@@ -249,37 +249,16 @@ The `items` are column IDs grouped under the folder name. UI-side
 organization; doesn't affect render. Inspect via `mcp-describe.sh
 workbook <wb-id>` if you need the structure.
 
-## Top-level `themeOverrides` field
+## Theming (`themeOverrides` + theme color references)
 
-Optional. Controls workbook-wide page width and spacing:
-
-```json
-"themeOverrides": {
-  "pageWidth": "large",
-  "space": { "unit": "small" }
-}
-```
-
-Observed values: `pageWidth: "large"`, `space.unit: "small"`. Other
-enum values (`medium`, `full`, etc.) likely accepted — inspect via
-the OpenAPI. Verified 2026-07-02 against `sales-mbr-sentinel`.
-
-## `theme` element kind
-
-A named theme reference that can appear inside `pages[].elements[]`
-alongside data-viz elements:
-
-```json
-{
-  "kind": "theme",
-  "ref": "colors-textNeutral"
-}
-```
-
-Observed in `sales-mbr-sentinel` (2 instances). Applies theme-level
-styling by reference. Inspect the OpenAPI for the enum of valid `ref`
-values before authoring. Kept minimal here until a fuller pattern
-emerges.
+Moved to its own chunk: **`reference/specification/theming.md`**
+(2026-08-04, Wave 4 / C7). Includes a correction: what earlier versions
+of this file called a standalone `"kind": "theme"` **element** does not
+exist — live-POST tested and rejected (`Invalid kind: "theme"`). The
+`{kind:"theme", ref}` shape is real, but it's a **reusable color-value
+form** usable inside `style.color`/`borderColor`/`backgroundColor` and
+similar fields across many element kinds, not a page element in its own
+right. See that file for the full, corrected reference.
 
 ## Minimal working example
 

@@ -56,8 +56,8 @@ workbooks:
 | 4 of 5 dynamic-value forms (`constant`, `formula`, `column`, `control`) | Wave 2 / C3 probe — 2026-08-03 | **Authored from scratch and POSTed**, byte-for-byte round-trip, including `{{formula}}` string interpolation with a bare `[controlId]` reference in a modal header title. `agent-input` remains GET-spec-only pending the agent surface. See `dynamic-values.md`. |
 | `input-table` element (`empty`+`linked` source, all 6 column shapes, `insert-rows`/`delete-rows` writeback) | GET-spec: all 5 harvested workbooks (27 instances combined) — 2026-08-03. **POST-verified**: `b7fead6d-504e-48e7-b623-e41576ce8eb5` — 2026-08-04 (Wave 3 / C5 probe) | GET-spec 200; field names cross-confirmed against the real upstream `sigma-workbooks` skill's `tables.md` (independent source, same conclusion: column field is `type`, not `columnType`). **Authored from scratch and POSTed** — both `empty` (real connectionId) and `linked` (`from` + bare-column-id `key`, correcting the harvest's `inode-<id>/COL` assumption) source variants, all 6 column shapes, and both writeback effects via a button, all round-tripped byte-for-byte. See `input-tables.md`. |
 | `agents[]` + `chat` element (incl. agent tool `insert-rows` writeback + `agent-input` values) | GET-spec: Insurance P4P Analytics, Workbooks Demo 2026, Marketing Control Center, Bergey's Unified Insights — 2026-08-03. **POST-verified**: `b7fead6d-504e-48e7-b623-e41576ce8eb5` — 2026-08-04 (Wave 3 / C6 probe, same workbook as the input-table probe) | GET-spec 200; `agents:[{id,name,instructions,dataSources,tools}]` present; `tools[].steps[]` reuse the same effect vocabulary as buttons. **Authored from scratch and POSTed** — `chat` element + `agents[]` with a tool writing to a real input-table via `insert-rows` + `agent-input` dynamic values + `{{formula}}`-interpolated `instructions`, all round-tripped byte-for-byte. See `agents.md`. |
-| `image` with `{{formula}}` URL | Workbooks Demo 2026 — 2026-08-03 | GET-spec 200; `image.source.url` containing `{{If(...)}}` |
-| `image` with inline `data:image/svg+xml;base64,...` | Marketing Control Center — 2026-08-03 | GET-spec 200; two lucide-icon SVGs decoded and confirmed valid |
+| `image` element (`source:{kind:"url"|"upload"}`) + `{{formula}}` URL + inline `data:image/svg+xml;base64,...` | GET-spec: Workbooks Demo 2026, Marketing Control Center — 2026-08-03. **POST-verified**: `b77b5b05-d1f5-40ba-96eb-00458726da29` — 2026-08-04 (Wave 4 / C7 probe) | GET-spec 200 confirmed `{{If(...)}}` URLs and 2 valid lucide-icon inline SVGs. **Authored from scratch and POSTed** — surfaced and fixed a real field-shape bug (flat `url` is wrong; real shape is `source:{kind:"url", url}`), both the `{{formula}}` URL and the inline-SVG data URI round-tripped byte-for-byte in the corrected shape. Resolves the previously-open "WAF-403 on inline SVG" question — not observed. See `others.md`. |
+| Container `backgroundImage` (`source:{kind:"url"|"upload"}`) + theme color reference (`{kind:"theme", ref}` as a color value) | GET-spec harvest (backgroundImage) — 2026-07-02; `themeOverrides`/theme colors GET-spec — `sales-mbr-sentinel`, 2026-07-02. **POST-verified**: `b77b5b05-...` — 2026-08-04 (Wave 4 / C7 probe) | **Authored from scratch and POSTed** — surfaced and fixed the same `backgroundImage.url` → `backgroundImage.source.url` bug as the image element; also corrected a false claim that `{kind:"theme", ref}` was a standalone element kind (live-POST rejected as an element; confirmed as a color-value form used in `style.borderColor` instead). See `containers.md` and the new `theming.md`. |
 | `navigation` element | Workbooks Demo 2026 — 2026-08-03 GET-spec; **`b9e4bc48-afa8-4085-b94d-fdd61c06bf0d` — 2026-08-03 POST-verified** | GET-spec 200; `kind:"navigation"` + `mode` present. **Authored from scratch and POSTed** — `mode:"auto"` round-trips unchanged. |
 | `plugin` element | Claims Command Center — 2026-08-03 | GET-spec 200; `kind:"plugin"` + `pluginId` + `config` present |
 | Page-level RBAC (`visibility.kind:"specific-users-and-teams"`) | Bergey's Unified Insights — 2026-08-03 | GET-spec 200; `assignments.teams:[uuid,...]` present on 6 pages |
@@ -75,13 +75,19 @@ variants, all 6 column shapes), `agents[]` + `chat`, agent tool
 `insert-rows` writeback, and the 5th dynamic-value form (`agent-input`)
 were authored from scratch and POSTed as part of the Wave 3 / C5+C6
 probe (2026-08-04, workbook `b7fead6d-504e-48e7-b623-e41576ce8eb5`).
-None of those are GET-spec-only anymore. Everything else in the table
-above (`image` variants, `plugin`) is still GET-spec (read)
-confirmation only — "supported" for those means "the live API emits
-this shape for a working, currently-rendering workbook," which is
-strong evidence but not proof that authoring it from scratch will be
-accepted identically. Probe each before asserting it as a canonical,
-clone-able shape.
+`image` (all variants), container `backgroundImage`, and the
+`{kind:"theme", ref}` color-value form were authored from scratch and
+POSTed as part of the Wave 4 / C7 probe (2026-08-04, workbook
+`b77b5b05-d1f5-40ba-96eb-00458726da29`) — this probe also caught and
+fixed two real field-shape bugs (`image`/`backgroundImage`'s flat `url`
+should have been `source:{kind:"url", url}`) and one false claim
+(`theme` is not a standalone element kind). None of those are
+GET-spec-only anymore. Everything else in the table above (`plugin`)
+is still GET-spec (read) confirmation only — "supported" for those
+means "the live API emits this shape for a working, currently-
+rendering workbook," which is strong evidence but not proof that
+authoring it from scratch will be accepted identically. Probe each
+before asserting it as a canonical, clone-able shape.
 
 **Wire-format caveat (2026-08-04).** The live POST/PUT/GET wire format
 nests the spec under a top-level `document` key (see
@@ -103,7 +109,6 @@ verbatim, wrap it in `document`/`kind:"workbook"` first — or use
 | Claim | Source | Status |
 |---|---|---|
 | `top-n` as a dedicated `controlType` | Real upstream `sigma-workbooks` skill says yes; local `controls.md` explicitly says no (filter-only) | Direct disagreement with the *real* engineering skill — needs a live probe, not a guess |
-| Inline `data:image/svg+xml` accepted on **POST** (not just observed on GET) | Harvest confirms GET; a third-party fork (`cmiller-coder/millersigma`) ships it in production | Probe pending |
 | `plugin.config` column bindings — bare `columnId` string vs. `{kind:"column", columnId, source}` object | Disagreement between two third-party forks, neither authoritative | Probe pending |
 | `clear-control` effect scope (`page` only vs. `control`/`container`) | Disagreement between two third-party forks | Probe pending |
 | `DateTrunc([control], ...)` with a dynamic first argument | Local `controls.md` shows this; one third-party fork claims it errors and must be wrapped in `Switch` | Probe pending |
