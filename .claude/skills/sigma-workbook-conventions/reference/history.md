@@ -866,3 +866,25 @@ schema: `charts.md` claimed the percent-stacked `stacking` value was
 expected, out-of-scope placeholder UUID (`<data-model-id>`) on the
 hidden data-source page, which every example in this skill uses as a
 deliberate stand-in for a real data-model ID substituted at build time.
+
+## 2026-08-04 — `find-file-by-urlid.sh` didn't handle a pasted full workbook URL
+
+Flagged by the second Wave 2 test sub-agent: pasting a full Sigma
+workbook URL (as a user naturally would, e.g. after copying it from
+the browser address bar) returned `null` instead of the file metadata.
+Root-caused via a live `/v2/files` lookup: the API's actual `urlId`
+field is only the short trailing token (e.g.
+`3R528WqcM6uEqxWIaJe6sN`), but Sigma's address bar shows a
+human-readable slug prepended to that same token (e.g.
+`Marketing-Control-Center-Analytics-and-Application-vREL-3R528WqcM6uEqxWIaJe6sN`,
+confirmed against the real Marketing Control Center workbook,
+`7eb36f00-5c3b-4471-861d-e8b679cab731`) — the script compared the
+entire pasted string against each entry's urlId verbatim, so anything
+beyond the bare token matched nothing.
+
+**Fix.** `find-file-by-urlid.sh` now takes the URL's last path segment
+(if given a full URL) and splits off everything before the last
+hyphen. A genuine bare `urlId` has no hyphens, so this is a no-op for
+that case. Verified against all three input forms — full pasted URL,
+bare pretty slug with no URL wrapper, and bare short urlId (regression
+check) — all three now resolve to the same, correct entry.
