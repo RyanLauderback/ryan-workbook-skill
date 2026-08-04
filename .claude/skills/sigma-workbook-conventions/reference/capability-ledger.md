@@ -79,6 +79,21 @@ strong evidence but not proof that authoring it from scratch will be
 accepted identically. Probe each before asserting it as a canonical,
 clone-able shape.
 
+**Wire-format caveat (2026-08-04).** The live POST/PUT/GET wire format
+nests the spec under a top-level `document` key (see
+`reference/specification/schema.md` → "Wire format" and
+`reference/history.md` → "2026-08-04 — document wrapper"). The
+`b9e4bc48-...` and `189db290-...` POST-verified workbooks referenced
+above were POSTed via flat-shape `curl` calls made directly during Wave
+1/Wave 2, before this wrapper requirement was discovered — whether the
+API changed mid-session or those calls were wrapped in a way not
+reflected in this ledger's evidence rows was not conclusively
+determined. This does not undermine what those probes proved (the
+element shapes, field names, and referential semantics are unaffected
+by wire-level nesting), but if you need to re-run one of those probes
+verbatim, wrap it in `document`/`kind:"workbook"` first — or use
+`scripts/api/publish-workbook.sh`, which does this for you.
+
 ## Unverified — probe pending (do not treat as fact either way)
 
 | Claim | Source | Status |

@@ -333,9 +333,12 @@ pre-POST (planned; not yet implemented — see `reference/workflows/validate.md`
 
 ## Bar-chart orientation + categorical-axis sort rule
 
-Bar charts accept `orientation: "horizontal" | "vertical"` (default
-vertical). **Bar charts only** — line/area/combo/scatter use time-on-x
-or metric-on-x by design.
+Bar charts accept `orientation: "horizontal"` or omit the field
+entirely (vertical is the default and the **only** other valid state —
+explicit `orientation: "vertical"` is **rejected at POST**, confirmed
+2026-08-04 against the live OpenAPI schema, where `orientation`'s enum
+is `["horizontal"]` only). **Bar charts only** — line/area/combo/scatter
+use time-on-x or metric-on-x by design.
 
 | X-axis type | Examples | `orientation` | `xAxis.sort` |
 |---|---|---|---|

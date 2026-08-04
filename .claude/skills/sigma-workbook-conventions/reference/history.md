@@ -742,3 +742,127 @@ confirmed 0 false positives against all 5 harvested production
 workbooks with real actions (their references were all genuinely
 valid — a true negative, not a check that never fires). Full 12-example
 canonical regression re-run clean throughout.
+
+## 2026-08-04 — document wrapper: the live wire format nests the spec under `document`
+
+A Wave 2 build-mode test session (a second, independently-spawned test
+sub-agent) reported two claims about the live POST/PUT/GET wire format,
+both of which directly contradicted this session's own extensively
+live-POST-verified Wave 1/Wave 2 work (which had succeeded with a flat
+top-level shape). Per this skill's own "verify, don't trust a summary"
+doctrine — doubly so when a claim contradicts already-verified
+evidence — both were independently re-tested from scratch rather than
+merged as reported.
+
+**Claim 1 — confirmed real:** the live API nests `schemaVersion`,
+`kind`, `pages`, `layout`, `themeOverrides`, `folders`, and `agents`
+under a top-level `document` key; only `name`/`folderId`/`description`
+stay top-level siblings, and `document.kind` is required and always
+`"workbook"`. Verified via direct bisection: a bare flat-shape POST was
+rejected with a large union-type validation error naming paths like
+`0.document.0.0.0`; adding a `document` wrapper without `kind` still
+failed; adding `document.kind: "workbook"` succeeded
+(`workbookId: a6b5b06b-6073-45ba-aa5c-518a816d0964`). A `GET .../spec`
+with `Accept: application/json` confirmed the same nesting on read.
+
+**Claim 2 — checked and refuted (red herring):** the claim that
+successful POST/PUT responses come back as plain `key: value` text
+rather than JSON. `scripts/api/_env.sh`'s `sigma_curl` helper — the
+actual call path for every script in `scripts/api/`, including
+`publish-workbook.sh` — already sends `Accept: application/json`
+(confirmed via `grep -n "Accept:" scripts/api/_env.sh`). Explicit
+`Accept`-header tests on both GET and POST returned clean JSON in both
+directions. The plain-text response only appeared in raw `curl` calls
+(the test sub-agent's own ad-hoc bisection scripts, and mine when
+reproducing) that omitted this header — a real observation about bare
+curl, but not a property of this skill's actual tooling.
+
+**Why this didn't surface earlier in the same session:** unresolved.
+The Wave 1/C2 probe (`b9e4bc48-...`) and Wave 2/C3 probe
+(`189db290-...`) both succeeded earlier in this same session using a
+flat top-level shape via direct `curl`, not through
+`publish-workbook.sh` (which had no wrapping logic until this fix).
+Whether the API's requirement changed mid-session, whether those
+earlier probes were in fact hand-wrapped and this went unremarked in
+the transcript, or some other explanation, was not conclusively
+determined. Treat the `b9e4bc48-...`/`189db290-...` evidence rows in
+`capability-ledger.md` as correct for what they proved (the element
+shapes and referential semantics) but do not assume they demonstrate
+the flat top-level shape is POST-able today — re-verify the wire
+format specifically before relying on it.
+
+**Fix.** Added `wrap_flat_to_wire()`/`unwrap_wire_to_flat()` to
+`scripts/api/publish-workbook.sh`, wired into `post`/`put` (wraps
+before sending, via a temp file to avoid `ARG_MAX` limits on large
+specs) and `get-spec` (unwraps after receiving). The flat shape stays
+the one authoring convention across every example, validator, and doc
+in this skill — the wrapping is invisible to normal use. Documented in
+`reference/specification/schema.md` → "Wire format — the live API
+wraps the document under a `document` key". Did **not** carry over the
+test sub-agent's dual-format (`extract_field`/`is_success`) response
+parsing — it solves a problem that doesn't exist on this skill's real
+`sigma_curl`-based call path.
+
+**Verification.** `bash -n` clean on the edited script. End-to-end
+tested against a real exemplar
+(`examples/dashboard-department-scorecard.json`, POSTed to the "Claude
+Testing" folder under a scratch name) through the actual fixed
+`publish-workbook.sh post` — this surfaced two more real,
+previously-latent bugs in that exemplar (see next entry), independent
+of the wrapper fix itself, which is what end-to-end testing an
+exemplar that had never actually been POSTed before was for.
+
+## 2026-08-04 — two real bugs found in `dashboard-department-scorecard.json` via its first-ever live POST
+
+The Wave 0/CW "dashboard tier" exemplar had been locally validated
+(`validate-spec.py`, all checks passing) but never actually POSTed to
+the live API before the document-wrapper end-to-end test above. Two
+independent, real bugs surfaced:
+
+**Bug 1 — `text` vs `body` on the `text` element.** `txt-hero-title`
+used `"text": "<h2>Department Scorecard</h2>"`; the correct field is
+`"body": "## Department Scorecard"` (Markdown, not raw inline HTML —
+see `reference/specification/text.md` for the inline-HTML allowlist).
+This is the exact bug class caught in this session's own Wave 1/C2
+probe first draft, but that catch was never checked back against this
+already-committed exemplar since the exemplar itself had never been
+POSTed. Fixed directly.
+
+**Bug 2 — invalid `orientation: "vertical"` on the bar-chart.**
+`chart-rev-by-region` set `"orientation": "vertical"`, which POSTed as
+`"document.pages[0].elements[5]: Invalid kind: \"bar-chart\""` — a
+misleading error that reads like the `kind` itself is rejected rather
+than naming the actual problem. Bisected against the live OpenAPI
+schema (`curl -sf https://help.sigmacomputing.com/openapi/sigma-computing-public-rest-api.json`,
+`components.schemas.CommonElement.oneOf[0].oneOf[2]`): `orientation`'s
+enum is `["horizontal"]` **only** — there is no `"vertical"` value at
+all. Setting it to a string outside the enum fails the whole element's
+`oneOf` discriminator match, which is why the error names `kind`
+instead of `orientation`. Vertical is the default and can only be
+reached by omitting the field.
+
+Root cause: `reference/conventions.md`'s "Bar-chart orientation" section
+still said `orientation: "horizontal" | "vertical"` (default vertical)
+— directly contradicting `reference/specification/charts.md`'s already-
+correct rule (`"vertical"` rejected at POST, verified 2026-07-02) in the
+same skill. The stale claim in `conventions.md` is the most likely
+reason `"vertical"` ended up hardcoded in this exemplar in the first
+place. Since the exemplar's `chart-rev-by-region` is exactly the
+categorical-axis-with-descending-sort case `charts.md`'s own rule table
+calls for `orientation: "horizontal"` (not omitted), the fix sets it to
+`"horizontal"` rather than just deleting the field.
+
+**Fix.** Corrected both fields in
+`examples/dashboard-department-scorecard.json`. Fixed the stale
+`conventions.md` claim to match `charts.md`. Also caught and fixed a
+second, unrelated documentation error while cross-referencing the live
+schema: `charts.md` claimed the percent-stacked `stacking` value was
+`"100"`; the live schema's enum is `"none"` | `"stacked"` | `"normalized"`
+— no `"100"` value exists. Fixed.
+
+**Verification.** Re-POSTed the fully-corrected exemplar end-to-end
+(`validate-spec.py`: 16/16 clean; live POST via `publish-workbook.sh`)
+— progressed cleanly past both fixed fields, and failed only on the
+expected, out-of-scope placeholder UUID (`<data-model-id>`) on the
+hidden data-source page, which every example in this skill uses as a
+deliberate stand-in for a real data-model ID substituted at build time.

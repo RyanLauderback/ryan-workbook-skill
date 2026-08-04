@@ -59,6 +59,69 @@ See `reference/workflows/crud.md` → "schemaVersion — don't hardcode"
 for the rule on `schemaVersion`. Existing exemplars use `1`; future
 versions will require reading from a reference GET.
 
+## Wire format — the live API wraps the document under a `document` key
+
+**This section is about transport, not authoring.** Every shape
+described in this file and the rest of `reference/specification/` is
+the **flat authoring shape** — `schemaVersion`/`pages`/`layout`/etc. as
+top-level siblings of `name`/`folderId`. Keep authoring that shape.
+This section explains what happens between writing that JSON and it
+reaching the live API.
+
+**Confirmed 2026-08-04 via direct live-POST/PUT/GET testing** (not
+GET-spec-only — a bare flat-shape spec was actively POSTed and
+rejected, confirming this isn't a passive artifact): the real Sigma
+REST API nests `schemaVersion`, `kind`, `pages`, `layout`,
+`themeOverrides`, `folders`, and `agents` under a top-level `document`
+key. Only `name`, `folderId`, and `description` remain true top-level
+siblings on the request (plus response-only metadata — see below —
+which also lives outside `document`). `document.kind` is **required**
+and is always the literal string `"workbook"`:
+
+```json
+{
+  "name": "My Workbook",
+  "folderId": "<folder-uuid>",
+  "document": {
+    "schemaVersion": 1,
+    "kind": "workbook",
+    "pages": [...],
+    "layout": "<?xml version=\"1.0\" ...?>...</Page>..."
+  }
+}
+```
+
+POSTing the flat shape as-is against the live API is rejected with a
+large union-type validation error naming paths like `0.document.0.0.0`
+— easy to misread as unrelated schema drift rather than "wrap this in
+a `document` key." A GET on an existing workbook's spec confirms the
+same nesting comes back on read: `{"workbookId": ..., "document":
+{"schemaVersion": 1, "kind": "workbook", "pages": [...], ...}}`.
+
+**You do not need to hand-wrap this.** `scripts/api/publish-workbook.sh`
+wraps flat → wire on `post`/`put` and unwraps wire → flat on
+`get-spec`, transparently, so the flat shape stays the one authoring
+convention across this skill's tooling, examples, and docs. This only
+matters to you if you POST/PUT/GET directly via raw `curl` instead of
+through that script (e.g. ad-hoc schema investigation) — in that case
+wrap/unwrap by hand per the shape above.
+
+A separate claim from the same investigation — that successful
+POST/PUT responses come back as plain `key: value` text instead of
+JSON — was checked and is **not real** for this skill's actual call
+path: `scripts/api/_env.sh`'s `sigma_curl` helper already sends
+`Accept: application/json` (every script in `scripts/api/` goes
+through it), and the API honors that header on both GET and POST/PUT.
+The plain-text response only appears when that header is omitted
+(e.g. a raw `curl` call made outside `sigma_curl` during ad-hoc
+bisection). No dual-format response parsing was added anywhere in this
+skill's tooling — it wasn't needed.
+
+See `reference/history.md` → "2026-08-04 — document wrapper" for the
+full incident and verification trail, and
+`reference/capability-ledger.md` for how this affects the dating of
+earlier POST evidence in that ledger.
+
 ## Response-only fields
 
 `GET /v2/workbooks/<id>/spec` also returns these. **Correction

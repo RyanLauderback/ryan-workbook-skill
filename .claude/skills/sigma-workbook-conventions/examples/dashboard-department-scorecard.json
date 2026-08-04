@@ -14,7 +14,7 @@
         {
           "id": "txt-hero-title",
           "kind": "text",
-          "text": "<h2>Department Scorecard</h2>"
+          "body": "## Department Scorecard"
         },
         {
           "id": "ctrl-ov-date",
@@ -151,8 +151,8 @@
             "sort": { "by": "rbr-revenue", "direction": "descending" }
           },
           "yAxis": { "columnIds": ["rbr-revenue"] },
-          "orientation": "vertical",
-          "stacking": "none"
+          "stacking": "none",
+          "orientation": "horizontal"
         },
         {
           "id": "tbl-top-stores",

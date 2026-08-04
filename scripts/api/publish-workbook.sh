@@ -36,6 +36,81 @@ if ! command -v jq >/dev/null 2>&1; then
   exit 1
 fi
 
+# Sigma's live POST/PUT wire format (confirmed 2026-08-04 via direct testing,
+# independent of and following up on a build-mode session's report) nests
+# schemaVersion/kind/pages/layout/themeOverrides/folders/agents under a
+# top-level "document" key -- only name/folderId/description stay top-level
+# siblings, e.g.:
+#   {"name":"...", "folderId":"...", "document":{"schemaVersion":1,"kind":"workbook","pages":[...],"layout":"..."}}
+# This skill's tooling (validate-spec.py, workbook-manifest.py, every example
+# in examples/) authors and validates the FLAT shape (schemaVersion/pages/
+# layout as top-level siblings) -- POSTing that flat shape as-is is rejected
+# with a large union-type validation error naming paths like
+# "0.document.0.0.0", which reads like unrelated schema drift rather than
+# "wrap this in a document key". `document.kind` is REQUIRED and always
+# "workbook" -- since no example or prior spec in this repo ever set a
+# top-level `kind` field (it was previously response-only metadata), the
+# wrap defaults it to "workbook" rather than requiring every caller to add it.
+#
+# Rather than push this wrapping requirement onto every caller/example/
+# validator, these helpers wrap flat -> wire shape on POST/PUT and unwrap
+# wire -> flat on GET, so the flat shape stays the one stable authoring
+# convention everywhere else in the skill. See reference/specification/
+# schema.md and reference/history.md -> "2026-08-04 -- document wrapper"
+# for the full incident and verification trail.
+#
+# NOTE on response format: a build-mode session separately reported that
+# successful POST/PUT responses come back as plain "key: value" text, not
+# JSON, and patched jq-based parsing to fall back to text scanning. Verified
+# 2026-08-04 that this is NOT the case via this skill's actual sigma_curl
+# path -- sigma_curl already sends `Accept: application/json` (see _env.sh),
+# and Sigma's API honors it for both GET and POST/PUT responses; the
+# plain-text response only appears when that header is omitted (e.g. a raw
+# curl call made outside sigma_curl during ad-hoc bisection). No dual-format
+# response parsing was added here — the existing jq-based parsing already
+# works correctly through the real script path.
+wrap_flat_to_wire() {
+  # $1 = path to a flat-shape spec file, $2 = path to write the wire-shape
+  # JSON to. Writes to a file (not stdout captured into a shell variable) so
+  # `--data-binary "@<file>"` avoids ARG_MAX limits on large specs, matching
+  # the existing @-file pattern below. Passes through unchanged if the input
+  # already has a top-level "document" key.
+  python3 -c '
+import json, sys
+spec = json.load(open(sys.argv[1]))
+if "document" in spec:
+    json.dump(spec, open(sys.argv[2], "w"))
+    sys.exit(0)
+TOP_KEYS = ("name", "folderId", "description")
+DOC_KEYS = ("schemaVersion", "kind", "pages", "layout", "themeOverrides", "folders", "agents")
+top = {k: spec[k] for k in TOP_KEYS if spec.get(k) is not None}
+doc = {k: spec[k] for k in DOC_KEYS if spec.get(k) is not None}
+doc.setdefault("kind", "workbook")
+top["document"] = doc
+json.dump(top, open(sys.argv[2], "w"))
+' "$1" "$2"
+}
+
+unwrap_wire_to_flat() {
+  # Reads wire-shape JSON on stdin (a GET /v2/workbooks/{id}/spec response).
+  # Prints the flat shape on stdout: document's keys hoisted to the top
+  # level, alongside the response-only fields (workbookId, url, etc.)
+  # unchanged. Passes through unchanged if there's no top-level "document" key.
+  #
+  # Must take the script as an argv-passed -c string, NOT a heredoc on stdin
+  # (`python3 - <<'PY' ... PY`) -- the heredoc form makes the heredoc content
+  # itself python's stdin (the script source), leaving nothing for the piped
+  # response body to land on when the script then tries to read sys.stdin.
+  python3 -c '
+import json, sys
+d = json.load(sys.stdin)
+doc = d.pop("document", None)
+if isinstance(doc, dict):
+    d.update(doc)
+print(json.dumps(d, indent=2))
+'
+}
+
 run_audit() {
   # $1 = workbook id
   # Runs audit-workbook-schema.sh unless SIGMA_SKIP_AUDIT=1. Exits with the
@@ -70,10 +145,13 @@ case "$cmd" in
     # Bug found 2026-08-03 via a live Wave 1 probe. Fix: suspend `set -e`
     # around the call so the echo always runs, then propagate the real
     # exit code afterward.
+    wire_file="$(mktemp "${TMPDIR:-/tmp}/publish-wire.XXXXXX")"
+    trap 'rm -f "$wire_file"' EXIT
+    wrap_flat_to_wire "$spec" "$wire_file"
     set +e
     response=$(sigma_curl -X POST \
       -H "Content-Type: application/json" \
-      --data-binary "@$spec" \
+      --data-binary "@$wire_file" \
       "$SIGMA_BASE_URL/v2/workbooks/spec")
     post_exit=$?
     set -e
@@ -98,10 +176,13 @@ case "$cmd" in
     # See the matching comment in the `post` case above — set +e around
     # the capture so a failed PUT's error body still gets echoed before
     # the script exits, instead of set -e silently discarding it.
+    wire_file="$(mktemp "${TMPDIR:-/tmp}/publish-wire.XXXXXX")"
+    trap 'rm -f "$wire_file"' EXIT
+    wrap_flat_to_wire "$spec" "$wire_file"
     set +e
     response=$(sigma_curl -X PUT \
       -H "Content-Type: application/json" \
-      --data-binary "@$spec" \
+      --data-binary "@$wire_file" \
       "$SIGMA_BASE_URL/v2/workbooks/$wb_id/spec")
     put_exit=$?
     set -e
@@ -117,7 +198,7 @@ case "$cmd" in
     ;;
   get-spec)
     wb_id="${2:?usage: publish-workbook.sh get-spec <workbook-id>}"
-    sigma_curl "$SIGMA_BASE_URL/v2/workbooks/$wb_id/spec"
+    sigma_curl "$SIGMA_BASE_URL/v2/workbooks/$wb_id/spec" | unwrap_wire_to_flat
     ;;
   get-meta)
     wb_id="${2:?usage: publish-workbook.sh get-meta <workbook-id>}"

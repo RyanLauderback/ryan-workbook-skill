@@ -111,8 +111,9 @@ Same axis shape as line-chart. Adds `stacking` and the
 }
 ```
 
-`stacking`: `none` | `stacked` | `"100"` (the percent-stacked variant
-must be quoted in JSON/YAML to keep it a string).
+`stacking`: `"none"` | `"stacked"` | `"normalized"` (the percent-stacked
+variant — confirmed 2026-08-04 against the live OpenAPI schema; an
+earlier version of this doc incorrectly named it `"100"`).
 
 ### Orientation + categorical-axis sort rule
 
@@ -132,7 +133,14 @@ largest→smallest, the conventional categorical read order. Horizontal
 on time-series compresses the time scale.
 
 Verified 2026-07-02 against `exec-scorecard-v2` build (1 POST retry
-on explicit-`"vertical"` before this rule was documented).
+on explicit-`"vertical"` before this rule was documented). Reconfirmed
+2026-08-04 directly against the live OpenAPI schema (`orientation`'s
+enum is `["horizontal"]` only — no `"vertical"` value exists at all,
+so an explicit `"vertical"` fails the whole element's `oneOf` match
+and surfaces as a misleading `Invalid kind: "bar-chart"` POST error
+rather than a targeted enum-mismatch message) — see
+`reference/history.md` → "2026-08-04 — bar-chart orientation" for the
+incident this caught in `examples/dashboard-department-scorecard.json`.
 
 ### Color channel
 
