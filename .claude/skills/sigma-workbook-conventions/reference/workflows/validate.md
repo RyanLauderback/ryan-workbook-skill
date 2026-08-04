@@ -3,7 +3,7 @@
 Validation runs in three phases:
 
 1. **Pre-submit** — `scripts/validate-spec.py` catches what's visible
-   in the spec text (16 checks; see the note on JSON/YAML input below).
+   in the spec text (17 checks; see the note on JSON/YAML input below).
 2. **Post-create** — `scripts/api/verify-workbook.sh` catches
    unresolved / circular refs in the compiled SQL;
    `scripts/api/audit-workbook-schema.sh` catches `error`-typed
@@ -38,7 +38,11 @@ reconciliation, plus a 15th (`schema-version`) added the same day after
 a live Wave 1 POST probe caught an invalid `schemaVersion` value that
 local validation alone couldn't have flagged without this check. A 16th
 (`action-refs-resolve`) was added the same wave (Wave 2 / C3) alongside
-the action/effect vocabulary itself.
+the action/effect vocabulary itself. A 17th (`channel-exclusivity`) was
+added 2026-08-04 after a Wave 3 test session hit the exact channel-reuse
+rejection `reference/conventions.md` had documented since 2026-07-02 but
+flagged as "planned; not yet implemented" — the second real-session
+recurrence of the same failure mode.
 
 | # | Check | What it catches |
 |---|---|---|
@@ -58,6 +62,7 @@ the action/effect vocabulary itself.
 | 13 | `summary-calc-collision` | Column IDs that appear in both `summary[]` and a `groupings[].calculations[]` list on the same table. POST rejects with `Duplicate column or folder reference`. Fix: split into two column definitions with distinct IDs. Added 2026-07-02 after `exec-scorecard` v1 hit this mid-build. See `reference/specification/tables.md` → "summary — summary-bar pattern." |
 | 14 | `description-object-on-kpi-and-table` | Plain-string `description` on `kpi-chart`, `table`, `pivot-table`, or `input-table` elements. POST rejects with `Invalid object: string`. Fix: wrap as `{"text": "..."}` or `{"visibility": "hidden"}`. Chart elements accept the string form. Note: a GET-spec readback of any of these 4 kinds emits `description` as a plain string — a harvested spec must be normalized before it can be re-POSTed. Added 2026-07-02 after `inventory-health` build hit this. See `reference/specification/kpis.md` → "Description must be an object." |
 | 15 | `pivot-missing-rows-and-columns` | Pivot-tables that have `values` but neither `rowsBy` nor `columnsBy` — the pivot compiles cleanly (passes POST + verify) but renders as a single grand-total row. Fix: add at least one `rowsBy` or `columnsBy` entry (`[{"id": "<dim-col-id>"}]`). Added 2026-07-02 after `Product-and-Basket-Performance` shipped two pivots that rendered as grand-total-only in the UI. See `reference/specification/tables.md` → "Shape" (pivot section). |
+| 16 | `channel-exclusivity` | A column id bound to 2+ distinct binding channels on the same chart/map/KPI element (e.g. a region-map's `color.column` and `label[].id` both pointing at the same column). Sigma **rejects at POST** with `Column '<id>' is referenced from both 'X' and 'Y'; a column can only be on one channel at a time` — a hard failure, not a rendering quirk. FAIL-level. Covers `bar-chart`/`line-chart`/`area-chart`/`combo-chart`/`scatter-chart` (`xAxis`, `yAxis`, `color`, `size`), `pie-chart`/`donut-chart` (`value`, `color`, `holeValue`), `region-map`/`point-map`/`geography-map` (region/lat-lon/geography, `color`, `size`, `label`, `tooltip`), and `kpi-chart` (`value`). Fix: duplicate the column (same formula, a distinct id) and bind one id per channel. Added 2026-08-04 after a Wave 3 test session hit this live at POST — the second real-session recurrence since the rule was first documented (`exec-scorecard-v2`, 2026-07-02) without a validator check. See `reference/conventions.md` → "Channel exclusivity." |
 
 **What this validator does not cover, even when it exits 0** (printed as a
 footer on every run): qualified `[Source/Column]` refs are not verified —

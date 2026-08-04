@@ -1067,3 +1067,84 @@ per-file capability summaries).
 
 **Retest note:** full 12-example validator regression re-run clean
 after every fix in this entry.
+
+## 2026-08-04 — Wave 3 real build-mode test: sales dashboard + input-table writeback + `channel-exclusivity` check shipped
+
+A follow-up test session (fresh kickoff → recon → plan → approval → build,
+against a real user ask — "Wave 3 Test," a sales performance dashboard with
+4 KPIs, a control-driven "pick your dimension/metric" pivot, a region-map
+with click-to-modal, an editable input table for per-state notes filtered
+live by the clicked state, and three tabbed cohort-analysis sections
+(region / customer / product)) deliberately combined this skill's newest
+capability waves in one real spec, authored from the chunk text plus a live
+GET of an existing, structurally-similar production workbook in this org
+(`fe0140e9-3798-4a9a-a30b-03af8ddbc8ef`, the original "wave 1 test" —
+reused its header/KPI/map/modal/tabbed-container patterns directly rather
+than reinventing them from prose).
+
+**Recon finding, not a bug:** the data model's 5M-row transactions element
+(`GwiskXBx0S`) does not pass through `Store State` — only `Store Region` —
+confirmed by diffing against the sibling 500M-row element
+(`LZxh6NMhnf`), which does carry `Store State`. Pulled it in via `Lookup()`
+against a sibling `D_STORE`-sourced table, per `formulas.md`'s verified
+dimension-passthrough recipe. Matches the user's own heads-up in the
+prompt ("perform lookups to the other dim tables where necessary").
+
+**One real bug found at first POST attempt:** `map-profit-by-state`'s
+`color.column` and `label[0].id` both referenced the same column id
+(`col-map-profit`) — rejected with `Column 'col-map-profit' is referenced
+from both 'color' and 'label'; a column can only be on one channel at a
+time`. This is the exact rule `reference/conventions.md` → "Channel
+exclusivity" already documented (verified 2026-07-02 against
+`exec-scorecard-v2`, 2 POST rejections) — but that check had been flagged
+"planned; not yet implemented" since it was formalized. This is the
+**second independent real-session recurrence** of the same failure mode,
+which crossed this skill's own "promote on 2nd recurrence" threshold —
+implemented `validate-spec.py`'s `channel-exclusivity` check (17th check)
+rather than filing it as a 3rd occurrence to fix later. Fixed the spec
+itself by duplicating the column (`col-map-profit-label`, identical
+formula, distinct id) — the documented fix pattern.
+
+The new check walks a per-element-kind channel-field map (`bar-chart`/
+`line-chart`/`area-chart`/`combo-chart`/`scatter-chart`: `xAxis`, `yAxis`,
+`color`, `size`; `pie-chart`/`donut-chart`: `value`, `color`, `holeValue`;
+`region-map`/`point-map`/`geography-map`: region-binding field(s), `color`,
+`size` (point-map only), `label`, `tooltip`; `kpi-chart`: `value`) and
+extracts column id(s) from each channel's value generically (handles the
+`{id}`, `{columnId}`, `{columnIds:[...]}`, and `{by, column}` shapes
+observed across different element kinds under the same channel name,
+plus arrays of `{id}` for `label`/`tooltip`). Flags FAIL when the same
+column id appears under 2+ distinct channel names on one element.
+Positive-control tested against a minimal deliberately-broken region-map
+(caught correctly) and the full 13-example regression plus this session's
+own spec (all clean, no false positives).
+
+Second POST succeeded: `workbookId 22bf01a5-1ecc-4257-b9ad-b89e3b1d18c1`,
+`verify-workbook.sh` 33/33 elements compiling clean, GET-back round-trip
+byte-for-byte confirmed on the map's `on-select` action chain, the
+hidden-page control's cross-page `filters` binding, the tabbed-container's
+`tabs[]`, the modal page's `type`/`modal` config, and the pivot's
+`rowsBy`/`columnsBy`/`values`. `audit-workbook-schema.sh` returned the
+expected `INCOMPLETE` (exit 3) — this org's OAuth client still lacks MCP
+scope, the same documented gap from every prior wave's test session, not a
+new failure.
+
+**New pattern used, not yet independently confirmed in the UI:** `summary`
++ `Percentile()` applied to bucket rows by percentile rank on a **plain,
+non-`groupings` table** (grain already one-row-per-customer from an
+upstream aggregation tier), rather than the previously-documented pairing
+of `summary` with `groupings.calculations` on the same table. Compiles
+clean per `verify-workbook.sh`, but this is a new application of the
+pattern — flagged in `workbooks/wave-3-test/notes.md` for visual
+confirmation before promoting into `tables.md` as a second worked example.
+
+**No browser-based visual verification performed** — this test session
+had no browser/screenshot tool available. All verification is via
+`validate-spec.py`, live POST/GET round-trip diffing, and
+`verify-workbook.sh`'s compiled-SQL check; the workbook URL was handed
+back for the user to open directly.
+
+**Retest note:** full 13-example validator regression re-run clean after
+the `channel-exclusivity` check shipped (13/13, no new false positives),
+plus the deliberately-broken minimal region-map fixture (correctly
+flagged FAIL).

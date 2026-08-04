@@ -457,7 +457,7 @@ mapping.
   wrapper.
 - `discover.md` — `mcp-search.sh` / `mcp-describe.sh` sequencing,
   REST fallbacks, friendly-vs-raw warehouse name normalization.
-- `validate.md` — `validate-spec.py` (pre-submit, 16 checks) +
+- `validate.md` — `validate-spec.py` (pre-submit, 17 checks) +
   `verify-workbook.sh` (SQL-compile check) +
   `audit-workbook-schema.sh` (data-layer schema audit, auto-run by
   `publish-workbook.sh`) + cryptic-error decoding table.

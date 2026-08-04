@@ -43,6 +43,7 @@ CHECKS = [
     "summary-calc-collision",
     "description-object-on-kpi-and-table",
     "pivot-missing-rows-and-columns",
+    "channel-exclusivity",
 ]
 
 
@@ -482,6 +483,95 @@ def issues_controlid_collision(spec: dict) -> list[tuple[str, str]]:
                         "will resolve to the control, not the column. "
                         "Rename the control (e.g. `DateRange`, `StoreFilter`)."
                     ))
+    return issues
+
+
+CHANNEL_FIELDS_BY_KIND = {
+    "bar-chart": ["xAxis", "yAxis", "color", "size"],
+    "line-chart": ["xAxis", "yAxis", "color", "size"],
+    "area-chart": ["xAxis", "yAxis", "color", "size"],
+    "combo-chart": ["xAxis", "yAxis", "color", "size"],
+    "scatter-chart": ["xAxis", "yAxis", "color", "size"],
+    "pie-chart": ["value", "color"],
+    "donut-chart": ["value", "color", "holeValue"],
+    "region-map": ["region", "color", "label", "tooltip"],
+    "point-map": ["latitude", "longitude", "size", "color", "label", "tooltip"],
+    "geography-map": ["geography", "color", "label", "tooltip"],
+    "kpi-chart": ["value"],
+}
+
+
+def _extract_channel_column_ids(value) -> list[str]:
+    """Return the column-id string(s) a single channel's value references.
+
+    Channel value shapes observed across element kinds are inconsistent
+    (`{"id": ...}` for donut value/holeValue and map region/lat/lon/size,
+    `{"columnId": ...}` for KPI value and chart xAxis, `{"columnIds": [...]}`
+    for chart yAxis, `{"by", "column": ...}` for color, and arrays of
+    `{"id": ...}` for map label/tooltip) — this walks all of them generically
+    rather than special-casing per element kind.
+    """
+    ids: list[str] = []
+    if value is None:
+        return ids
+    if isinstance(value, str):
+        return [value]
+    if isinstance(value, dict):
+        col_ids = value.get("columnIds")
+        if isinstance(col_ids, list):
+            ids.extend(x for x in col_ids if isinstance(x, str))
+        for key in ("id", "columnId", "column"):
+            v = value.get(key)
+            if isinstance(v, str):
+                ids.append(v)
+        return ids
+    if isinstance(value, list):
+        for item in value:
+            ids.extend(_extract_channel_column_ids(item))
+        return ids
+    return ids
+
+
+def issues_channel_exclusivity(spec: dict) -> list[tuple[str, str]]:
+    """Catch a column id reused across two+ binding channels on one element.
+
+    Per `reference/conventions.md` -> "Channel exclusivity": a single column
+    id may appear on at most one binding channel per element (e.g. a
+    region-map's `color.column` and `label[].id` can't both be the same id).
+    Sigma rejects this at POST with a 400: "Column '<id>' is referenced from
+    both 'X' and 'Y'; a column can only be on one channel at a time" — a hard
+    rejection, not a rendering quirk.
+
+    This check was flagged in `conventions.md` as "planned; not yet
+    implemented" pending a second real-session confirmation of the failure
+    mode beyond the original 2026-07-02 `exec-scorecard-v2` incident.
+    Confirmed again 2026-08-04 (Wave 3 test session, live POST rejection on
+    `map-profit-by-state`'s `color`/`label` both referencing the same
+    column) — implementing now.
+
+    fail: any column id bound to 2+ distinct channels on the same element.
+    """
+    issues = []
+    for _pi, el in _all_elements(spec):
+        channel_fields = CHANNEL_FIELDS_BY_KIND.get(el.get("kind"))
+        if not channel_fields:
+            continue
+        id_to_channels: dict[str, set[str]] = {}
+        for field in channel_fields:
+            if field not in el:
+                continue
+            for cid in _extract_channel_column_ids(el.get(field)):
+                id_to_channels.setdefault(cid, set()).add(field)
+        for cid, channels in sorted(id_to_channels.items()):
+            if len(channels) > 1:
+                issues.append((
+                    "fail",
+                    f"element '{el.get('id')}' ({el.get('kind')}): column "
+                    f"'{cid}' is bound to {len(channels)} channels "
+                    f"({', '.join(sorted(channels))}) — a column can only be "
+                    "on one channel at a time. Duplicate the column (same "
+                    "formula, a distinct id) and bind one id per channel."
+                ))
     return issues
 
 
@@ -1050,6 +1140,7 @@ def main() -> None:
         ("summary-calc-collision",     lambda: issues_summary_calc_collision(spec)),
         ("description-object-on-kpi-and-table", lambda: issues_description_object_on_kpi_and_table(spec)),
         ("pivot-missing-rows-and-columns", lambda: issues_pivot_missing_rows_and_columns(spec)),
+        ("channel-exclusivity",       lambda: issues_channel_exclusivity(spec)),
     ]:
         for level, msg in fn():
             all_issues.append((level, tag, msg))

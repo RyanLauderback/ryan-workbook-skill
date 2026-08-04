@@ -324,10 +324,13 @@ channel per element.
 ```
 
 Verified 2026-07-02 against `exec-scorecard-v2` (2 POST rejections
-on region-map channel reuse before this rule was formalized).
+on region-map channel reuse before this rule was formalized). Confirmed
+again 2026-08-04 (Wave 3 test session, `map-profit-by-state`'s
+`color`/`label` both referencing the same column) — this second
+real-session recurrence is what triggered implementing the check below.
 
 `validate-spec.py`'s `channel-exclusivity` check catches this
-pre-POST (planned; not yet implemented — see `reference/workflows/validate.md`).
+pre-POST (implemented 2026-08-04 — see `reference/workflows/validate.md`).
 
 ---
 
