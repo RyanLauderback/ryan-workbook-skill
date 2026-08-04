@@ -315,8 +315,23 @@ above.
 | `Min([col])` | Minimum value |
 | `Max([col])` | Maximum value |
 | `Median([col])` | Median value |
-| `Percentile([col], 0.95)` | Nth percentile |
+| `PercentileCont([col], 0.95)` | Nth percentile (continuous — interpolates between values) |
+| `PercentileDisc([col], 0.95)` | Nth percentile (discrete — returns an actual value from the data) |
 | `Mode([col])` | Most frequent value |
+
+> ⚠️ `Percentile(<col>, <k>)` (no `Cont`/`Disc` suffix) does **NOT** exist in
+> Sigma — a hallucination, same failure class as the `DivideSafe` incident
+> below. Confirmed 2026-08-04 via a live compiled-SQL check (a Wave 3 test
+> session's build used it in a `summary` column; the raw SQL literally
+> contained `'Unknown function Percentile'`, which then cascaded into a
+> "reference to errored column" error on every downstream formula
+> referencing that column — POST, `validate-spec.py`, and
+> `verify-workbook.sh` all reported clean, since none of them execute or
+> inspect the actual aggregate-function names in a formula; only pulling the
+> raw compiled SQL via `GET /v2/workbooks/{id}/elements/{eid}/query`, or a
+> human opening the workbook, surfaces it). Use `PercentileCont`/
+> `PercentileDisc` instead — same argument order (`column, k` where `k` is
+> 0–1). See `reference/history.md` → "2026-08-04" for the full incident.
 
 ## Date functions
 
@@ -630,6 +645,20 @@ element:
    placed in layout XML, so it doesn't exist at render.
 5. **Boolean operator as function call** — `Not(...)` instead of
    `Not (...)`.
+
+**If `verify-workbook.sh` reports clean but the workbook still shows an
+error in the UI** (e.g. "reference to errored column"): the script only
+greps compiled SQL for two specific text markers ("Unknown column",
+"Circular column reference") — a hallucinated/nonexistent function name
+(confirmed 2026-08-04: `Percentile` instead of `PercentileCont`) compiles
+to a *different* literal error string (`'Unknown function <Name>'`) that
+this check doesn't match, and any column referencing the broken one
+cascades into "reference to errored column." Pull the raw compiled SQL
+directly (`GET /v2/workbooks/{id}/elements/{eid}/query`, the same
+endpoint `verify-workbook.sh` uses) and read the actual `sql` field for
+any `'...'` string-literal markers rather than trusting a clean
+`verify-workbook.sh` exit code alone when a user reports a UI-visible
+column error.
 
 See `reference/workflows/validate.md` → "Post-create — verify-workbook.sh"
 for the triage flow.

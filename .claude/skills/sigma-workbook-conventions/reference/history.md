@@ -267,6 +267,16 @@ compiled SQL for unresolved-ref markers; it does not inspect schema
 types, so runtime-error columns with structurally valid SQL pass
 silently.
 
+**Forward note (2026-08-04):** this build's `Percentile` usage was
+the same hallucinated, nonexistent function later fully root-caused
+in the Wave 3 test session below (`formulas.md` had it listed as real
+all along) — at the time, the fix here was a general data-layer audit
+tool, not a correction to the function name itself, so this exact
+class of error went unfixed at the source for almost a month. See
+`reference/specification/formulas.md` → the `Percentile` hallucination
+warning and the entry below, "Follow-up, same day — `Percentile` is
+not a real Sigma function."
+
 **Fix.** `scripts/api/audit-workbook-schema.sh <wb-id>` iterates
 every element via `mcp-describe workbook-element`, parses the DDL
 for `error`-typed columns, and reports element + column + formula.
@@ -1129,22 +1139,114 @@ expected `INCOMPLETE` (exit 3) — this org's OAuth client still lacks MCP
 scope, the same documented gap from every prior wave's test session, not a
 new failure.
 
-**New pattern used, not yet independently confirmed in the UI:** `summary`
-+ `Percentile()` applied to bucket rows by percentile rank on a **plain,
-non-`groupings` table** (grain already one-row-per-customer from an
-upstream aggregation tier), rather than the previously-documented pairing
-of `summary` with `groupings.calculations` on the same table. Compiles
-clean per `verify-workbook.sh`, but this is a new application of the
-pattern — flagged in `workbooks/wave-3-test/notes.md` for visual
-confirmation before promoting into `tables.md` as a second worked example.
-
-**No browser-based visual verification performed** — this test session
-had no browser/screenshot tool available. All verification is via
-`validate-spec.py`, live POST/GET round-trip diffing, and
+**No browser-based visual verification performed by this agent** — this
+test session had no browser/screenshot tool available. All verification
+was via `validate-spec.py`, live POST/GET round-trip diffing, and
 `verify-workbook.sh`'s compiled-SQL check; the workbook URL was handed
-back for the user to open directly.
+back for the user to open directly. **This gap was not theoretical** —
+see the follow-up below: the user opened the workbook and immediately
+caught a real bug none of the automated checks had.
 
 **Retest note:** full 13-example validator regression re-run clean after
 the `channel-exclusivity` check shipped (13/13, no new false positives),
 plus the deliberately-broken minimal region-map fixture (correctly
 flagged FAIL).
+
+### Follow-up, same day — `Percentile` is not a real Sigma function (hallucination, same class as `DivideSafe`)
+
+The user opened the workbook and reported: "the aov bucket calculation is
+returning reference to errored column." `tbl-customer-cohort`'s `AOV
+Bucket` column referenced two `summary` columns (`AOV P33`/`AOV P67`)
+computed via `Percentile([AOV], 0.33)` — a function this skill's own
+`formulas.md` listed in its aggregation-functions table, but which **does
+not exist in Sigma**.
+
+**First fix attempt was wrong and was reverted at the user's explicit
+instruction.** The initial hypothesis — that `summary` requires the
+parent table to also have `groupings` (the table had `summary` but no
+`groupings` at all) — was plausible from `conventions.md`'s documented
+"Summary-bar pattern," and was promoted into `conventions.md` and
+`tables.md` with a worked wrong/right example. The user reported the fix
+did not work and correctly identified the real cause ("unknown percentile
+calculations"). Both doc edits were reverted in full (`tables.md` fully
+reverted via `git restore`; `conventions.md` had the retracted paragraph
+manually removed, keeping the unrelated-and-still-valid
+`channel-exclusivity` edit from earlier in the same session intact).
+
+**Actual root cause, confirmed by reading the raw compiled SQL directly**
+(`GET /v2/workbooks/{id}/elements/tbl-customer-cohort/query` — not just
+`verify-workbook.sh`'s narrow marker check, which reported this element
+clean both before and after the real fix): the compiled SQL contained the
+literal string `'Unknown function Percentile'`, and the downstream `AOV
+Bucket` column's own error ("reference to errored column") was a pure
+cascade from referencing the broken `AOV P33`/`AOV P67` columns — nothing
+to do with `groupings` at all. Confirmed via `WebSearch`/`WebFetch`
+against `help.sigmacomputing.com` that the real functions are
+`PercentileCont`/`PercentileDisc` (same argument order:
+`PercentileCont([col], k)`). Renaming fixed it — reconfirmed by re-pulling
+the raw compiled SQL, which now shows a real `percentile_cont(...) within
+group (...)` expression and no error-string markers anywhere, on both
+`tbl-customer-cohort` and the downstream `pivot-customer-cohort`.
+
+**Why nothing in the pipeline caught this the first time:** `validate-spec.py`
+only checks spec *shape*, not formula semantics. `verify-workbook.sh`
+greps compiled SQL for exactly two markers ("Unknown column", "Circular
+column reference") — a nonexistent function name compiles to a *third*,
+different literal (`'Unknown function <Name>'`), which the script's grep
+doesn't match, so it reported this element clean on both the broken and
+fixed versions. Only reading the raw `sql` field directly, or a human
+opening the workbook, surfaces it.
+
+**Fix.** Corrected `formulas.md`'s aggregation-functions table
+(`Percentile` → `PercentileCont`/`PercentileDisc`, with a hallucination
+warning matching the existing `DivideSafe` callout's format) and added a
+troubleshooting note under "When the formula fails at render" describing
+this exact failure class and the raw-compiled-SQL workaround.
+Deliberately did **not** extend `verify-workbook.sh`'s grep patterns this
+session — this is the first confirmed occurrence of this specific gap
+(unlike `channel-exclusivity` above, which was a second recurrence), and
+the user was actively waiting on the real fix; flagging the gap here as a
+well-evidenced candidate for a future pass rather than shipping a second
+speculative change in the same session.
+
+### Second follow-up, same day — a "confirmed fixed" claim was itself wrong (verification false-positive)
+
+After the `PercentileCont` fix above, this agent PUT the corrected spec,
+then immediately fetched the raw compiled SQL for `tbl-customer-cohort`
+and saw a real `percentile_cont(...)` expression with no error markers —
+and reported the bug fixed on that basis. **That report was wrong.** A
+reviewing agent (relaying this session's output) independently re-checked
+the same live workbook shortly after and found the stored formula was
+still literally `Percentile([AOV], 0.33)` and the compiled SQL still
+contained `'Unknown function Percentile'` — i.e. the exact pre-fix state,
+despite this agent's fresh-looking verification moments earlier.
+
+Re-investigating found the local spec file on disk already had the
+correct `PercentileCont` formula (so the *authoring* was right), but a
+fresh `get-spec` + fresh raw `query` call, done again from scratch, also
+showed the live workbook still broken at that point — confirming the
+reviewing agent's finding, not just taking its word for it. Re-running
+the PUT → verify sequence a second time, with an explicit timestamp
+logged before and after every mutating and reading call, produced
+internally consistent evidence: `get-meta`'s `latestVersion` incremented
+(4 → 5) with `updatedAt` matching the new PUT's timestamp to the second,
+and both the fresh `get-spec` and fresh raw `query` calls made *after*
+that specific PUT showed the corrected formula and clean compiled SQL.
+
+**The exact mechanism behind the first false-positive was not
+conclusively identified** — candidates include a stale/misattributed
+local response, a PUT that silently didn't include the intended change,
+or some transient inconsistency, but none was confirmed. What's
+notable and worth carrying forward regardless of mechanism: **this
+agent's own single post-PUT verification pass (PUT, then immediately
+re-fetch and check) produced a confident, wrong "fixed" claim once
+already in this same session** — for a bug class (`verify-workbook.sh`
+blind to it) where the checking agent had already established that the
+automated pipeline can't be trusted alone. The practical lesson: treat
+one fresh-looking check after a mutation as good evidence, but not
+infallible — a second independent check, or a short delay before the
+"final" verification, would have caught this sooner. This is a process
+gap in how this skill's agents self-verify fixes, not a Sigma platform
+behavior — no fix is proposed to any script over it in this session;
+noted here as a caution for future sessions relying on "I checked and
+it's clean" as sufficient grounds to report a fix as done.
