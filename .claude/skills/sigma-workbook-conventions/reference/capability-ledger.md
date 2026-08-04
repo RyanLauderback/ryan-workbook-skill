@@ -105,6 +105,7 @@ verbatim, wrap it in `document`/`kind:"workbook"` first — or use
 | `DateTrunc([control], ...)` with a dynamic first argument | Local `controls.md` shows this; one third-party fork claims it errors and must be wrapped in `Switch` | Probe pending |
 | `displayColumnId` on a control's `source` | Observed in one third-party fork's corpus; zero occurrences in this skill's 5-workbook harvest | Probe pending |
 | Cascading controls (control A restricts control B's value list) | No source has documented this | Genuine, unaddressed gap — not even a claim to verify yet |
+| DM-internal RLS helper columns (`CurrentUserAttributeText`-backed column + dependent boolean) not cross-element-referenceable from a workbook table, even when named at the DM level | A Wave 2 build-mode test session, 2026-08-04 | Plausible given Sigma's RLS mechanics, but not independently reproduced — this session has no recon on a real RLS-backed data model. Two other claims from the same report (cross-page forward-reference ordering, table `sort`+`groupings` rejection) were checked and refuted via live probes the same day — see `reference/history.md` → "2026-08-04 — second peer report," so this one is flagged, not assumed true by association. |
 
 **On third-party forks:** `cmiller-coder/millersigma` and a repo initially
 mistaken for a mirror of the real upstream skill (`twells89/sigma-migration-skills`)

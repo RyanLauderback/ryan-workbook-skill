@@ -26,6 +26,47 @@ Every per-element file in this directory opens with the relevant `jq`
 recipe. Use it whenever a field shape has changed or the skill's coverage
 doesn't include a feature you need.
 
+### OpenAPI reference — known-dead URL (2026-08-04)
+
+**The URL above is confirmed dead** — `curl -I` returns a real `HTTP
+404` (a proper Fern-docs 404 page, not a transient network error).
+Sigma's docs site has restructured onto a Fern-hosted "Available APIs"
+index at `https://help.sigmacomputing.com/openapi.json`, which
+currently lists exactly two downloadable bundles:
+
+- `https://help.sigmacomputing.com/openapi/sigma-rest-api.json` (181
+  paths — workbook/folder/member/schedule management endpoints)
+- `https://help.sigmacomputing.com/openapi/code-representation.json`
+  (only 2 paths: `/v2/dataModels/{dataModelId}/spec` and
+  `/v2/dataModels/spec` — data-model specs only)
+
+**Neither current bundle contains the workbook-spec element-kind
+schemas** (`BarChart`, `KpiChart`, `CommonElement`, `WorkbookSpec`,
+etc.) that the `jq` recipes above and every per-element file in this
+directory depend on — confirmed by grepping both fetched bundles for
+`"bar-chart"` (zero matches in either) and for `Workbook`/`Element`
+schema names (present, but none matching the workbook-spec element
+shapes). The schema this skill has been using all along (11 top-level
+schemas incl. `WorkbookSpec`, `CommonElement`, `BarChart`'s enum
+definitions) came from the now-dead URL and isn't currently reachable
+through Sigma's own docs-site navigation via any bundle this session
+could locate. This is a Sigma docs-site gap, not a missing-URL puzzle
+to solve — don't guess at replacement paths (e.g. a "content-hash"
+path was floated in one session and could not be verified; treat that
+as unconfirmed).
+
+**Practical fallback:** if a session already has a `/tmp/sigma-api.json`
+cached from before this broke, it remains valid and was used
+successfully as late as 2026-08-04 (see `reference/history.md` →
+"2026-08-04 — bar-chart orientation" for a live example: it correctly
+identified `orientation`'s enum as `["horizontal"]`-only). A fresh
+session with no cached copy has no known way to re-fetch that specific
+schema — fall back to this skill's "Probe first, then document"
+doctrine (live-POST bisection against the real API) as the primary
+way to resolve field-shape questions for workbook-spec elements, not a
+fallback of last resort. See `reference/capability-ledger.md` →
+"retest protocol."
+
 ### Schema-drift signal
 
 If a POST/PUT fails with `invalid argument`, `unknown field`,

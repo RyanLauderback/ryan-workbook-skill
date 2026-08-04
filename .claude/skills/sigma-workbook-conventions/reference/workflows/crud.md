@@ -11,7 +11,17 @@ preserved verbatim — see the "ID preservation" section below.
 
 ## OpenAPI reference
 
+**This URL is confirmed dead (404) as of 2026-08-04** — Sigma's docs
+site restructured. See `reference/specification/schema.md` →
+"OpenAPI reference — known-dead URL" for the full finding, including
+why the two current replacement bundles do NOT cover this. If you
+already have a cached `/tmp/sigma-api.json` from before this date,
+it's still a valid reference. Otherwise, fall back to live-POST
+bisection against the real API — see `reference/capability-ledger.md`
+→ "retest protocol."
+
 ```bash
+# BROKEN as of 2026-08-04 — do not rely on this succeeding:
 curl -sf https://help.sigmacomputing.com/openapi/sigma-computing-public-rest-api.json > /tmp/sigma-api.json
 jq '.paths."/v2/workbooks/spec".post, .paths."/v2/workbooks/{workbookId}/spec".get, .paths."/v2/workbooks/{workbookId}/spec".put' /tmp/sigma-api.json
 ```

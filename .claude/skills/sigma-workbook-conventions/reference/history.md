@@ -888,3 +888,100 @@ hyphen. A genuine bare `urlId` has no hyphens, so this is a no-op for
 that case. Verified against all three input forms — full pasted URL,
 bare pretty slug with no URL wrapper, and bare short urlId (regression
 check) — all three now resolve to the same, correct entry.
+
+## 2026-08-04 — second peer report: 1 confirmed, 2 refuted (again), 2 more refuted, 1 real docs gap found independently
+
+The same Wave 2 test sub-agent (task `addf650c9024688e2`, closing out
+its session) relayed a fuller bug report via `SendMessage` after the
+fixes above already landed. Per this skill's own doctrine, every claim
+was independently re-tested rather than merged on the strength of the
+report — several directly repeated or extended claims already handled
+above, and two were new enough to warrant a fresh live probe before
+writing anything into the reference docs.
+
+**Already handled, no new action:**
+- Document wrapper (claim re-stated) — already confirmed and fixed
+  above; the peer's own fix sat uncommitted in its worktree and was
+  not merged (this session's own implementation was kept).
+- `find-file-by-urlid.sh` bare-urlId-only matching (claim re-stated)
+  — already fixed above, before this report arrived.
+- A heredoc-vs-`-c` stdin bug in the peer's own fix for the wrapper —
+  a bug in that fix, not in this session's implementation, which
+  already used `python3 -c` for exactly this reason. No action needed.
+
+**Re-refuted with fresh, decisive evidence:** the plain-text
+(non-JSON) success-response claim. Rather than rely on the earlier
+GET/POST spot-check, ran a genuine fresh POST of a guaranteed-valid
+minimal spec through the actual fixed `publish-workbook.sh` and
+hex-dumped the raw response: `{"success":true,"workbookId":"31ee1f92-
+55d3-45e1-9fd4-2a5c2905d9fb"}` — clean JSON, no plain-text framing, on
+an authentic 2xx success via this skill's real call path. Two
+independent agent sessions have now reported this claim; both times it
+traced to a raw `curl` call (the reporting agent's own ad-hoc test)
+that omitted `Accept: application/json`, not to a property of the API
+itself.
+
+**Refuted via new, targeted live probes (not previously tested):**
+
+- *Cross-page forward references.* Claim: a page-1 element sourcing a
+  hidden page-2 table fails with "Dependency not found" unless the
+  source page is declared first in `pages[]`. Built a 2-page probe
+  with a real, working data-model source (`3889b3c3-4657-4d9e-b568-
+  5d2388cf4b4c` / `GwiskXBx0S`, reused from
+  `data-model-sourced-single-page-inventory-health.json` rather than a
+  placeholder, so a real dependency-resolution failure couldn't hide
+  behind an unrelated "connection not found" error) with the
+  *referencing* page declared first and the *source* page declared
+  second — the opposite of the claimed working order. **POSTed clean**
+  (`workbookId: bbd00e1d-a989-418c-b1ee-bd4e2f3867f5`). `pages[]`
+  order does not affect cross-page reference resolution.
+
+- *Table `sort` rejected alongside `groupings`.* Claim: a table-level
+  `sort` referencing a column used in a grouping's calculations is
+  rejected with "Sort column not found" even when the column exists in
+  `columns[]`. Already directly contradicted by evidence already in
+  hand: `dashboard-department-scorecard.json`'s `tbl-top-stores` has
+  both `groupings` (categorize on `tts-store`/`tts-region`) and `sort`
+  (`{columnId: "tts-revenue", direction: "descending"}`, `tts-revenue`
+  also appearing in `summary`) together, and this exact table POSTed
+  successfully as part of the full corrected exemplar's end-to-end
+  test earlier in this same session. No new probe needed — this
+  combination is already live-verified working.
+
+**Not independently verified — left as an open, unverified caution:**
+DM-internal RLS helper columns (a `CurrentUserAttributeText`-backed
+column and its dependent boolean) reportedly not cross-element-
+referenceable from a workbook table, even when named at the DM level.
+Plausible given how Sigma's RLS mechanics work, but reproducing it
+requires a real RLS-backed data model this session doesn't have
+recon on. Added to `reference/capability-ledger.md` → "Unverified —
+probe pending" rather than asserted as fact either way.
+
+**Not from the peer report — an independent finding made while
+checking one of its side-comments.** The peer mentioned in passing
+that the OpenAPI URL in `schema.md`/`crud.md` "404s now" and guessed
+the replacement was "a content-hash path off help.sigmacomputing.com/
+reference" — the guess could not be verified and is not repeated
+anywhere. But the underlying observation (the URL is dead) checked
+out: `curl -I` on the documented URL returns a genuine `HTTP 404`.
+Traced further than the peer did: Sigma's docs site now serves an
+"Available APIs" index at `https://help.sigmacomputing.com/openapi.json`
+listing exactly two bundles (`openapi/sigma-rest-api.json`,
+`openapi/code-representation.json`), and **neither contains the
+workbook-spec element-kind schemas** (`BarChart`, `KpiChart`,
+`CommonElement`, etc.) this skill's per-element `jq` recipes rely on —
+confirmed by fetching both and grepping for `"bar-chart"` (zero
+matches in either) and for element-schema names. This is a real gap in
+Sigma's currently-published docs, not a wrong-URL problem to solve.
+Documented in `reference/specification/schema.md` → "OpenAPI reference
+— known-dead URL" and `reference/workflows/crud.md`, with the fallback
+guidance that live-POST bisection (as used minutes earlier in this
+same session to nail down the `bar-chart` `orientation`/`stacking`
+enums) is now the primary way to resolve workbook-spec field-shape
+questions, not a fallback of last resort.
+
+**Retest note:** full 12-example validator regression re-run clean
+after every fix in this entry and the prior one (still 12/12 example
+files — canonical count is smaller than the historical "12-example"
+figure quoted in earlier entries, which included harvested production
+workbooks not currently in this repo's own `examples/` directory).
