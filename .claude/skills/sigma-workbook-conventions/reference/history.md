@@ -1387,3 +1387,17 @@ already-verified primitive chunk for each piece (`formulas.md` for
 confidence-band line chart), and clearly separating what this wave
 confirmed from what remains harvest-only. Added the "Scenario /
 what-if / forecast build" gate row to `SKILL.md`.
+
+**C9-b (plugin packaging/publish) deliberately deferred, not
+forgotten.** The plan's remaining item — moving `scripts/` and
+`.claude/skills/` into a `plugins/sigma-workbooks/` tree, adding
+`.claude-plugin/{plugin.json,marketplace.json}`, and re-pathing every
+reference to the moved files — was scoped and ready, but is a
+full-repo restructure with a much larger blast radius than anything
+else in Wave 4: it touches nearly every file in the project and would
+have run while a Wave 3 test session's worktree was still active on
+the old layout. Asked the user directly rather than executing it
+silently; they chose to defer it to its own dedicated session once
+other in-flight work is closed out. Wave 4 is otherwise complete
+(C7 + C8 shipped, live-POST verified where the underlying capability
+allowed it).
