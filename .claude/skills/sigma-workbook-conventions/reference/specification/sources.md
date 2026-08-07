@@ -81,9 +81,11 @@ Column formulas can reference:
   `reference/conventions.md` → "`[Metrics/<Name>]` resolution"
 
 Discover available data models with
-`scripts/api/mcp-search.sh "<topic>" --types dataModel`. Inspect a
-specific model's elements + metrics with
-`scripts/api/mcp-describe.sh datamodel-element <dm-id> <el-id>`.
+`scripts/api/search-files.sh "<topic>" --types data-model`. Inspect a
+specific model's elements + metrics via `GET /v2/dataModels/{id}/spec`,
+or opportunistically try `scripts/api/mcp-describe.sh datamodel-element
+<dm-id> <el-id>` (expect exit 3 — see `reference/workflows/discover.md`
+→ "MCP status").
 
 If no data model fits, fall back to `warehouse-table` — don't
 manufacture a model.

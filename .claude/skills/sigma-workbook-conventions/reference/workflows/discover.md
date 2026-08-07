@@ -1,8 +1,20 @@
 # Source Discovery
 
 Finding connections, tables, columns, data models, metrics, and existing
-workbooks via the Sigma REST API + this skill's MCP wrappers. Load before
-composing any new spec.
+workbooks via the Sigma REST API. Load before composing any new spec.
+
+**MCP status (2026-08-07): not usable with this skill's auth model.**
+This skill authenticates with a `client_credentials` API token (see
+CLAUDE.md → "Authentication"). As of 2026-07-30, Sigma's `/mcp/v2`
+endpoint only accepts interactive user OAuth — confirmed directly by
+Sigma's MCP engineering team (see `reference/history.md` →
+"2026-08-07"). `mcp-search.sh`/`mcp-describe.sh` will reliably exit 3 on
+every call under this auth model; they are not flaky or occasionally
+missing a scope, they are categorically blocked until Sigma ships
+dedicated client-credentials MCP support (stated as "intended/in
+progress," no ETA). **Use the REST tools below as the default, not a
+fallback.** The MCP sections further down are kept for when that
+changes, not for today's builds.
 
 ## The routing decision
 
@@ -11,16 +23,26 @@ for first:
 
 | Prompt contains | Use first |
 |---|---|
-| Names or topics ("the PLUGS data model", "find the sales workbook") | `scripts/api/mcp-search.sh "<query>" [--types workbook,dataModel,dataModelElement,table] [--limit N]` |
+| Names or topics ("the PLUGS data model", "find the sales workbook") | `scripts/api/search-files.sh "<query>" [--types workbook,data-model,dataset] [--limit N]` |
 | URL slugs (`/b/<id>`, `…-<urlId>`) | `scripts/api/find-file-by-urlid.sh <urlId>` |
 | Warehouse paths (`<DB>.<SCHEMA>.<table>`), `/s/<id>` or `/t/<id>` schema URLs, or mixed prose | `scripts/sigma-resolve.py "<prompt-verbatim>"` |
 
-After resolution, use `scripts/api/mcp-describe.sh` against the resolved
-id to inspect — returns SQL DDL with column types, descriptions,
-formulas, and the metrics catalog. Replaces hand-walking `GET
-/v2/dataModels/{id}/spec` JSON.
+After resolution, inspect the resolved id via REST:
+- **Data model**: `GET /v2/dataModels/{id}/spec` (raw `curl`, self-bootstrapped
+  auth via `source scripts/api/_env.sh` — no dedicated wrapper script yet).
+  Returns the full JSON element/column/metric tree — more verbose than
+  MCP's DDL text, same information.
+- **Warehouse table**: `scripts/api/lookup-path.sh` → `scripts/api/list-table-columns.sh`
+  (raw warehouse column names — see "Column names — friendly vs raw
+  warehouse" below).
+- **Workbook**: `scripts/api/publish-workbook.sh get-spec <wb-id>`.
 
-## Discovery via MCP (preferred — richer output, less plumbing)
+`scripts/api/mcp-describe.sh` returns the same information as SQL DDL in
+one call when it works, but expect exit 3 under this skill's auth model
+(see the MCP status note above) — try it opportunistically, don't build
+a plan step that depends on it succeeding.
+
+## Discovery via MCP (blocked under client_credentials auth — kept for reference)
 
 `scripts/api/mcp-search.sh` and `mcp-describe.sh` call Sigma's MCP
 server (`/mcp/v2`) using the same OAuth token as the REST API.
@@ -104,12 +126,12 @@ referencing rules.
 carries formatting, is the single source of truth, and survives
 warehouse-column renames.
 
-## Discovery via REST primitives (fallbacks)
-
-The MCP wrappers cover ~90% of discovery needs. Reach for these only
-when MCP doesn't:
+## Discovery via REST primitives (default, not a fallback)
 
 ```bash
+# Find a workbook/data model/dataset by name or topic (substring match)
+scripts/api/search-files.sh "<query>" --types workbook,data-model,dataset --limit 10
+
 # List connections
 scripts/api/list-connections.sh
 
@@ -126,9 +148,13 @@ scripts/api/list-folders.sh "<name-substring>"
 scripts/api/probe-schema-tables.sh <connection-id> "<DB>.<SCHEMA>"
 ```
 
-These hit `/v2/connections`, `/v2/connection/<id>/lookup`,
-`/v2/connections/tables/<inode>/columns`, `/v2/files`, etc. Auth is
-self-bootstrapped via `_env.sh`.
+These hit `/v2/files`, `/v2/connections`, `/v2/connection/<id>/lookup`,
+`/v2/connections/tables/<inode>/columns`, etc. Auth is self-bootstrapped
+via `_env.sh`. `search-files.sh` is exact substring match against name
++ description, not semantic — broaden the query rather than expecting
+fuzzy/typo-tolerant matching, and it has no `dataModelElement`/table
+result kind (it indexes files, not elements inside them — describe the
+resolved data-model/workbook id to get to its elements).
 
 ## Path formats per warehouse
 
@@ -208,11 +234,17 @@ for the full rules.
 
 ## When discovery fails
 
-- **MCP `search` returns nothing**: try broader query terms or
-  switch to `find-file-by-urlid.sh` if you have a URL slug.
-- **`mcp-describe` 404s on a known-good ID**: the resource may
-  require a different `kind` argument. Try `workbook` vs `workbook-element`,
-  `datamodel` vs `datamodel-element`.
+- **`mcp-search.sh`/`mcp-describe.sh` exit 3 with `Missing required
+  scopes: mcp:access`**: expected, not a bug — see the MCP status note
+  at the top of this file. Don't retry the MCP call; switch to
+  `search-files.sh` / the REST describe recipes above.
+- **`search-files.sh` returns nothing**: try a broader/shorter
+  substring (it's exact substring match, not fuzzy), or switch to
+  `find-file-by-urlid.sh` if you have a URL slug.
+- **`mcp-describe` 404s on a known-good ID** (on the rare host where MCP
+  access does work): the resource may require a different `kind`
+  argument. Try `workbook` vs `workbook-element`, `datamodel` vs
+  `datamodel-element`.
 - **`/v2/connection/<id>/lookup` returns ambiguous results**: ask
   the user for the full database/schema path. Don't guess.
 - **Schema URL slugs (`/s/<id>`, `/t/<id>`)** are not reversible via

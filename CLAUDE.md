@@ -85,7 +85,7 @@ for the workflow.
 
 - `workbooks/<name>/` — one folder per dashboard. Each contains `spec.json`, `prompts/<timestamp>.md`, `iterations/<timestamp>.json`, `notes.md`. Start a new dashboard by copying `workbooks/_template/`.
 - `workbooks/_exemplars/` — golden specs harvested from Sigma. Read-only references; never edit.
-- `scripts/api/` — auth-bootstrapped wrappers around Sigma's MCP server (`mcp-search.sh`, `mcp-describe.sh`) and REST endpoints (`find-file-by-urlid.sh`, `list-folders.sh`, etc.). Each sources `_env.sh` on first call to load `.env` and cache an OAuth token. Workbook CRUD (POST/PUT to `/v2/workbooks/*`) still goes through direct `curl` — no helper script yet.
+- `scripts/api/` — auth-bootstrapped wrappers around Sigma REST endpoints (`search-files.sh`, `find-file-by-urlid.sh`, `list-folders.sh`, etc.) and Sigma's MCP server (`mcp-search.sh`, `mcp-describe.sh` — **blocked as of 2026-07-30** under this skill's `client_credentials` auth model; see `reference/workflows/discover.md` → "MCP status"). Each sources `_env.sh` on first call to load `.env` and cache an OAuth token. Workbook CRUD (POST/PUT to `/v2/workbooks/*`) still goes through direct `curl` — no helper script yet.
 - `scripts/load-env.sh` — used internally by `_env.sh`. Direct callers rarely need it. `scripts/refresh-vendor.sh` clones the upstream skill repo into `vendor/` for inspection only.
 - `prompts/library/` — reusable prompt fragments (guardrails, framing, etc.).
 - `docs/` — `conventions.md`, `iteration-playbook.md`, `skill-authoring.md`.

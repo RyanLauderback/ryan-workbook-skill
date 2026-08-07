@@ -113,10 +113,10 @@ readers know it's opt-in, not canonical.
 
 Read-only discovery against the Sigma workspace routes through the bash
 helpers in `scripts/api/`. Full protocol — routing table
-(name/URL/messy-prose), MCP-vs-REST fallback, `mcp-describe` batching
-rules, resolver JSON shape, friendly-vs-raw column-name normalization,
-troubleshooting — lives in `reference/workflows/discover.md`. Load it
-before any recon step.
+(name/URL/messy-prose), REST-first / MCP-blocked status, `mcp-describe`
+batching rules, resolver JSON shape, friendly-vs-raw column-name
+normalization, troubleshooting — lives in `reference/workflows/discover.md`.
+Load it before any recon step.
 
 For Sigma **function references** and **REST API endpoint shapes** (not
 workspace discovery), use the native `mcp__claude_ai_Sigma_Docs__*`

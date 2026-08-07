@@ -19,6 +19,21 @@
 
 # Don't impose `set -euo pipefail` here — inherit the caller's shell options.
 
+# BASH_SOURCE[0] is empty when this file is sourced from a non-bash shell
+# (e.g. zsh, the macOS/many-Linux-distro default login shell) rather than
+# from inside a bash script/`bash -c`. dirname of an empty string silently
+# resolves to ".", turning the "../.." below into a walk from the *caller's
+# cwd* instead of this file's location — landing on a wrong-but-plausible
+# repo root 2 directories shallower, with load-env.sh then failing on a
+# garbled path instead of a clear error. Fail loudly here instead.
+if [ -z "${BASH_SOURCE[0]:-}" ]; then
+  echo "_env.sh: \$BASH_SOURCE is unset — this file must be sourced from" >&2
+  echo "  bash, not zsh/sh/dash. Run the wrapping script via 'bash scripts/api/<name>.sh'," >&2
+  echo "  or if sourcing _env.sh directly (e.g. for its sigma_curl helper)," >&2
+  echo "  do so from inside a bash shell: bash -c 'source scripts/api/_env.sh; ...'" >&2
+  return 1 2>/dev/null || exit 1
+fi
+
 _sigma_repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 # SIGMA_ENV_SH: absolute path to this file, exported so sigma_curl's 401
 # self-heal (below) can re-source it even when the function itself was

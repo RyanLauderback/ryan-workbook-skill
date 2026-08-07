@@ -1401,3 +1401,82 @@ silently; they chose to defer it to its own dedicated session once
 other in-flight work is closed out. Wave 4 is otherwise complete
 (C7 + C8 shipped, live-POST verified where the underlying capability
 allowed it).
+
+## 2026-08-07 — MCP access confirmed blocked for client_credentials tokens; not a per-org scope gap
+
+A capability-expansion follow-up session diagnosed "the MCP wrapper
+scripts are seemingly broken" starting from a live, reproducible 403:
+`mcp-search.sh`/`mcp-describe.sh` calling `/mcp/v2` with this skill's
+usual `client_credentials`-derived bearer token got
+`{"error":{"code":"EACCES","errorCode":"permission_denied","message":"Missing
+required scopes: mcp:access"}}` on every call. REST calls with the same
+token worked fine — the rejection was specific to `/mcp/v2`.
+
+**Ruled out: stale credentials.** The org rotated the API client's
+key/secret pair mid-session; after clearing the local token cache and
+confirming (via `whoami.sh` and a differing `requestId` on the retried
+MCP call) that this was a genuinely fresh, non-cached call, the *exact
+same* 403/`mcp:access` error reproduced with the new key. A new key from
+the same client type hits the same wall — this is not a rotted secret.
+
+**Root cause, confirmed by Sigma's own MCP engineering team (asked
+directly, not inferred from docs):** `/mcp/v2`'s only supported
+customer-facing auth path today is interactive user OAuth, not REST
+API/`client_credentials` tokens. Change #37939 (2026-07-30) removed a
+gate (`USE_AUTH_SCOPE_CHECK`) that had been letting legacy API tokens
+without `mcp:access` through; that path "worked" during a pre-OAuth
+testing phase but was never officially supported, and now correctly
+403s. Dedicated API-key/client-credentials MCP support is "intended/in
+progress" on Sigma's side, likely via a dedicated MCP scope rather than
+reusing the REST API scope — no ETA given. The team's guidance for
+portable skills today: use the org-specific Sigma MCP URL from
+Profile → Integrations with the OAuth flow; if OAuth still 403s, check
+the user's account type has "Use Sigma MCP with OAuth."
+
+**This is not a per-org misconfiguration** — it affects every
+installation of this skill using its documented `.env`/`client_credentials`
+auth model (CLAUDE.md → "Authentication"), permanently, until Sigma
+ships the dedicated scope. Sigma's public docs are consistent with this:
+pages covering MCP access always describe it via an account-type
+permission granted through interactive login; pages covering API/OAuth
+clients (`configure-a-sigma-oauth-application`,
+`configure-oauth-with-write-access`) never mention MCP or `mcp:access`
+at all.
+
+**Two smaller, real bugs found during the same diagnostic:**
+1. `mcp-search.sh` had no exception handling around its MCP call and
+   crashed with a raw `urllib.error.HTTPError` traceback on any
+   transport failure. `mcp-describe.sh` got the equivalent fix in Wave 0
+   (2026-08-03, this same failure class) but it was never ported to
+   `mcp-search.sh`. Fixed to match: catches `HTTPError`/`URLError`,
+   exits 3, explains the likely cause and points at `search-files.sh`.
+2. `_env.sh`'s repo-root resolution (`dirname "${BASH_SOURCE[0]}")/../..`)
+   silently computes a wrong, too-shallow root when `BASH_SOURCE[0]` is
+   empty — which happens when the file is `source`d from a non-bash
+   shell (e.g. zsh, the macOS/many-Linux-distro default login shell)
+   instead of from inside a bash script. Found by accident while
+   sourcing `_env.sh` directly to get `sigma_curl` for an ad hoc probe;
+   not reachable through any documented usage pattern (every documented
+   call goes through `bash scripts/api/<name>.sh`, which guarantees a
+   bash context), but a real trap for anyone doing the same. Fixed to
+   fail loudly instead of silently walking to the wrong directory.
+
+**Fix.** Added `scripts/api/search-files.sh` — REST-based (`/v2/files`
+with repeated `typeFilters` params, confirmed live: a comma-joined value
+400s with "Expecting Array<...> at typeFilters.0"), substring not
+semantic, no `url` field (not present on `/v2/files` entries) — as the
+default discovery-by-name tool, promoted from a documentation gap (no
+REST equivalent existed for "find a workbook/data model by name," only
+for connections/columns/folders/schema-probing) to a real script.
+Rewrote `reference/workflows/discover.md` to lead with REST and state
+the MCP-blocked status plainly rather than framing MCP as "preferred,
+covers ~90%"; `SKILL.md`, `sources.md`, and `CLAUDE.md` updated to
+match. The MCP sections of `discover.md` are kept, not deleted — for
+if/when Sigma ships client-credentials MCP support.
+
+**Not built:** an interactive user-OAuth flow so this skill's own
+scripts could reach `/mcp/v2` today. Sigma's team says dedicated
+client-credentials support is in progress; a heavy, browser-dependent
+OAuth flow now risks being thrown away, and cuts against this skill's
+headless/same-code-path-CLI-and-web design goal (CLAUDE.md →
+"Authentication"). Revisit if/when that scope ships.
