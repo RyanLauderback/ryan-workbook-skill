@@ -1480,3 +1480,67 @@ client-credentials support is in progress; a heavy, browser-dependent
 OAuth flow now risks being thrown away, and cuts against this skill's
 headless/same-code-path-CLI-and-web design goal (CLAUDE.md →
 "Authentication"). Revisit if/when that scope ships.
+
+## 2026-08-07 (continued) — data-model-first discovery framing + raw-table routing cost data
+
+Two follow-up live tests (background sub-agents, same session as the MCP
+block above) quantified the actual cost of REST-only discovery instead
+of guessing:
+
+**Test 1 — data model vs. raw table richness.** `GET
+/v2/dataModels/{id}/spec` on the real "PLUGS Data Model vREL"
+(`3889b3c3-4657-4d9e-b568-5d2388cf4b4c`) returned 28.9KB, 8 elements, 117
+columns, **28 metrics** — friendly names, descriptions, and metric
+formulas all inline, in one call, matching MCP `describe`'s depth
+exactly. `list-table-columns.sh` on a real warehouse table (D_STORE, in
+the "Big Buys" data model's underlying `SE_DEMO_DB.BIG_BUYS` schema)
+returned only raw names (`STORE_KEY`, `STORE_NAME`, ...) — no
+descriptions, no metrics, unrecoverable via REST without a data model to
+borrow friendly names from.
+
+**Test 2 — does naming specific tables beat schema-level probing?** No,
+not unless the schema is also confirmed. Given 3 table names
+(`F_POINT_OF_SALE`, `F_SALES`, `D_PRODUCT`) without a stated schema:
+`find-file-by-urlid.sh` returned null on all 3 (warehouse tables aren't
+a `/v2/files` type — confirmed, not assumed). `D_PRODUCT` resolved in 2
+calls once the correct schema (`BIG_BUYS`) was known. `F_SALES` and
+`F_POINT_OF_SALE` did not exist under `BIG_BUYS`; chasing them across
+guessed sibling schemas cost **29 calls with zero hits** — worse than a
+schema-only probing run from the same investigation, which found 3/3
+real tables in 11 guessed calls. Naming tables without a known schema is
+not a shortcut; it's a worse strategy than schema-level probing.
+
+**Bonus finding:** `discover.md` claimed `/s/<id>`/`/t/<id>` schema URL
+slugs are flatly "not reversible via Sigma's public API." Tested live:
+there IS a real endpoint (`/v2/connections/paths`, already wired into
+`scripts/sigma-resolve.py`'s `find_path_by_urlid`) that reverses them —
+but it's a full org-wide paginated enumeration (4,225+ entries and still
+paginating in one run, one unthrottled retry hit a 429). Technically
+reversible, practically useless for a single lookup. The doc's
+conclusion (ask the user instead) was right for the wrong stated reason;
+corrected to name the real one.
+
+**Fix.** Added `discover.md` → "Prefer data models over raw tables"
+(cites the Test 1 numbers) and → "Routing: raw warehouse tables" (a
+3-way split: table+confirmed-schema → straight to `lookup-path.sh`, no
+probing; table without confirmed schema → **ask the user, don't
+guess-cascade**; schema-only → `probe-schema-tables.sh` as before).
+Corrected the "not reversible" claim in two spots to name the org-wide
+enumeration cost instead. Mirrored the schema-confirmation requirement
+into `SKILL.md`'s Q2 kickoff question, and fixed two stale
+`mcp-describe.sh`-as-default references inside `SKILL.md` itself (the
+kickoff worked example, and the "Data inventory" plan-checklist item)
+that this same sweep surfaced.
+
+**Not fixed, flagged for the dedicated contradiction-review pass
+instead:** the same grep sweep found `mcp-search.sh`/`mcp-describe.sh`
+still presented as the default (not a blocked path) in
+`reference/conventions.md`, `reference/workflows/plan.md`,
+`reference/workflows/validate.md`, `reference/specification/{schema,
+controls,formulas}.md`, `reference/capability-ledger.md`,
+`docs/iteration-playbook.md`, and one `examples/*.prompt.md` file.
+Fixing all of those was judged out of scope for this specific ask (data-
+model-first framing + schema confirmation) — bundling an unbounded sweep
+into a narrowly-scoped change is exactly the kind of ad hoc partial fix
+that creates fresh inconsistency instead of resolving it. Left for the
+skill's own planned full contradiction review.

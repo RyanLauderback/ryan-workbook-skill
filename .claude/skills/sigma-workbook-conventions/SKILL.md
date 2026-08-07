@@ -54,8 +54,21 @@ questions. Each question has a defined branch behavior:
 - **No** — Claude shares `.env.example` contents + a link to Sigma's "Administration → Developer Access" docs for OAuth client creation, then re-prompts Q1 once the user confirms setup.
 
 **Q2: What data source will you build against?**
-- Data model URL/slug (`Customer-Financials-461QUZu2VPny8KxImgSmfF`)
-- Warehouse table path (`<CONN>.<DB>.<SCHEMA>.<TABLE>` or `/t/<id>` URL)
+- **Data model** (recommended) — URL/slug (`Customer-Financials-461QUZu2VPny8KxImgSmfF`)
+  or name. Prefer this when one plausibly covers the request: confirmed
+  live (2026-08-07, `reference/history.md`) that a data model's full
+  spec — friendly column names, descriptions, and the metrics catalog —
+  comes back in a single REST call, while a raw warehouse table's REST
+  equivalent returns only raw warehouse column names, no metrics. See
+  `reference/specification/sources.md` → "If no data model fits, fall
+  back to `warehouse-table` — don't manufacture a model" for when a
+  table is the right call anyway.
+- Warehouse table path (`<CONN>.<DB>.<SCHEMA>.<TABLE>` or `/t/<id>` URL).
+  **If the user names table(s) without their schema/DB, ask for it here**
+  before Recon — confirmed live that resolving a bare table name without
+  a known schema means guessing across schemas, which cost 29 wasted
+  calls with zero hits in one real test. See `reference/workflows/discover.md`
+  → "Routing: raw warehouse tables."
 - Mixed prose (the resolver handles it)
 
 **Q3: What would you like to build, and where would you like the workbook placed in Sigma?**
@@ -85,7 +98,7 @@ Claude: [bash scripts/api/_env.sh]
 
 Claude: [writes the verbatim prompt to workbooks/<name>/prompts/<ts>.md]
         [resolves URL slugs via scripts/api/find-file-by-urlid.sh]
-        [enters Recon — mcp-describe.sh on the data model]
+        [enters Recon — GET /v2/dataModels/{id}/spec on the data model]
         [drafts the Plan, surfaces for user approval]
 ```
 
@@ -244,9 +257,10 @@ The plan must include:
    prompt at publish time. The destination must therefore be named
    explicitly in the plan, never implied.
 2. **Data inventory.** What table(s) and which columns are actually
-   available — pulled via `scripts/api/mcp-describe.sh datamodel-element
-   <dm-id> <el-id>` (returns column types, descriptions, formulas, and
-   the data model's metrics catalog), not assumed. Name any column
+   available — pulled via `GET /v2/dataModels/{id}/spec` (data model:
+   returns column types, descriptions, formulas, and the metrics catalog
+   in one call) or `scripts/api/list-table-columns.sh` (raw table: raw
+   warehouse names only), not assumed. Name any column
    that's missing from your assumed schema (e.g. there *is* a customer
    dimension; there *isn't* a margin field) so the user can correct
    before you build on a wrong premise.
@@ -456,8 +470,9 @@ mapping.
 - `crud.md` — POST/GET/PUT mechanics + ID preservation on POST +
   response-only fields to strip on PUT + the `publish-workbook.sh`
   wrapper.
-- `discover.md` — `mcp-search.sh` / `mcp-describe.sh` sequencing,
-  REST fallbacks, friendly-vs-raw warehouse name normalization.
+- `discover.md` — REST-first discovery (`search-files.sh` sequencing,
+  data-model-vs-table routing, raw-table schema-confirmation rule),
+  friendly-vs-raw warehouse name normalization, MCP status (blocked).
 - `validate.md` — `validate-spec.py` (pre-submit, 17 checks) +
   `verify-workbook.sh` (SQL-compile check) +
   `audit-workbook-schema.sh` (data-layer schema audit, auto-run by

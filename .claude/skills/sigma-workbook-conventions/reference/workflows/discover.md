@@ -16,6 +16,23 @@ progress," no ETA). **Use the REST tools below as the default, not a
 fallback.** The MCP sections further down are kept for when that
 changes, not for today's builds.
 
+## Prefer data models over raw tables
+
+When a data model plausibly covers the request, resolve to it instead of
+a raw warehouse table — this is the seamless path today. Confirmed live
+(2026-08-07, see `reference/history.md`): `GET /v2/dataModels/{id}/spec`
+on a real 117-column, 28-metric data model returned friendly column
+names, descriptions, and the full metrics catalog in **one** REST call —
+full parity with what MCP's `describe` used to provide. The REST
+equivalent for a raw warehouse table (`list-table-columns.sh`) returns
+**only raw warehouse column names** (`STORE_KEY`, not `Store Key`) — no
+descriptions, no metrics, and there is no MCP-based enrichment path left
+to fill that gap (see "MCP status" above). This mirrors the existing
+rule in `reference/specification/sources.md`: "If no data model fits,
+fall back to `warehouse-table` — don't manufacture a model." Raise this
+at kickoff (`SKILL.md` → Q2) rather than defaulting straight to
+table-level discovery when a data model might fit.
+
 ## The routing decision
 
 What the user's prompt contains determines which discovery tool to reach
@@ -25,14 +42,16 @@ for first:
 |---|---|
 | Names or topics ("the PLUGS data model", "find the sales workbook") | `scripts/api/search-files.sh "<query>" [--types workbook,data-model,dataset] [--limit N]` |
 | URL slugs (`/b/<id>`, `…-<urlId>`) | `scripts/api/find-file-by-urlid.sh <urlId>` |
-| Warehouse paths (`<DB>.<SCHEMA>.<table>`), `/s/<id>` or `/t/<id>` schema URLs, or mixed prose | `scripts/sigma-resolve.py "<prompt-verbatim>"` |
+| Warehouse table name(s) **with** schema/DB confirmed | See "Routing: raw warehouse tables" below — go straight to `lookup-path.sh`, skip probing. |
+| Warehouse table name(s) **without** schema/DB, `/s/<id>`/`/t/<id>` schema URLs, or mixed prose | `scripts/sigma-resolve.py "<prompt-verbatim>"` — and if the schema still can't be resolved, ask the user rather than guessing (see below). |
 
 After resolution, inspect the resolved id via REST:
 - **Data model**: `GET /v2/dataModels/{id}/spec` (raw `curl`, self-bootstrapped
   auth via `source scripts/api/_env.sh` — no dedicated wrapper script yet).
   Returns the full JSON element/column/metric tree — more verbose than
   MCP's DDL text, same information.
-- **Warehouse table**: `scripts/api/lookup-path.sh` → `scripts/api/list-table-columns.sh`
+- **Warehouse table** — only once the schema/DB is confirmed:
+  `scripts/api/lookup-path.sh` → `scripts/api/list-table-columns.sh`
   (raw warehouse column names — see "Column names — friendly vs raw
   warehouse" below).
 - **Workbook**: `scripts/api/publish-workbook.sh get-spec <wb-id>`.
@@ -41,6 +60,24 @@ After resolution, inspect the resolved id via REST:
 one call when it works, but expect exit 3 under this skill's auth model
 (see the MCP status note above) — try it opportunistically, don't build
 a plan step that depends on it succeeding.
+
+## Routing: raw warehouse tables
+
+Confirmed via live testing (2026-08-07, `reference/history.md`): there
+is no REST "list tables in a schema" endpoint, and guessing names is
+expensive. What matters is whether the **schema is confirmed**, not
+whether table names were given:
+
+| Prompt gives | Do this | Cost (measured) |
+|---|---|---|
+| Table name(s) **and** confirmed schema/DB | `scripts/api/lookup-path.sh <connection-id> "<DB>.<SCHEMA>.<TABLE>"` per table → `scripts/api/list-table-columns.sh <inode-id>` | 2 calls/table, no guessing |
+| Table name(s), schema/DB **not** confirmed | **Ask the user to confirm the schema/DB before attempting resolution.** Do not cascade into guessing sibling schemas. | One live test cascading through guessed schemas cost 29 calls chasing 2 tables — zero hits |
+| Schema/DB only, no table names | `scripts/api/probe-schema-tables.sh <connection-id> "<DB>.<SCHEMA>"` — guessed-name probing, but bounded to one schema | 11 calls found 3/3 real tables in one live run |
+
+The middle row is the important one: naming specific tables is **not**
+automatically cheaper than schema-level probing — it's only cheaper when
+the schema is also right. Guessing the schema on top of guessing the
+table compounds badly (worse than schema-only probing, not a shortcut).
 
 ## Discovery via MCP (blocked under client_credentials auth — kept for reference)
 
@@ -193,8 +230,13 @@ Returns structured JSON:
 When `candidates` is populated, surface names to the user; when
 `unresolved` has warehouse-path entries, ask for the missing
 `<DB>.<SCHEMA>` and connection name. The resolver handles `/s/<id>`
-and `/t/<id>` schema URLs too — these are NOT reversible via Sigma's
-public API, so if unresolved, ask the user for the warehouse path.
+and `/t/<id>` schema URLs too — these are technically reachable via
+`/v2/connections/paths` (`scripts/sigma-resolve.py`'s
+`find_path_by_urlid`), but confirmed live (2026-08-07) that endpoint is
+a full org-wide paginated enumeration — 4,225+ entries and still
+paginating in one run, with an unthrottled retry hitting a 429. Not
+viable for a single lookup. Ask the user for the warehouse path instead
+of trying to reverse the slug.
 
 ## Column names — friendly vs raw warehouse
 
@@ -247,9 +289,15 @@ for the full rules.
   `datamodel-element`.
 - **`/v2/connection/<id>/lookup` returns ambiguous results**: ask
   the user for the full database/schema path. Don't guess.
-- **Schema URL slugs (`/s/<id>`, `/t/<id>`)** are not reversible via
-  Sigma's public API. Ask the user for `<DB>.<SCHEMA>` and the
-  connection name.
+- **Schema URL slugs (`/s/<id>`, `/t/<id>`)**: technically reachable via
+  `/v2/connections/paths`, but that's a full org-wide paginated
+  enumeration (thousands of entries, real rate-limit risk) — not viable
+  for a single lookup. Ask the user for `<DB>.<SCHEMA>` and the
+  connection name instead of trying to reverse it.
+- **Table name given without a confirmed schema**: don't cascade into
+  guessing sibling schemas — confirmed costly (29 calls, 0 hits in one
+  live test). Ask the user for the schema/DB instead. See "Routing: raw
+  warehouse tables" above.
 
 When in doubt, surface to the user. The plan's "Open decisions"
 section is the right place to log discovery gaps.
