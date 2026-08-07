@@ -9,6 +9,24 @@ OpenAPI doesn't surface.
 For container element bodies (the `kind: "container"` JSON placeholders
 that pair with `<GridContainer>` in this XML), see `containers.md`.
 
+## Table of contents
+
+- [When to write layout vs. let Sigma auto-arrange](#when-to-write-layout-vs-let-sigma-auto-arrange)
+- [Layout is top-level (NOT per-page)](#layout-is-top-level-not-per-page)
+- [Two flavors: XML layout vs. element-level `layout` object](#two-flavors-xml-layout-vs-element-level-layout-object)
+- [Five-tag grammar](#five-tag-grammar)
+  - [`<TabbedContainer>` / `<Tab>` — the two tags the old grammar missed](#tabbedcontainer--tab--the-two-tags-the-old-grammar-missed)
+  - [Modal pages get a 12-column grid, not 24](#modal-pages-get-a-12-column-grid-not-24)
+- [`<GridContainer>` vs `<LayoutElement>` — silent failure](#gridcontainer-vs-layoutelement--silent-failure)
+- [`gridTemplateRows`: keep it `"auto"`](#gridtemplaterows-keep-it-auto)
+  - [Side-by-side](#side-by-side)
+  - [Stacked rows inside a container](#stacked-rows-inside-a-container)
+  - [GridContainer children use LOCAL row coordinates — not the page's absolute numbering](#gridcontainer-children-use-local-row-coordinates--not-the-pages-absolute-numbering)
+- [After CREATE: IDs are preserved](#after-create-ids-are-preserved)
+- [Page-structure pattern (apply by default)](#page-structure-pattern-apply-by-default)
+- [Cross-cutting rules](#cross-cutting-rules)
+- [What `layout` does NOT capture](#what-layout-does-not-capture)
+
 ## When to write layout vs. let Sigma auto-arrange
 
 Write explicit `layout` when **any** of these apply:

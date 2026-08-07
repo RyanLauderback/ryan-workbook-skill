@@ -16,6 +16,21 @@ progress," no ETA). **Use the REST tools below as the default, not a
 fallback.** The MCP sections further down are kept for when that
 changes, not for today's builds.
 
+## Table of contents
+
+- [Prefer data models over raw tables](#prefer-data-models-over-raw-tables)
+- [The routing decision](#the-routing-decision)
+- [Routing: raw warehouse tables](#routing-raw-warehouse-tables)
+- [Discovery via MCP (blocked under client_credentials auth — kept for reference)](#discovery-via-mcp-blocked-under-clientcredentials-auth--kept-for-reference)
+  - [Searching the workspace](#searching-the-workspace)
+  - [Describing a resolved object](#describing-a-resolved-object)
+  - [Discovering data-model metrics](#discovering-data-model-metrics)
+- [Discovery via REST primitives (default, not a fallback)](#discovery-via-rest-primitives-default-not-a-fallback)
+- [Path formats per warehouse](#path-formats-per-warehouse)
+- [Resolving messy / mixed-input prompts](#resolving-messy--mixed-input-prompts)
+- [Column names — friendly vs raw warehouse](#column-names--friendly-vs-raw-warehouse)
+- [When discovery fails](#when-discovery-fails)
+
 ## Prefer data models over raw tables
 
 When a data model plausibly covers the request, resolve to it instead of

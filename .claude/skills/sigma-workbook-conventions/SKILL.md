@@ -484,7 +484,10 @@ mapping.
 **Specification files (`reference/specification/`):**
 
 Per-element-kind recipes + gotchas. Each file opens with the relevant
-OpenAPI `jq` recipe.
+OpenAPI `jq` recipe. Dated verification status and correction history
+for these files lives in `reference/history.md` and
+`reference/capability-ledger.md`, not here — this list is a routing
+index, not a changelog.
 
 - `schema.md` — top-level workbook spec shape, response-only fields,
   ID preservation on POST, top-level `folders` + `themeOverrides` +
@@ -500,7 +503,7 @@ OpenAPI `jq` recipe.
   page-structure pattern.
 - `containers.md` — `kind: container` + `style` (bg + border) +
   `backgroundImage` (`source:{kind:"url"|"upload"}` + fit/align/tiling
-  style — corrected 2026-08-04, live-POST verified), 5-recipe catalog.
+  style) + 5-recipe catalog.
 - `charts.md` — bar/line/area/combo/scatter/pie/donut + canonical
   `columnId`/`columnIds` axis shape + `refMarks` + `trendlines` +
   `dataLabel`/`seriesDataLabel` + 3-variant `color` channel
@@ -525,38 +528,30 @@ OpenAPI `jq` recipe.
   text embeds with d3 format suffix.
 - `others.md` — `divider` (with `direction`/`align`/`style`) +
   `image` + `embed` elements + `{{formula}}` in URLs +
-  `data:image/svg+xml;base64,...` inline SVG. **Correction
-  (2026-08-03):** previously ended with a "buttons/modals unsupported"
-  note — retracted, see `reference/capability-ledger.md`. **Correction
-  (2026-08-04):** `image`'s field shape was wrong (flat `url` — real
-  shape is `source:{kind:"url"|"upload"}`), live-POST verified.
+  `data:image/svg+xml;base64,...` inline SVG.
 - `theming.md` — top-level `themeOverrides` (`pageWidth`, `space`, +
   14 more fields cataloged from the live schema) + the reusable
   `{kind:"theme", ref}` color-value form usable across many elements'
-  color fields. **Correction (2026-08-04):** an earlier version of
-  `schema.md` described this as a standalone element kind — live-POST
-  rejected; it's a color-value form, not an element. New 2026-08-04
-  (Wave 4 / C7).
+  color fields.
 - `pages.md` — `tabbed-container` (labels-only element + flat
   tab-content siblings), `type:"modal"` pages, `navigation`,
-  `page-break`. All four live-POST verified 2026-08-03 (Wave 1 probe).
+  `page-break`.
 - `actions.md` — `button` element + the `actions[]`/`effects[]`
   vocabulary: all 9 effects (`set-control-value`, `clear-control`,
   `open-overlay`/`close-overlay`, `navigate`, `select-tab`,
-  `open-url`, `insert-rows`/`delete-rows`). All live-POST verified
-  2026-08-03 (Wave 2 / C3 — 2 via a real build, 7 via a dedicated probe).
+  `open-url`, `insert-rows`/`delete-rows`).
 - `dynamic-values.md` — the slot → accepted-form matrix for dynamic
   values: all 5 structured `{type: ...}` forms (`constant`, `formula`,
-  `column`, `control`, `agent-input`) live-POST verified, plus
-  `{{formula}}` string interpolation.
+  `column`, `control`, `agent-input`), plus `{{formula}}` string
+  interpolation.
 - `input-tables.md` — `input-table` element: `empty`/`linked` source,
   all 6 column shapes (system, key, editable, dropdown, formula, plus
   `filters`/`sort`/`conditionalFormats`), `insert-rows`/`delete-rows`
-  writeback. All live-POST verified 2026-08-04 (Wave 3 / C5).
+  writeback.
 - `agents.md` — top-level `agents[]` + `chat` element + agent
   `tools[].steps[]` (reusing the `actions.md` effect vocabulary,
   `agent-input` for model-supplied values) + `{{formula}}` in
-  `instructions`. All live-POST verified 2026-08-04 (Wave 3 / C6).
+  `instructions`.
 - `maps.md` — `geography-map` + `point-map` + `region-map` (with
   `regionType` enum) + single-vs-array shape gotcha on binding
   fields.
@@ -565,23 +560,13 @@ OpenAPI `jq` recipe.
 - `sources.md` — `table` / `data-model` / `join` / `union` / `sql` /
   `transpose` source kinds + two-tier sourcing pattern reference.
 - `reference/patterns/scenario-modeling.md` — forecasting via
-  `CallVariant` (a real function, confirmed 2026-08-04; the specific
-  UDF/accessor names are harvest-only) + what-if via parameter
-  controls + 2 structural gotchas (controls can't usefully filter
-  input-tables/pivots; input-table rows can't be seeded from code —
-  the latter confirmed at the schema level 2026-08-04). Deliberately
-  filed under `patterns/`, not `specification/` — a composition of
-  already-verified primitives, not a spec surface of its own. New
-  2026-08-04 (Wave 4 / C8).
+  `CallVariant` + what-if via parameter controls + 2 structural
+  gotchas (controls can't usefully filter input-tables/pivots;
+  input-table rows can't be seeded from code). Deliberately filed
+  under `patterns/`, not `specification/` — a composition of
+  already-verified primitives, not a spec surface of its own.
 - `example-full.yaml` — multi-page reference spec (KPIs, charts, join
   sources, controls, custom layout) authored locally for this skill.
-  **Correction (2026-08-03):** previously described as "verbatim ...
-  from the upstream skill" — the real upstream `sigma-workbooks` skill
-  (reviewed in full against a local copy of `sigma-agent-skills-dev`)
-  contains no such file. That was a false attribution of external
-  authority with no functional impact on the content itself, but it's
-  the same bug class as the `DivideSafe` incident (`reference/history.md`)
-  — a fabricated provenance claim rather than a fabricated function.
   Read this when in doubt about overall shape.
 
 `examples/` — known-good specs to seed generation. Clone-and-modify rather

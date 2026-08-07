@@ -17,6 +17,40 @@ to flag "this rule was once unverified and bit us — treat it as load-bearing."
 > if you need the current rule wording. See the migration commits
 > (`e0eec01`–`c765c1d`) for the full mapping.
 
+## Table of contents
+
+- [2026-05-11 — Per-page `layout` field silently discarded](#2026-05-11--per-page-layout-field-silently-discarded)
+- [2026-05-13 — Cohort iteration: legacy `groupings: [{id}]` shape](#2026-05-13--cohort-iteration-legacy-groupings-id-shape)
+- [2026-05-15 — `DivideSafe` hallucination committed to skill (commit 58f376a)](#2026-05-15--dividesafe-hallucination-committed-to-skill-commit-58f376a)
+- [2026-05-18 — Column `format` shape discovered (Phase 6b)](#2026-05-18--column-format-shape-discovered-phase-6b)
+- [2026-05-19 — Cold-start test session: chunk files not consumed (Phase 9 trigger)](#2026-05-19--cold-start-test-session-chunk-files-not-consumed-phase-9-trigger)
+- [2026-05-19 — DM-switch metric carryover (claims attempt 1)](#2026-05-19--dm-switch-metric-carryover-claims-attempt-1)
+- [2026-05-19 — Passthrough collapse from phantom-series over-correction](#2026-05-19--passthrough-collapse-from-phantom-series-over-correction)
+- [2026-05-19 — Falsely-claimed `[Metrics/Cost/Member/Month]` round-trip (cautionary tale)](#2026-05-19--falsely-claimed-metricscostmembermonth-round-trip-cautionary-tale)
+- [2026-05-19 — Styled-name + `style.borderColor` discovered](#2026-05-19--styled-name--stylebordercolor-discovered)
+- [2026-05-19 — Control/column ID collision (sales-performance attempt 2)](#2026-05-19--controlcolumn-id-collision-sales-performance-attempt-2)
+- [2026-05-21 — `style.backgroundColor` + container/control styling discovered](#2026-05-21--stylebackgroundcolor--containercontrol-styling-discovered)
+- [2026-07-12 — `audit-workbook-schema.sh` added as post-POST data-layer gate](#2026-07-12--audit-workbook-schemash-added-as-post-post-data-layer-gate)
+- [2026-08-03 — Capability-expansion planning: a load-bearing phantom limitation, a retracted validator check, and gate cleanup](#2026-08-03--capability-expansion-planning-a-load-bearing-phantom-limitation-a-retracted-validator-check-and-gate-cleanup)
+- [2026-08-03 — Portability fixes + `composition.md` ported + dashboard-tier exemplar](#2026-08-03--portability-fixes--compositionmd-ported--dashboard-tier-exemplar)
+- [2026-08-03 — Wave 0 build-mode test finds a real masked-failure bug in the audit gate](#2026-08-03--wave-0-build-mode-test-finds-a-real-masked-failure-bug-in-the-audit-gate)
+- [2026-08-03 — Wave 1 / C2: live-POST probe for layout/page-structure, plus two more real bugs](#2026-08-03--wave-1--c2-live-post-probe-for-layoutpage-structure-plus-two-more-real-bugs)
+- [2026-08-03 — Multi-page `<?xml ?>` declaration bug (found via a real build-mode session, not a probe)](#2026-08-03--multi-page-xml--declaration-bug-found-via-a-real-build-mode-session-not-a-probe)
+- [2026-08-03 — Four more bugs found live-iterating the same build (KPI nulls, container-child coordinate model, orphaned grouping column, aggregate-null-propagation)](#2026-08-03--four-more-bugs-found-live-iterating-the-same-build-kpi-nulls-container-child-coordinate-model-orphaned-grouping-column-aggregate-null-propagation)
+- [2026-08-03 — Wave 2 / C3: the full action/effect vocabulary, live-POST verified](#2026-08-03--wave-2--c3-the-full-actioneffect-vocabulary-live-post-verified)
+- [2026-08-04 — document wrapper: the live wire format nests the spec under `document`](#2026-08-04--document-wrapper-the-live-wire-format-nests-the-spec-under-document)
+- [2026-08-04 — two real bugs found in `dashboard-department-scorecard.json` via its first-ever live POST](#2026-08-04--two-real-bugs-found-in-dashboard-department-scorecardjson-via-its-first-ever-live-post)
+- [2026-08-04 — `find-file-by-urlid.sh` didn't handle a pasted full workbook URL](#2026-08-04--find-file-by-urlidsh-didnt-handle-a-pasted-full-workbook-url)
+- [2026-08-04 — second peer report: 1 confirmed, 2 refuted (again), 2 more refuted, 1 real docs gap found independently](#2026-08-04--second-peer-report-1-confirmed-2-refuted-again-2-more-refuted-1-real-docs-gap-found-independently)
+- [2026-08-04 — Wave 3 / C5+C6: input tables + agent surface, live-POST verified](#2026-08-04--wave-3--c5c6-input-tables--agent-surface-live-post-verified)
+- [2026-08-04 — Wave 3 real build-mode test: sales dashboard + input-table writeback + `channel-exclusivity` check shipped](#2026-08-04--wave-3-real-build-mode-test-sales-dashboard--input-table-writeback--channel-exclusivity-check-shipped)
+  - [Follow-up, same day — `Percentile` is not a real Sigma function (hallucination, same class as `DivideSafe`)](#follow-up-same-day--percentile-is-not-a-real-sigma-function-hallucination-same-class-as-dividesafe)
+  - [Second follow-up, same day — a "confirmed fixed" claim was itself wrong (verification false-positive)](#second-follow-up-same-day--a-confirmed-fixed-claim-was-itself-wrong-verification-false-positive)
+- [2026-08-04 — Wave 4 / C7: visual media + theming, live-POST verified, 2 real field-shape bugs found](#2026-08-04--wave-4--c7-visual-media--theming-live-post-verified-2-real-field-shape-bugs-found)
+- [2026-08-04 — Wave 4 / C8: scenario modeling pattern, 2 structural gotchas checked](#2026-08-04--wave-4--c8-scenario-modeling-pattern-2-structural-gotchas-checked)
+- [2026-08-07 — MCP access confirmed blocked for client_credentials tokens; not a per-org scope gap](#2026-08-07--mcp-access-confirmed-blocked-for-clientcredentials-tokens-not-a-per-org-scope-gap)
+- [2026-08-07 (continued) — data-model-first discovery framing + raw-table routing cost data](#2026-08-07-continued--data-model-first-discovery-framing--raw-table-routing-cost-data)
+
 ## 2026-05-11 — Per-page `layout` field silently discarded
 
 POSTing a workbook spec with `layout` placed under `pages[i]` (rather than at

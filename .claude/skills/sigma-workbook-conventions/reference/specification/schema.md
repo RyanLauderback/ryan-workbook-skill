@@ -2,6 +2,21 @@
 
 The overall shape of the workbook spec passed to `POST /v2/workbooks/spec`.
 
+## Table of contents
+
+- [Consulting the OpenAPI](#consulting-the-openapi)
+  - [OpenAPI reference — known-dead URL (2026-08-04)](#openapi-reference--known-dead-url-2026-08-04)
+  - [Schema-drift signal](#schema-drift-signal)
+- [Top-level object](#top-level-object)
+- [Wire format — the live API wraps the document under a `document` key](#wire-format--the-live-api-wraps-the-document-under-a-document-key)
+- [Response-only fields](#response-only-fields)
+- [Pages](#pages)
+- [ID rules](#id-rules)
+- [Layout](#layout)
+- [Top-level `folders` field](#top-level-folders-field)
+- [Theming (`themeOverrides` + theme color references)](#theming-themeoverrides--theme-color-references)
+- [Minimal working example](#minimal-working-example)
+
 ## Consulting the OpenAPI
 
 The Sigma OpenAPI is the canonical schema for every request/response
