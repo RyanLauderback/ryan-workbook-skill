@@ -475,6 +475,11 @@
               }
             ]
           },
+          "yAxis2": {
+            "columnIds": [
+              "tr-margin"
+            ]
+          },
           "xAxis": {
             "columnId": "tr-week",
             "sort": {

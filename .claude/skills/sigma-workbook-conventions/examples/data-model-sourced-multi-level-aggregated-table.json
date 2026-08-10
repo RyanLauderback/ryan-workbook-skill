@@ -703,6 +703,11 @@
           }
         ]
       },
+      "yAxis2": {
+        "columnIds": [
+          "P8CPev9n_G"
+        ]
+      },
       "xAxis": {
         "columnId": "uTI8mEc7iL",
         "sort": {

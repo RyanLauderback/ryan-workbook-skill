@@ -900,7 +900,7 @@
         },
         {
           "id": "THbM4R5YxQ",
-          "formula": "Sum([Sales Amount])",
+          "formula": "Sum([Sales Amount] * [Quantity])",
           "name": "Total Revenue",
           "format": {
             "kind": "number",
@@ -909,7 +909,7 @@
         },
         {
           "id": "mOlqHQ70te",
-          "formula": "Sum([Sales Amount]) - Sum([Quantity] * [Unit Cost])",
+          "formula": "Sum([Sales Amount] * [Quantity]) - Sum([Quantity] * [Unit Cost])",
           "name": "Total Profit",
           "format": {
             "kind": "number",

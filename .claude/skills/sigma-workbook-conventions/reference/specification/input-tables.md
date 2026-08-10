@@ -45,6 +45,18 @@ Required fields: `id`, `kind: input-table`, `source`, `inputMode`.
   probed. `explore` = users with explore permission or greater can edit,
   in published view; `view` = all users can edit, in published view;
   `edit` (per upstream) = workbook editors only, in draft mode.
+  **Confirmed live 2026-08-10** (`workbookId:
+  2a751a0e-d568-4e7f-8d5c-4baffcbc3b7d`, "Item4b Verify - Scenario
+  Planner"): a spec POSTed with `inputMode: "explore"` left ordinary
+  published-view users unable to edit the table — they need explore
+  permission or greater, which most viewers of a published dashboard
+  don't have. The user fixed this live via the Sigma UI by switching to
+  `"view"`. **Default to `"view"` for a general-audience writeback
+  demo/workbook** (any published-view user should be able to edit) —
+  reserve `"explore"` for cases where editing should deliberately be
+  restricted to users with explore permission or greater. This is
+  confirmed for the general-audience case only; not a blanket rule for
+  every use case.
 - `source.kind`:
   - `"empty"` + **required** `connectionId` — provisions a fresh, blank
     warehouse table. **Live-POST verified** — a real connection id

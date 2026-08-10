@@ -27,7 +27,7 @@
         {
           "id": "input-tbl-scenarios",
           "kind": "input-table",
-          "inputMode": "explore",
+          "inputMode": "view",
           "source": { "kind": "empty", "connectionId": "<connection-id>" },
           "columns": [
             { "id": "ID" },

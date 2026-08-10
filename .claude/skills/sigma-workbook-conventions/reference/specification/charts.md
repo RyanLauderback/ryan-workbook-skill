@@ -22,7 +22,7 @@ element must use the source's prefix (`[<SourceName>/col]`) — see
   - [Line chart](#line-chart)
   - [Bar chart](#bar-chart) (with orientation + categorical-sort rule)
   - [Area chart](#area-chart)
-  - [Combo chart](#combo-chart)
+  - [Combo chart](#combo-chart) (with `yAxis2` secondary-axis mechanism)
   - [Scatter / bubble chart](#scatter--bubble-chart)
   - [Pie / donut chart](#pie--donut-chart) (with `holeValue` distinct-column rule)
 - Cartesian-only optional features:
@@ -215,6 +215,53 @@ override:
 ```
 
 `type` values: `"line"`, `"bar"`, `"area"`, `"scatter"`.
+
+### Secondary y-axis — `yAxis2`
+
+`yAxis.columnIds` alone puts every series on **one shared scale** —
+`type` only changes the render shape (bar vs line), not the axis a
+series plots against. Mixing a large-magnitude metric (e.g. revenue,
+in the thousands/millions) with a small-magnitude one (e.g. a
+percentage-scale metric like margin) on that single scale renders
+the small one flat/near-zero.
+
+Confirmed live (2026-08-10, extracted from a workbook where this was
+manually fixed in the UI via **column menu → Axis → Right**): a
+sibling **`yAxis2`** field, at the same level as `yAxis`/`xAxis`,
+carries the column(s) that should render against the secondary
+scale:
+
+```json
+"yAxis": {
+  "columnIds": [
+    "col-bar-revenue",
+    { "columnId": "col-line-margin", "type": "line" }
+  ]
+},
+"yAxis2": {
+  "columnIds": ["col-line-margin"]
+}
+```
+
+Notes on the confirmed shape:
+- The secondary-axis column stays listed in `yAxis.columnIds` too
+  (still carrying its `type` override there) — it is **not** moved
+  out of `yAxis` and into `yAxis2` exclusively. `yAxis2.columnIds`
+  is an additional pointer, not a replacement location.
+- `yAxis2.columnIds` takes bare column-id strings (no `{ columnId,
+  type }` override form observed there — the `type` override still
+  lives on the `yAxis.columnIds` entry for that column).
+- Same mechanism family as `xAxis`/`yAxis` — object with a
+  `columnIds` array. Not yet confirmed whether `yAxis2` accepts a
+  `format` sibling the way `yAxis`/`xAxis` do (see "Axis shape —
+  canonical" above); treat that as unverified until tested.
+- UI docs confirm this same left/right secondary-axis mechanism is
+  also available on bar, line, scatter, box-and-whisker, and
+  waterfall charts (not combo-only) — see
+  https://help.sigmacomputing.com/docs/format-chart-axis-position.
+  The `yAxis2` field name itself was only directly confirmed via a
+  combo-chart spec; assume the same field name applies to those
+  other Cartesian kinds until independently verified.
 
 ## Scatter / bubble chart
 

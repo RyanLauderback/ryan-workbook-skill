@@ -2007,3 +2007,75 @@ to fill.
 directly to the wire shape the live API actually accepts — no
 translation-layer patch, per the user's explicit requirement for
 guarantees over minimal-diff convenience.
+
+### Follow-up, same day — visual QA on the Phase 2 test workbooks found 3 more real bugs that POST/GET/compile checks all missed
+
+The user opened 4 of the Phase 2 test workbooks (linked above) in the
+Sigma UI and manually fixed what they found broken — a strong reminder
+that `validate-spec.py` + live POST + GET-back + `verify-workbook.sh`
+compile-checking, however thorough, only proves a spec is *structurally
+valid*, not that it *renders or behaves correctly*. All 3 real bugs
+below were invisible to every automated check run on these files
+earlier the same day.
+
+**1 & 2 — combo-chart secondary axis, 2 files.** Both
+`data-model-sourced-multi-level-aggregated-table.json` (element
+`58MHXnThBv`) and `styled-card-dashboard.json` (element `chart-trend`)
+plot Revenue (large dollar figures) against Profit Margin (small-scale)
+on one shared `yAxis` — `type: "line"` only changes render shape, not
+axis scale, so margin rendered flat/near-zero next to revenue. Two
+independent agents pulled each workbook's live, user-fixed spec and
+landed on the **identical** confirmed shape: a new sibling `yAxis2`
+field (`{"columnIds": ["<margin-col-id>"]}`) — additive, not a
+replacement; the column stays listed in `yAxis.columnIds` too. Fixed
+in both files; documented in `reference/specification/charts.md` →
+"Combo chart" → "Secondary y-axis — `yAxis2`" (new subsection).
+
+**3 — input-table not editable in published view.**
+`input-table-agent-scenario-planner.json`'s `input-tbl-scenarios`
+element used `inputMode: "explore"`, which restricts editing to users
+with explore permission or greater — ordinary published-view users
+couldn't interact with it, defeating the exemplar's own purpose (a
+general-audience writeback demo). Live-fixed value: `"view"` ("all
+users can edit, in published view" — already documented as a valid
+value, just not the one this file used). Fixed; added a recommendation
+in `reference/specification/input-tables.md` to default to `"view"`
+for general-audience writeback demos, reserving `"explore"` for
+deliberately-restricted editing.
+
+**Investigated, no bug found (in the elements originally suspected):**
+the user's report of "the control element was being passed as the date
+field causing an error" pointed at 2 charts in
+`data-model-sourced-multi-element-catalog.json` using
+`DateTrunc([date-part], [Date])`, where `[date-part]` is a bracket
+reference that looked suspicious next to `DateTrunc`'s
+string-literal-first signature. Pulled the live spec: byte-for-byte
+identical to the tracked file on both elements, `[date-part]` is a
+real, correctly-wired `segmented` control (`controlId: "date-part"`,
+values year/quarter/month/week/day) — exactly this skill's own
+documented bare-control-reference pattern, argument order correct.
+`verify-workbook.sh` confirms both compile clean. No edit made — would
+have been a regression against an already-correct formula.
+
+**Real bug found instead, on a different, unscoped element (revenue
+undercounted).** Diffing the *whole* live spec (not just the 2
+suspected elements) against the tracked file surfaced an actual
+formula fix on `q5lej1uYSj`, a pivot table ("Revenue & Profit by Region
+and Product Type") — likely what the user's report was actually
+pointing at, given the name overlap ("revenue trend and revenue over
+time"):
+- `Sum([Sales Amount])` → `Sum([Sales Amount] * [Quantity])`
+- `Sum([Sales Amount]) - Sum([Quantity] * [Unit Cost])` →
+  `Sum([Sales Amount] * [Quantity]) - Sum([Quantity] * [Unit Cost])`
+
+Revenue was being computed as unit price alone, not price × quantity —
+a real undercount, not a wire-format issue. Applied directly to the
+tracked file once confirmed against the live, user-fixed spec.
+
+**Lesson reinforced, not new:** this skill's own "always visually
+verify after publish" note (present throughout `reference/`) is not
+boilerplate — 3 of these 4 reported issues were real, and none were
+catchable by any check this skill runs today. No new automated check
+is proposed here (dual-axis scale mismatches and permission-gated
+edit-ability are rendering/UX properties, not structural shape
+violations) — logged as a reminder, not a gap to close.
