@@ -14,7 +14,7 @@ The overall shape of the workbook spec passed to `POST /v2/workbooks/spec`.
 - [ID rules](#id-rules)
 - [Layout](#layout)
 - [Top-level `folders` field](#top-level-folders-field)
-- [Theming (`themeOverrides` + theme color references)](#theming-themeoverrides--theme-color-references)
+- [Theming (`settings.theme.overrides` + theme color references)](#theming-settingsthemeoverrides--theme-color-references)
 - [Minimal working example](#minimal-working-example)
 
 ## Consulting the OpenAPI
@@ -104,12 +104,24 @@ this directory.
   "description": "Optional description",
   "schemaVersion": 1,
   "pages": [...],
+  "elements": [...],
   "layout": "<?xml version=\"1.0\" encoding=\"utf-8\"?>...</Page>..."
 }
 ```
 
-**Required:** `name`, `folderId`, `schemaVersion`, `pages`.
-**Optional:** `description`, `layout`.
+**Required:** `name`, `folderId`, `schemaVersion`, `pages`, `elements`.
+**Optional:** `description`, `layout`, `settings`, `overlays`.
+
+**Breaking change, confirmed live 2026-08-10:** `elements` is now a
+single flat top-level array — `document.pages[].elements` is rejected
+outright (see "Wire format" below). Page objects carry only
+`{id, name, pageWidth?, visibility?}`; page membership for an element
+is determined entirely by which `<Page id="...">` block its `<Element
+elementId="...">`/`<Container elementId="...">` tag sits under in the
+layout XML — there is no `pageId` field on elements. `settings` (theme
+overrides live at `settings.theme.overrides`) and `overlays` (modal
+pages) are new top-level siblings — see "Theming" above and
+`pages.md` → "Modal pages" respectively.
 
 See `reference/workflows/crud.md` → "schemaVersion — don't hardcode"
 for the rule on `schemaVersion`. Existing exemplars use `1`; future
@@ -127,12 +139,20 @@ reaching the live API.
 **Confirmed 2026-08-04 via direct live-POST/PUT/GET testing** (not
 GET-spec-only — a bare flat-shape spec was actively POSTed and
 rejected, confirming this isn't a passive artifact): the real Sigma
-REST API nests `schemaVersion`, `kind`, `pages`, `layout`,
-`themeOverrides`, `folders`, and `agents` under a top-level `document`
-key. Only `name`, `folderId`, and `description` remain true top-level
-siblings on the request (plus response-only metadata — see below —
-which also lives outside `document`). `document.kind` is **required**
-and is always the literal string `"workbook"`:
+REST API nests `schemaVersion`, `kind`, `pages`, `elements`, `layout`,
+`settings`, `overlays`, `folders`, and `agents` under a top-level
+`document` key. Only `name`, `folderId`, and `description` remain true
+top-level siblings on the request (plus response-only metadata — see
+below — which also lives outside `document`). `document.kind` is
+**required** and is always the literal string `"workbook"`.
+
+**Correction (2026-08-10):** `themeOverrides` was previously listed
+here as a `document`-nested key — it no longer exists at any top
+level. Confirmed live: `document.themeOverrides` is rejected outright
+(`{"message":"document.themeOverrides is no longer supported. Use
+document.settings.theme.overrides instead."}`). Theme overrides now
+live at `document.settings.theme.overrides`. See "Theming" below and
+`reference/specification/theming.md`.
 
 ```json
 {
@@ -142,7 +162,10 @@ and is always the literal string `"workbook"`:
     "schemaVersion": 1,
     "kind": "workbook",
     "pages": [...],
-    "layout": "<?xml version=\"1.0\" ...?>...</Page>..."
+    "elements": [...],
+    "layout": "<?xml version=\"1.0\" ...?>...</Page>...",
+    "settings": { "theme": { "overrides": {...} } },
+    "overlays": [...]
   }
 }
 ```
@@ -204,13 +227,14 @@ a file being POSTed.
 
 ## Pages
 
-`pages` is the core of the spec. Each page:
+`pages` and `elements` are both top-level siblings of `name`/`folderId`
+(**breaking change, confirmed live 2026-08-10** — see "Wire format"
+above). A page entry no longer carries its own `elements[]`; it's just:
 
 ```json
 {
   "id": "page-overview",
-  "name": "Overview",
-  "elements": [...]
+  "name": "Overview"
 }
 ```
 
@@ -220,9 +244,16 @@ Optional page-level keys:
   See `reference/specification/text.md` and the iteration pattern in
   `reference/workflows/plan.md`.
 - `description` — page-level description string.
+- `pageWidth` — per-page width override.
 
-The `elements` array holds tables, charts, KPIs, controls, containers,
-text, dividers, and images. See the per-element reference files.
+All elements for every page live in the single top-level `elements[]`
+array (tables, charts, KPIs, controls, containers, text, dividers, and
+images — see the per-element reference files). An element's page
+membership isn't a field on the element at all — it's determined by
+the layout XML: whichever `<Page id="...">` block an element's
+`<Element elementId="...">` (or `<Container elementId="...">`) tag is
+nested under is the page it renders on. See
+`reference/specification/layout.md`.
 
 ## ID rules
 
@@ -266,16 +297,26 @@ organization; doesn't affect render. Inspect via
 `mcp-describe.sh workbook <wb-id>`, expect exit 3) if you need the
 structure.
 
-## Theming (`themeOverrides` + theme color references)
+## Theming (`settings.theme.overrides` + theme color references)
 
 Moved to its own chunk: **`reference/specification/theming.md`**
-(2026-08-04, Wave 4 / C7). Includes a correction: what earlier versions
-of this file called a standalone `"kind": "theme"` **element** does not
-exist — live-POST tested and rejected (`Invalid kind: "theme"`). The
-`{kind:"theme", ref}` shape is real, but it's a **reusable color-value
-form** usable inside `style.color`/`borderColor`/`backgroundColor` and
-similar fields across many element kinds, not a page element in its own
-right. See that file for the full, corrected reference.
+(2026-08-04, Wave 4 / C7; relocated again 2026-08-10 — see below).
+Includes a correction: what earlier versions of this file called a
+standalone `"kind": "theme"` **element** does not exist — live-POST
+tested and rejected (`Invalid kind: "theme"`). The `{kind:"theme", ref}`
+shape is real, but it's a **reusable color-value form** usable inside
+`style.color`/`borderColor`/`backgroundColor` and similar fields across
+many element kinds, not a page element in its own right. See that file
+for the full, corrected reference.
+
+**Breaking change, confirmed live 2026-08-10:** top-level
+`document.themeOverrides` is now rejected outright:
+`{"message":"document.themeOverrides is no longer supported. Use
+document.settings.theme.overrides instead."}`. The new home is
+`document.settings.theme.overrides` — same field names/values inside,
+only the nesting changed. `themeName` moved the same way, to
+`document.settings.theme.name` (a UUID string). See `theming.md` for
+the full corrected reference.
 
 ## Minimal working example
 
@@ -289,23 +330,23 @@ The smallest spec that creates a workable workbook:
   "pages": [
     {
       "id": "page-1",
-      "name": "Overview",
-      "elements": [
-        {
-          "id": "sales-table",
-          "kind": "table",
-          "name": "Sales Data",
-          "source": {
-            "kind": "warehouse-table",
-            "connectionId": "<conn-uuid>",
-            "path": ["SALES_DB", "PUBLIC", "ORDERS"]
-          },
-          "columns": [
-            { "id": "col-order-id", "name": "Order ID", "formula": "[ORDERS/order_id]" },
-            { "id": "col-amount",   "name": "Amount",   "formula": "[ORDERS/amount]" },
-            { "id": "col-total",    "name": "Total",    "formula": "Sum([Amount])" }
-          ]
-        }
+      "name": "Overview"
+    }
+  ],
+  "elements": [
+    {
+      "id": "sales-table",
+      "kind": "table",
+      "name": "Sales Data",
+      "source": {
+        "kind": "warehouse-table",
+        "connectionId": "<conn-uuid>",
+        "path": ["SALES_DB", "PUBLIC", "ORDERS"]
+      },
+      "columns": [
+        { "id": "col-order-id", "name": "Order ID", "formula": "[ORDERS/order_id]" },
+        { "id": "col-amount",   "name": "Amount",   "formula": "[ORDERS/amount]" },
+        { "id": "col-total",    "name": "Total",    "formula": "Sum([Amount])" }
       ]
     }
   ]

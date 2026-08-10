@@ -9,7 +9,7 @@ jq '.components.schemas.Container' /tmp/sigma-api.json
 
 A container is the visual grouping primitive: a labeled section, a
 branded header strip, a row of KPIs treated as a unit. It pairs with a
-matching `<GridContainer elementId="...">` in the layout XML (see
+matching `<Container elementId="...">` in the layout XML (see
 `layout.md`) — the spec declares the container exists; the XML
 positions it and its children.
 
@@ -44,12 +44,23 @@ Containers accept three optional styling fields:
 
 Verified fields:
 
-- `backgroundColor` — hex color string.
+- `backgroundColor` — hex color string. **Corrected 2026-08-10:** also
+  confirmed live accepting a CSS custom-property string, e.g.
+  `"var(--colors-fillPrimary)"`.
 - `borderRadius` — observed: `"round"`, `"pill"`. Absence renders
   sharp corners.
-- `borderColor` — hex color string.
+- `borderColor` — hex color string. **Corrected 2026-08-10:** also
+  confirmed live accepting a theme-ref object, e.g.
+  `{"kind": "theme", "ref": "colors-border"}` — the same `{kind:
+  "theme", ref}` form already documented elsewhere in this skill for
+  other color fields.
 - `borderWidth` — integer pixels (observed: `1` for cards, `3` for
   accent headers).
+
+```json
+"borderColor": { "kind": "theme", "ref": "colors-border" },
+"backgroundColor": "var(--colors-fillPrimary)"
+```
 
 **Partial styling is accepted.** Any subset of the four keys is
 valid; spacer containers omit `borderRadius` (sharp corners); some
@@ -110,19 +121,28 @@ Both can appear on the same container; they're independent:
 }
 ```
 
-## What `style` does NOT capture (UI-only)
+## Padding / spacing — DOES persist to the code spec
 
-These styling controls appear in the Sigma UI but **do not appear in
-the code spec** on GET-back:
+**Corrected 2026-08-10.** This doc previously claimed `padding`,
+inter-element gap, and grid-cell `gap` were UI-only and didn't survive
+to the code spec. **That claim is now false** — confirmed live,
+GET-returned on real containers: containers carry a `style.padding`
+field directly, plus top-level `elementGap` and `spacing` fields:
 
-- `padding` / "padding enabled" toggle
-- `ContainerSpacing` / inter-element gap
-- `gap` between grid cells
+```json
+{
+  "id": "ctr-section",
+  "kind": "container",
+  "style": { "padding": "none" },
+  "elementGap": "hidden",
+  "spacing": "medium"
+}
+```
 
-Verified 2026-05-21 against the retail-sales harvest — its design
-spec mentions all three but none survive into the JSON. Do not
-promise these in plans; do not template them in code specs. Layout
-XML attributes are limited to `gridColumn`, `gridRow`,
+Confirmed observed values: `style.padding: "none"`, `elementGap:
+"hidden"`, `spacing: "medium"`. Other enum values are unverified —
+don't invent a full enum from one example each. Layout XML attributes
+are unaffected by this correction and remain `gridColumn`, `gridRow`,
 `gridTemplateColumns`, `gridTemplateRows`, `elementId`, `type`, `id`.
 
 ## Common `style` recipes
@@ -158,12 +178,12 @@ heading, sharp corners for clean alignment:
 ```
 
 **Layout placement for spacer containers.** A spacer container must
-have a matching `<GridContainer>` (with children) in the layout XML
-— placing it as a `<LayoutElement>` leaf fails `validate-spec`'s
+have a matching `<Container>` (with children) in the layout XML
+— placing it as a `<Element>` leaf fails `validate-spec`'s
 `containers-have-children` check. Two valid patterns:
 
 1. **Wrap pattern** — nest the next section's container inside the
-   spacer's `<GridContainer>`. The spacer's `gridRow` spans both
+   spacer's `<Container>`. The spacer's `gridRow` spans both
    the visible band region AND the nested section, giving a
    concentric two-color frame. `examples/styled-card-dashboard.json`
    uses this for every section break on page 1.
@@ -215,12 +235,12 @@ Paired layout XML places logo and title side-by-side inside the
 header container:
 
 ```xml
-<GridContainer elementId="header" type="grid"
+<Container elementId="header" type="grid"
                gridColumn="1 / 25" gridRow="1 / 6"
                gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
-  <LayoutElement elementId="logo"  gridColumn="1 / 6"  gridRow="1 / 6"/>
-  <LayoutElement elementId="title" gridColumn="6 / 25" gridRow="1 / 6"/>
-</GridContainer>
+  <Element elementId="logo"  gridColumn="1 / 6"  gridRow="1 / 6"/>
+  <Element elementId="title" gridColumn="6 / 25" gridRow="1 / 6"/>
+</Container>
 ```
 
 ## Recipe — KPI on top of a background image
@@ -243,11 +263,11 @@ header container:
 ```
 
 ```xml
-<GridContainer elementId="hero" type="grid"
+<Container elementId="hero" type="grid"
                gridColumn="1 / 25" gridRow="1 / 8"
                gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
-  <LayoutElement elementId="revenue-kpi" gridColumn="1 / 25" gridRow="1 / 8"/>
-</GridContainer>
+  <Element elementId="revenue-kpi" gridColumn="1 / 25" gridRow="1 / 8"/>
+</Container>
 ```
 
 **Note:** overlapping `gridRow` ranges between siblings inside one
@@ -261,7 +281,7 @@ full extent and the child element sits on top of it naturally.
 
 If you don't need a visual grouping (no shared background, no
 logical section), put elements directly on the page and position
-them with `<LayoutElement>` in the page-level layout XML. A
+them with `<Element>` in the page-level layout XML. A
 container that holds a single element is usually overkill — unless
 you specifically need the background image or styled frame.
 

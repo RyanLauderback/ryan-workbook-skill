@@ -57,7 +57,7 @@ Surfaces an agent as a conversational UI element on a page:
 ```
 
 `agentId` references an `agents[].id`. **Live-POST verified** — placed
-via ordinary `<LayoutElement>` like any other element.
+via ordinary `<Element>` like any other element.
 `validate-spec.py`'s `action-refs-resolve` check verifies `agentId`
 resolves to a real agent (added this wave — a dangling `agentId`
 previously failed silently: POST succeeds, the chat element renders

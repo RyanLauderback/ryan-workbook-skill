@@ -1,32 +1,51 @@
-# Theming (`themeOverrides` + theme color references)
+# Theming (`settings.theme.overrides` + theme color references)
 
 New 2026-08-04 (Wave 4 / C7 — merged with the visual-media capability
 in `others.md`/`containers.md` since both answer "how does a value
-become pixels without touching the data graph"). Covers the top-level
-`themeOverrides` field and the reusable `{kind:"theme", ref}` color
+become pixels without touching the data graph"). Covers the workbook
+theme-overrides field and the reusable `{kind:"theme", ref}` color
 form. Carries one correction over prior versions of this reference —
 see "Theme color reference" below.
+
+**Breaking change, confirmed live 2026-08-10.** Top-level
+`document.themeOverrides` no longer works — rejected outright:
+
+```
+{"message":"document.themeOverrides is no longer supported. Use document.settings.theme.overrides instead."}
+```
+
+The new home is **`document.settings.theme.overrides`** — same field
+names/values inside (`pageWidth`, `space.unit`, `categoricalScheme`,
+etc.), only the nesting location changed. Every example below uses the
+new nesting.
 
 ```bash
 jq '.components.schemas.WorkbookSpec.allOf[1].allOf[1].properties.themeOverrides' /tmp/sigma-api.json
 ```
 
-## Top-level `themeOverrides` field
+## `settings.theme.overrides` field
 
 Optional. Controls workbook-wide visual defaults — page width/spacing,
 element chrome, and color schemes.
 
 ```json
-"themeOverrides": {
-  "pageWidth": "large",
-  "space": { "unit": "small" }
+"settings": {
+  "theme": {
+    "overrides": {
+      "pageWidth": "large",
+      "space": { "unit": "small" }
+    }
+  }
 }
 ```
 
 **Live-POST verified** (Wave 4 / C7 probe,
 `b77b5b05-d1f5-40ba-96eb-00458726da29`, and originally harvested against
 `sales-mbr-sentinel` 2026-07-02) — `pageWidth`/`space` round-tripped
-byte-for-byte.
+byte-for-byte under the old `themeOverrides` nesting; the field names
+and values are unchanged by the 2026-08-10 relocation, only the parent
+path is new (`settings.theme.overrides` instead of top-level
+`themeOverrides`).
 
 Fields confirmed via the live OpenAPI schema (2026-08-04) — type/enum
 only, not all individually live-POST tested this wave:
@@ -70,8 +89,8 @@ hex string OR this theme-reference object. It appears as a `oneOf`
 alternative inside color-typed fields across many element kinds —
 `style.color`, `style.borderColor`, `style.backgroundColor`,
 `name.color`, `description.color`, `sparkline.color`,
-`tableStyle`/`themeOverrides.tableStyles`'s various color fields, and
-likely others.
+`tableStyle`/`settings.theme.overrides.tableStyles`'s various color
+fields, and likely others.
 
 ```json
 {
@@ -91,17 +110,19 @@ valid `ref` values isn't documented anywhere this skill has found —
 inspect a real theme's tokens via the Sigma UI's theme editor, or trial
 a candidate token name and check the POST response.
 
-## `themeName` — reference to a saved/shared theme
+## `settings.theme.name` — reference to a saved/shared theme
 
-Documented only via harvest evidence (a top-level UUID field pointing
-at a named theme saved elsewhere in the org). **Not independently
-verified this wave** — no REST endpoint for listing available themes
-was found in either the current public OpenAPI bundles or the cached
-workbook-spec schema (see `reference/specification/schema.md` →
-"OpenAPI reference — known-dead URL" for why the schema situation is
-unusually murky right now), so there was no real theme ID available to
-trial. Treat as unconfirmed until probed against a real org's saved
-theme.
+Formerly a top-level `themeName` field. **Moved 2026-08-10** along
+with `themeOverrides` — same relocation, same parent object:
+`document.settings.theme.name`. Documented only via harvest evidence
+(a UUID field pointing at a named theme saved elsewhere in the org).
+**Not independently verified this wave** — no REST endpoint for
+listing available themes was found in either the current public
+OpenAPI bundles or the cached workbook-spec schema (see
+`reference/specification/schema.md` → "OpenAPI reference — known-dead
+URL" for why the schema situation is unusually murky right now), so
+there was no real theme ID available to trial. Treat as unconfirmed
+until probed against a real org's saved theme.
 
 ## Cross-references
 
@@ -111,4 +132,4 @@ theme.
 - `reference/specification/containers.md` → "backgroundImage" — shares
   the same `source: {kind:"url"|"upload"}` shape as the `image` element.
 - `reference/specification/tables.md` — per-element `tableStyle`, the
-  same shape family as `themeOverrides.tableStyles`.
+  same shape family as `settings.theme.overrides.tableStyles`.

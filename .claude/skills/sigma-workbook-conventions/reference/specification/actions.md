@@ -8,7 +8,9 @@ remaining 7 effects plus the `button` element itself confirmed via a
 dedicated scratch probe (`189db290-7674-4032-9ff7-7fad59dc14fa`)
 authored specifically to exercise each one in isolation. All 9 effects
 round-tripped **byte-for-byte** through POST → GET with zero
-normalization.
+normalization. (A 10th effect, `update-rows`, was confirmed later via
+a real production workbook's agent tool step — not part of this
+probe; see the `insert-rows`/`delete-rows`/`update-rows` entry below.)
 
 `others.md` previously declared buttons and action sequences "not
 supported" — retracted; see `reference/capability-ledger.md`.
@@ -66,7 +68,7 @@ array order.
 }
 ```
 
-## The 9 effects
+## The 10 effects
 
 ### `set-control-value`
 
@@ -109,10 +111,13 @@ Opens/closes a modal page.
 { "effect": "close-overlay" }
 ```
 
-`overlayId` is a **page `id`** (the modal page's own `id`, matching
-`pages[].id` where `type:"modal"`) — not an element id. `close-overlay`
-takes no other fields; it closes whichever overlay is currently open, so
-it's typically placed on a button living inside the modal itself.
+`overlayId` matches a `document.overlays[].id` — **not** an element id,
+and (as of 2026-08-10) not a `pages[].id` either. Modals moved out of
+`pages[]` entirely into a top-level `overlays` array; see
+`reference/specification/pages.md` → "Modal pages" for the current
+shape. `close-overlay` takes no other fields; it closes whichever
+overlay is currently open, so it's typically placed on a button living
+inside the modal itself.
 
 ### `navigate`
 
@@ -151,12 +156,11 @@ Opens an external URL.
 `openTarget`: `"_blank"` observed (new tab); other standard target
 values are plausible but unverified.
 
-### `insert-rows` / `delete-rows` — input-table writeback
+### `insert-rows` / `delete-rows` / `update-rows` — input-table writeback
 
-The **only** writeback mechanism for `input-table` elements (see
-`tables.md` → "Input tables"). **`update-rows` does not exist** —
-design for append-only inserts plus a derive-latest-per-key read
-pattern, or explicit deletes.
+The **only** writeback mechanisms for `input-table` elements (see
+`tables.md` → "Input tables"): append-only inserts, explicit deletes,
+or a targeted single-row update by primary key.
 
 ```json
 {
@@ -174,16 +178,37 @@ pattern, or explicit deletes.
   "whichRows": { "type": "formula", "formula": "[Note] = \"probe row\"" }
 }
 ```
+```json
+{
+  "effect": "update-rows",
+  "table": "tbl-rows",
+  "whichRows": {
+    "type": "single-row",
+    "primaryKeys": { "col-id": { "type": "agent-input", "inputName": "rowId" } }
+  },
+  "values": {
+    "col-status": { "type": "constant", "value": { "type": "boolean", "value": false } }
+  }
+}
+```
 
-`table` is the `input-table` element's own `id`. `insert-rows.values` is
-keyed by column `id`, each a dynamic-value object (see
-`dynamic-values.md`) — do not pass values for system columns
-(`ID`, `CREATED_AT`, `CREATED_BY`, `UPDATED_AT`, `UPDATED_BY`), they're
-protocol-managed. `delete-rows.whichRows` is a formula evaluated against
-each existing row; matching rows are removed. The formula's bare
-`[Note]` here resolves against the input-table's own column **names**
-(`"Note"`, the `name` on `col-note`) — same bare-ref resolution rules as
-any other element.
+`table` is the `input-table` element's own `id`. `insert-rows.values`
+and `update-rows.values` are keyed by column `id`, each a dynamic-value
+object (see `dynamic-values.md`) — do not pass values for system
+columns (`ID`, `CREATED_AT`, `CREATED_BY`, `UPDATED_AT`, `UPDATED_BY`),
+they're protocol-managed. `delete-rows.whichRows` is a formula
+evaluated against each existing row; matching rows are removed.
+`update-rows.whichRows` uses a **different, non-formula shape**:
+`{type:"single-row", primaryKeys:{<columnId>: <dynamic-value>}}` —
+keyed by column `id` (not name), identifying the one row to mutate;
+only the columns present in `values` are changed on that row. **Live-
+confirmed** via a real, currently-live production workbook's agent
+tool step (not this skill's own scratch probe) — observed value forms
+were `{"type":"agent-input","inputName":"Status"}` and
+`{"type":"constant","value":{"type":"boolean","value":false}}`. The
+formula's bare `[Note]` in the `delete-rows` example above resolves
+against the input-table's own column **names** (`"Note"`, the `name`
+on `col-note`) — same bare-ref resolution rules as any other element.
 
 Agent tools (`agents[].tools[].steps[]`) reuse this exact same effect
 vocabulary, with one addition: `{type: "agent-input", inputName}` as a
@@ -200,7 +225,9 @@ added sibling key, `kind:"effect"`. See `agents.md`.
   `table`, `tabbedContainer`, `navigate.target.page`, or `agentId`
   fails silently at runtime otherwise — POST succeeds, nothing renders
   or fires when clicked. See the `action-refs-resolve` check.
-- Whether tool steps support the full 9-effect vocabulary or only
-  `insert-rows`/`delete-rows` — only `insert-rows` was independently
-  probed as a tool step so far. See `agents.md`.
+- Whether tool steps support the full 10-effect vocabulary or only the
+  writeback trio — only `insert-rows` was independently probed as a
+  tool step by this skill's own probe; `update-rows` has separate
+  real-world confirmation as a tool step (see above) but `delete-rows`
+  as a tool step remains unconfirmed. See `agents.md`.
 - Effect `style` fields on buttons beyond `appearance` (see above).

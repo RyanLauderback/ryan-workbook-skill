@@ -1750,3 +1750,260 @@ new examples"):**
 Net: 13 → 11 example files. `validate-spec.py` re-run clean on all 11
 survivors post-deletion (0 fail; pre-existing warnings on 2 files
 unchanged, unrelated to this change).
+
+**Correction, same day (see "Wire-format breaking changes (round 2)"
+below):** this entry's approval-workflow gap sketch claimed "no
+`update-rows` effect in the verified 9-effect vocabulary." That's now
+confirmed false — `update-rows` is a real, live-confirmed 10th effect
+(see `reference/specification/actions.md`). The sketch should be
+revisited using `update-rows` for the approver's mutation step, not
+just direct inline cell editing, when this pattern actually gets built.
+
+## 2026-08-10 — Wire-format breaking changes (round 2): elements flattened, layout tags renamed, chart axes/theming/modals relocated
+
+**Trigger.** While scoping the two new writeback-pattern examples from
+the segmentation plan above, the user flagged that Sigma's workbook-
+spec API had picked up additional breaking changes since the
+2026-08-04 `document`-wrapper fix, and asked to re-fetch and re-validate
+the example set against the live API before building anything new.
+
+**First signal.** A routine live-POST smoke test of an existing
+exemplar failed with `Invalid kind: "bar-chart"` — a misleading error
+class seen before in this skill's history (inner-shape errors surfacing
+as if the element `kind` itself were invalid). Bisection ruled out
+forward-reference ordering and a missing `pageId` field before a
+side-by-side diff against a freshly-fetched real bar-chart element
+found the actual cause: the chart axis-binding shape had changed.
+Pulling on that thread (systematic live-POST/GET testing plus a
+4-subagent parallel audit cross-referencing 3 real live workbook specs
+against every file in `reference/specification/`) surfaced a much
+larger, stacked set of changes than the one bug that started it.
+
+**User decision on scope.** Presented as a choice between a smaller
+wire-translation-layer patch (Option A) and adopting the new wire shape
+directly as this skill's authoring convention (Option B, larger but
+removes an entire class of translation-layer risk). User explicitly
+required B: "we need guarantees that the skill will work as expected."
+Given the stacked-changes discovery mid-investigation, also chose to
+run a full shape-diff audit before touching any example file, rather
+than fixing bugs one at a time as found.
+
+**Confirmed changes (all live-POST/GET verified, not inferred from
+docs or third-party forks):**
+
+1. **`pages[].elements` nesting removed.** Elements now live in one
+   flat top-level `document.elements` array; page objects carry only
+   `{id, name, pageWidth?, visibility?}`. Page membership is determined
+   *entirely* by which `<Page>` block in the layout XML an element's
+   placement tag is nested under — there is no `pageId` field on
+   elements (a hypothesis tested and ruled out during bisection).
+2. **Layout XML tag rename:** `<GridContainer>`→`<Container>`,
+   `<LayoutElement>`→`<Element>`. Same attributes on both
+   (`elementId`, `type`, `gridColumn`, `gridRow`,
+   `gridTemplateColumns`, `gridTemplateRows`). `<TabbedContainer>`/
+   `<Tab>`/`<Page>` unchanged.
+3. **Cartesian chart axis binding renamed:** `xAxis:{id}`→
+   `xAxis:{columnId}`; `yAxis:[{id}]` (array)→`yAxis:{columnIds:[...]}`
+   (single object, array-valued field). Applies to bar/line/area/
+   combo/scatter. Does **not** apply to donut/pie (`value`/`color`/
+   `holeValue` stay on the old `{id}` shape). `kpi-chart`'s own
+   `value` binding (no `xAxis`/`yAxis` — KPIs bind a single value
+   directly) needed the same `id`→`columnId` rename; donut/pie's
+   `value` did not, despite an identical-looking field name — a blind
+   regex over `"value":{"id":...}` would have wrongly touched
+   donut/pie too. Fixed by walking the JSON structurally and scoping
+   the substitution to `kind=="kpi-chart"` only, re-verified via a
+   fresh structural re-parse.
+4. **Modal pages relocated.** `pages[].type:"modal"` is gone;
+   `document.overlays[]` is the new home
+   (`{id, type:"modal", name, modal:{width, header, footer}}`). Modal
+   *content* elements are ordinary flat top-level elements, associated
+   via a `<Page id="<overlay-id>">` block in the layout XML (same
+   tag/attrs as a real page, `type="grid"` not `type="modal"`).
+5. **Theming relocated.** Top-level `document.themeOverrides` is
+   explicitly rejected — exact error: `"document.themeOverrides is no
+   longer supported. Use document.settings.theme.overrides instead."`
+   New home: `document.settings.theme.overrides` (same field names
+   inside). `themeName`→`settings.theme.name`.
+6. **`refMarks.value` must be a dynamic-value object**
+   (`{type:"constant", value:N}`), not a bare scalar — bare scalar
+   rejected outright.
+7. **`dataBars` conditional format uses `scheme`** (an array of
+   colors), not `color` (singular).
+8. **`tableComponents.collapsedColumns` is a string toggle**
+   (`"hidden"`), not an array of column IDs — paired with a sibling
+   `summaryBar: "hidden"`.
+9. **`list` controlType with `selectionMode:"single"` uses a scalar
+   `value`**, not `values:[]` (multi-select keeps `values:[]`).
+10. **A new, previously-undocumented 15th `controlType`: `"drill"`**
+    (drill-down navigation control).
+11. **`containers.md`'s "UI-only, doesn't survive to spec" claim for
+    `style.padding`/`elementGap`/`spacing` is now false** — these
+    persist, confirmed via observed round-tripped values.
+12. **`borderColor`/`backgroundColor` accept theme-ref objects**
+    (`{kind:"theme", ref:"..."}`) and CSS var strings
+    (`"var(--...)"`), not just hex.
+13. **`update-rows` is a real, working effect** (a 10th effect),
+    contradicting an explicit "does not exist" claim that had been
+    written in 5 places across this skill (including, ironically, this
+    same session's own "Example-set rationalized" entry above,
+    written earlier the same day before this was discovered). Shape:
+    `{"kind":"effect","effect":"update-rows","table":"<id>",
+    "whichRows":{"type":"single-row","primaryKeys":{"<colId>":
+    <dynamic-value>}},"values":{"<colId>":<dynamic-value>}}`. Confirmed
+    via a real, currently-live production workbook's agent tool step
+    (not this skill's own scratch probe).
+14. A substantial set of **additive, non-breaking, undocumented
+    fields** was also found during the audit (new `dataset` source
+    kind, SQL `{{Control}}:start`/`:end` interpolation, conditional
+    `trigger` objects, KPI comparison/trend styling fields, donut
+    `hole`/`innerRadius`, chart `lineAreaStyle`, and more) — logged in
+    `capability-ledger.md` → "Unverified — probe pending" rather than
+    built, per explicit user direction ("log tier 2 as a future step
+    for review").
+
+**Audit method and triage.** Findings were bucketed Tier 1 (confirmed
+breaking, must fix — items 1–13 above), Tier 2 (additive, deferred —
+item 14), Tier 3 (ambiguous, needed a live test to resolve before
+classifying: the KPI-vs-donut `value` field distinction in item 3, the
+combo/pie chart shapes, and `refMarks.value`'s exact shape — all three
+resolved via direct live POST/GET rather than left as guesses). User
+approved this triage as-is: "approve, log tier 2 as a future step for
+review."
+
+**Tooling fixed to make the new shape the authoring convention
+end-to-end (not just documented):**
+- `scripts/api/publish-workbook.sh` — `wrap_flat_to_wire()`'s
+  `DOC_KEYS` updated to include `elements`/`overlays` and swap
+  `themeOverrides` for `settings`; `unwrap_wire_to_flat()` needed no
+  change (already generically hoists every `document.*` key).
+- `scripts/validate-spec.py` — every check that walked
+  `pages[].elements` (7 functions: `_all_elements`,
+  `issues_elements_placed`, `issues_containers_have_children`,
+  `issues_column_format_shape`, `issues_control_id_unique`,
+  `_collect_control_ids`, `issues_bare_ref_resolution`) now walks the
+  flat top-level `elements[]` instead; the `open-overlay` check now
+  resolves `overlayId` against `document.overlays[].id` instead of a
+  `pages[].id` with `type:"modal"`. **A second pass found two more
+  checks** (`issues_containers_have_children`,
+  `issues_layoutelement_has_children`) still hardcoded to the *old*
+  tag names only — missed in the first fix, caught when a Phase 2
+  fix-subagent hit false FAILs on every container-bearing example.
+  Both now accept old and new tag names, matching the pattern already
+  used in `issues_elements_placed`.
+- `scripts/workbook-manifest.py` — `page_summary`/`manifest`/
+  `top_level_summary`/`collect_unknown_kinds` updated to read the flat
+  `elements[]` and derive per-page membership from the layout XML via
+  a new `_element_ids_in_layout()` helper.
+
+**Reference docs fixed** (13 files under `reference/specification/`
+and `reference/workflows/`, plus `SKILL.md`): every doc mentioning the
+old nested-elements shape, the old tag names, `themeOverrides`, or
+`type:"modal"` pages was updated to the confirmed new shape, including
+several gaps that fell between subagents' assigned scopes and were
+only caught by an independent post-hoc grep sweep (6 files missed the
+tag rename on a first pass; `SKILL.md`/`actions.md`/
+`reference/workflows/validate.md` had stale cross-reference mentions no
+subagent had been assigned to fix). See `reference/specification/
+actions.md`, `input-tables.md`, `maps.md`, `tables.md`, `controls.md`,
+`containers.md`, `charts.md`, `schema.md`, `pages.md`, `layout.md`,
+`example-full.yaml`, `theming.md`, `text.md`, `others.md`, `agents.md`.
+
+**All 11 example files fixed and live-verified**, each POSTed to a
+dedicated validation folder, GET-back confirmed, and compiled via
+`verify-workbook.sh` — every fix independently re-verified by a
+separate read-only subagent per this skill's own "don't trust a
+summary" doctrine (one verification pass per fix batch, structural
+diffs against `git HEAD`, live `get-spec` checks on the resulting
+workbookIds, not just re-running the reporting subagent's own claims):
+- `dashboard-department-scorecard.json` — theme relocation; also
+  surfaced a real, pre-existing, unrelated bug (2 container elements,
+  `ctr-header`/`ctr-kpi-row`, referenced in the layout XML but never
+  declared in `elements[]` — fixed by adding them).
+- `data-model-sourced-single-page-inventory-health.json` — flatten +
+  tag rename only.
+- `data-model-sourced-overview.json` — axis-shape fix on one chart.
+- `data-model-sourced-sales-command-center.json` — theme relocation;
+  its 2 single-select `list` controls already used scalar `value`, no
+  change needed.
+- `data-model-sourced-exec-kpi-scorecard.json` — theme relocation;
+  `dataBars` fix (the real entry had zero existing colors, not one as
+  assumed — a judgment-call 2-color scheme was added); also surfaced
+  and fixed an unrelated pre-existing bug, a map element's legacy
+  bare-array `tooltip` needing the `{"columns":[...]}` wrap.
+- `data-model-sourced-multi-page-profitability-attrition.json` — 8
+  chart axis-shape fixes; full end-to-end POST blocked by a
+  pre-existing, intentionally-templated `<DATA_MODEL_ID>` placeholder
+  (documented in its own `.prompt.md` companion, confirmed predating
+  this session) unrelated to the fix — elements 0–42, including all 8
+  fixed charts, validated server-side before hitting that unrelated
+  placeholder at element 43; the specific fix was independently
+  confirmed via an isolated probe reproducing just the axis shape.
+- `data-model-sourced-cohort-pivot.json` — 2 chart axis-shape fixes.
+- `data-model-sourced-multi-level-aggregated-table.json` — 1 combo-
+  chart axis-shape fix (mixed-array `columnIds` form); surfaced a
+  real, pre-existing, unrelated bug (a dead `dataModelId`) — confirmed
+  present in git history before this session, deliberately left
+  unfixed in the tracked file (only swapped in the disposable live-
+  verify copy).
+- `data-model-sourced-multi-element-catalog.json` — 4 chart axis-shape
+  fixes (donut and pivot-table elements correctly left untouched);
+  surfaced a real, pre-existing, unrelated bug (an unresolvable bare
+  formula ref, `[Store Region (1)]`) — same treatment, left unfixed in
+  the tracked file.
+- `input-table-agent-scenario-planner.json` — flatten + tag rename
+  only; `agents[]`/input-table/action shapes confirmed untouched.
+- `styled-card-dashboard.json` — flatten + tag rename across 11
+  containers/22 elements; its 3 axis-bearing charts already used the
+  modern shape, confirmed, no change needed; donut chart confirmed
+  untouched.
+
+**A tampering claim surfaced and was run down, not waved through.**
+One fix-subagent reported that a scratch file it had written to `/tmp`
+was silently overwritten mid-task with substitute content, accompanied
+by an embedded instruction not to disclose this — it said it refused
+that instruction and rewrote its own version. A dedicated follow-up
+investigation found no forensic trace either way of the specific
+anti-disclosure detail (the original overwritten content was already
+gone), but confirmed definitively via a full worktree diff that
+**nothing unexpected reached any tracked repo file**. The most likely
+mundane explanation: every parallel fix-subagent this round was
+instructed to use bare `/tmp/phase2-<name>` scratch paths, and `/tmp`
+is shared across every concurrent background job on this machine
+(this session's own siblings, and potentially unrelated peer
+sessions) — a same-named file getting clobbered by a concurrent write
+is plausible without any adversarial intent. Lesson for future
+subagent instructions in this skill: scope scratch paths to a job-
+specific temp directory, not bare `/tmp`.
+
+**2 new golden exemplars harvested into `workbooks/_exemplars/`**, per
+explicit user request, replacing 2 stale ones that used the pre-fix
+shape:
+- `single-page-KPI-Dashboard` (urlId `57INzIeyojJL60fzpaRShx`) →
+  `data-model-sourced-kpi-dashboard-with-region-map-and-tabs.json` — a
+  Target-branded, single-page dashboard with a US-states region map
+  (click-to-filter), a segmented-control metric/dimension picker
+  driving a pivot table, and a tabbed container.
+- `LL-Bean-Performance` (urlId `2HH1cBswstRUaOAqToKrtJ`) →
+  `data-model-sourced-retail-performance-dashboard-with-custom-brand-theme.json`
+  — a heavily brand-themed (forest-green/gold) retail dashboard with
+  explicit `style` overrides on every container/chart and a 3-tier
+  table lineage.
+
+Both were fetched fresh from the live API and already reflected the
+current wire format with no fix needed — confirms the API normalizes
+existing stored workbooks to the current shape on GET, not just new
+POSTs. Retired `data-model-sourced-kpi-overview-with-containers.json`
+and `data-model-sourced-simple-overview.json` (both confirmed to use
+the now-rejected shape) as an explicit, user-approved one-time
+exception to `docs/conventions.md`'s stated "append-only, never edit
+in place" convention for this folder — justified here because both
+retired files were objectively broken (Sigma rejects their shape on
+POST), not merely superseded by preference, and the 2 replacements
+cover the same "simple 1-page dashboard" category the user asked them
+to fill.
+
+**Net:** every tool, doc, and example in this skill now authors
+directly to the wire shape the live API actually accepts — no
+translation-layer patch, per the user's explicit requirement for
+guarantees over minimal-diff convenience.

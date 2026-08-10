@@ -6,8 +6,10 @@
   "pages": [
     {
       "id": "page-scenarios",
-      "name": "Scenario Planner",
-      "elements": [
+      "name": "Scenario Planner"
+    }
+  ],
+  "elements": [
         {
           "id": "elem-ctrl-region",
           "kind": "control",
@@ -89,8 +91,6 @@
           "kind": "chat",
           "agentId": "agent-scenario"
         }
-      ]
-    }
   ],
   "agents": [
     {
@@ -122,5 +122,5 @@
       ]
     }
   ],
-  "layout": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<Page type=\"grid\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\" id=\"page-scenarios\">\n  <LayoutElement elementId=\"elem-ctrl-region\" gridColumn=\"1 / 7\" gridRow=\"1 / 4\"/>\n  <LayoutElement elementId=\"btn-add-scenario\" gridColumn=\"7 / 13\" gridRow=\"1 / 4\"/>\n  <LayoutElement elementId=\"btn-delete-scenario\" gridColumn=\"13 / 19\" gridRow=\"1 / 4\"/>\n  <LayoutElement elementId=\"input-tbl-scenarios\" gridColumn=\"1 / 19\" gridRow=\"4 / 20\"/>\n  <LayoutElement elementId=\"chat-scenario-agent\" gridColumn=\"19 / 25\" gridRow=\"1 / 20\"/>\n</Page>\n"
+  "layout": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<Page type=\"grid\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\" id=\"page-scenarios\">\n  <Element elementId=\"elem-ctrl-region\" gridColumn=\"1 / 7\" gridRow=\"1 / 4\"/>\n  <Element elementId=\"btn-add-scenario\" gridColumn=\"7 / 13\" gridRow=\"1 / 4\"/>\n  <Element elementId=\"btn-delete-scenario\" gridColumn=\"13 / 19\" gridRow=\"1 / 4\"/>\n  <Element elementId=\"input-tbl-scenarios\" gridColumn=\"1 / 19\" gridRow=\"4 / 20\"/>\n  <Element elementId=\"chat-scenario-agent\" gridColumn=\"19 / 25\" gridRow=\"1 / 20\"/>\n</Page>\n"
 }

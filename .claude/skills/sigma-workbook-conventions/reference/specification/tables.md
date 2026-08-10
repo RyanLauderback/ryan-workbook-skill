@@ -25,7 +25,7 @@ Table element:
   - [`visibleAsSource`](#visibleassource)
   - [`folders` — column folder groupings](#folders--column-folder-groupings)
   - [`tableStyle` — banding + presets + header styling](#tablestyle--banding--presets--header-styling)
-  - [`tableComponents` — collapsed columns](#tablecomponents--collapsed-columns)
+  - [`tableComponents` — collapsed columns / summary bar toggles](#tablecomponents--collapsed-columns--summary-bar-toggles)
 - [Conditional formatting — `conditionalFormats`](#conditional-formatting--conditionalformats) (single, backgroundScale, fontScale, dataBars)
 
 Pivot tables:
@@ -257,16 +257,24 @@ live in the OpenAPI:
 jq '.components.schemas.TableStyle // .. | select(.properties?.banding? or .properties?.preset?)' /tmp/sigma-api.json
 ```
 
-### `tableComponents` — collapsed columns
+### `tableComponents` — collapsed columns / summary bar toggles
+
+**Corrected 2026-08-10.** Earlier versions of this doc described
+`collapsedColumns` as an array of column IDs. The only live instance
+found shows a **string** toggle instead, paired with a sibling
+`summaryBar` field (also a string):
 
 ```json
 "tableComponents": {
-  "collapsedColumns": ["col-order-id", "col-cust-key"]
+  "collapsedColumns": "hidden",
+  "summaryBar": "hidden"
 }
 ```
 
-`collapsedColumns` names column IDs whose values should render
-collapsed by default. UI-side hint; doesn't affect data.
+Both `collapsedColumns` and `summaryBar` read as UI-visibility toggles
+for a components region, not a per-column list. Confirmed value for
+both: `"hidden"`. Other enum values are unverified — don't guess what
+else the enum might include.
 
 ## Conditional formatting — `conditionalFormats`
 
@@ -333,11 +341,17 @@ Style block supports `backgroundColor`, `color`, `bold`, `italic`,
 
 ### `dataBars` — inline horizontal bars
 
+**Confirmed 2026-08-10 (2 independent live examples — one `table`, one
+`pivot-table`):** uses `scheme` (array of colors), not a singular
+`color`. Also carries an optional `includeValues: true` boolean
+(undocumented; also seen alongside `backgroundScale`).
+
 ```json
 {
   "type": "dataBars",
   "columnIds": ["col-revenue"],
-  "color": "#3b82f6"
+  "scheme": ["#eaff00", "#8300ed"],
+  "includeValues": true
 }
 ```
 

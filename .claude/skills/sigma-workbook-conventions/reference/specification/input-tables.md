@@ -124,10 +124,11 @@ each existing row; matching rows are removed. The formula's bare
 (`"Status"`, the `name` on `col-status`) — same bare-ref resolution
 rules as any other element.
 
-**`update-rows` does not exist** — the working pattern is append-only
-inserts plus a `Coalesce`/latest-row-wins read formula.
-
-Full effect vocabulary and referential semantics: see `actions.md`.
+**`update-rows` is also a supported writeback effect** — a targeted
+single-row update by primary key, distinct from `delete-rows`'s
+formula-based `whichRows`. Full shape, the `whichRows: {type:
+"single-row", primaryKeys:{...}}` form, and referential semantics:
+see `actions.md` → "`insert-rows` / `delete-rows` / `update-rows`".
 `validate-spec.py`'s `action-refs-resolve` check verifies `table`
 resolves to a real `kind:"input-table"` element and that
 `insert-rows.values` keys match real column IDs on that table.

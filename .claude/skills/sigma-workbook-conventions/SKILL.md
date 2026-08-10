@@ -217,7 +217,7 @@ session and cite chunk + section in the plan.
 | Viz-heavy build (>2 chart kinds, KPI rows, pivots) | + each `reference/specification/<kind>.md` for the kinds in the plan (`charts.md`, `kpis.md`, `tables.md`, etc.) |
 | Formula-heavy build (custom calcs, metrics, Lookup, Rollup) | + `reference/specification/formulas.md` |
 | Conditional-formatting build (table/pivot cell coloring) | + `reference/specification/tables.md` |
-| Styling / theming build (container styling, background images, `themeOverrides`, theme color references) | + `reference/specification/containers.md` + `reference/specification/theming.md` |
+| Styling / theming build (container styling, background images, `settings.theme.overrides`, theme color references) | + `reference/specification/containers.md` + `reference/specification/theming.md` |
 | Image / divider / embed / dynamic-text build | + `reference/specification/others.md` + `reference/specification/text.md` + `reference/specification/dynamic-values.md` (for `{{formula}}` interpolation) |
 | Map-bearing build (`geography-map`, `point-map`, `region-map`) | + `reference/specification/maps.md` |
 | Multi-surface build (tabbed containers, modal pages, navigation, page breaks) | + `reference/specification/pages.md` + `reference/specification/layout.md` → "Five-tag grammar" |
@@ -443,15 +443,15 @@ for these files lives in `reference/history.md` and
 index, not a changelog.
 
 - `schema.md` — top-level workbook spec shape, response-only fields,
-  ID preservation on POST, top-level `folders` + `themeOverrides` +
-  `theme` element kind, minimal working example.
+  ID preservation on POST, top-level `folders` + `settings` (theme
+  home) + `theme` element kind, minimal working example.
 - `formulas.md` — formula DSL: column-reference rules,
   `[Metrics/<X>]`, boolean operators trap (`Not` requires space),
   JSON dot notation, window functions, `&` for string concat.
 - `formatting.md` — d3-format + strftime cheat sheets, SI prefix
   currency.
 - `layout.md` — top-level layout XML (24-col grid), XML-vs-object
-  `layout` distinction, `<GridContainer>` vs `<LayoutElement>`
+  `layout` distinction, `<Container>` vs `<Element>`
   silent failure, `gridTemplateRows` normalization quirk,
   page-structure pattern.
 - `containers.md` — `kind: container` + `style` (bg + border) +
@@ -469,11 +469,11 @@ index, not a changelog.
   `conditionalFormats` (4 variants) + `tableStyle` +
   `tableComponents` + styled-name + `noDataText` + `summary` bar.
   (`input-table` moved to `input-tables.md`.)
-- `controls.md` — 14 accepted controlType values (`list`, `date-range`,
+- `controls.md` — 15 accepted controlType values (`list`, `date-range`,
   `date`, `text`, `text-area`, `number`, `number-range`, `slider`,
   `range-slider`, `toggle`/`switch`/`checkbox`, `segmented`,
-  `hierarchy`) + 8 date-range modes + `top-n` filter + multi-binding
-  patterns + control/column collision reference. Note:
+  `hierarchy`, `drill`) + 8 date-range modes + `top-n` filter +
+  multi-binding patterns + control/column collision reference. Note:
   `controlType: "dropdown"` / `"radio"` currently POST-reject; use
   `list + selectionMode: "single"` instead.
 - `text.md` — Markdown subset + inline HTML (color, font-size,
@@ -482,25 +482,26 @@ index, not a changelog.
 - `others.md` — `divider` (with `direction`/`align`/`style`) +
   `image` + `embed` elements + `{{formula}}` in URLs +
   `data:image/svg+xml;base64,...` inline SVG.
-- `theming.md` — top-level `themeOverrides` (`pageWidth`, `space`, +
-  14 more fields cataloged from the live schema) + the reusable
+- `theming.md` — `document.settings.theme.overrides` (`pageWidth`, `space`, +
+  14 more fields cataloged from the live schema; relocated from the
+  now-rejected top-level `themeOverrides` 2026-08-10) + the reusable
   `{kind:"theme", ref}` color-value form usable across many elements'
   color fields.
 - `pages.md` — `tabbed-container` (labels-only element + flat
-  tab-content siblings), `type:"modal"` pages, `navigation`,
-  `page-break`.
+  tab-content siblings), modal pages (`document.overlays[]`, relocated
+  from `pages[].type:"modal"` 2026-08-10), `navigation`, `page-break`.
 - `actions.md` — `button` element + the `actions[]`/`effects[]`
-  vocabulary: all 9 effects (`set-control-value`, `clear-control`,
+  vocabulary: all 10 effects (`set-control-value`, `clear-control`,
   `open-overlay`/`close-overlay`, `navigate`, `select-tab`,
-  `open-url`, `insert-rows`/`delete-rows`).
+  `open-url`, `insert-rows`/`delete-rows`/`update-rows`).
 - `dynamic-values.md` — the slot → accepted-form matrix for dynamic
   values: all 5 structured `{type: ...}` forms (`constant`, `formula`,
   `column`, `control`, `agent-input`), plus `{{formula}}` string
   interpolation.
 - `input-tables.md` — `input-table` element: `empty`/`linked` source,
   all 6 column shapes (system, key, editable, dropdown, formula, plus
-  `filters`/`sort`/`conditionalFormats`), `insert-rows`/`delete-rows`
-  writeback.
+  `filters`/`sort`/`conditionalFormats`), `insert-rows`/`delete-rows`/
+  `update-rows` writeback.
 - `agents.md` — top-level `agents[]` + `chat` element + agent
   `tools[].steps[]` (reusing the `actions.md` effect vocabulary,
   `agent-input` for model-supplied values) + `{{formula}}` in
@@ -549,14 +550,14 @@ complex on another (e.g. a 1-page dashboard with a cohort pivot).
 - `reference/patterns/scenario-modeling.md` — `CallVariant` forecasting + what-if parameter controls. **No example workbook yet** — a documented gap, not silently missing; don't assume one exists.
 
 **4. Simple writeback (notes / value overrides, no agent):**
-- **No example yet** — a documented gap. Compose directly from `reference/specification/input-tables.md`: an `input-table` with editable columns, no agent, no buttons beyond `insert-rows`/`delete-rows` if needed.
+- **No example yet** — a documented gap. Compose directly from `reference/specification/input-tables.md`: an `input-table` with editable columns, no agent, no buttons beyond `insert-rows`/`delete-rows`/`update-rows` if needed.
 
 **5. Complex writeback (scenario modeling + approval workflow):**
-- `input-table-agent-scenario-planner.json` — editable input-table + AI agent generating scenario rows via `agent-input`. Covers "enter parameters, generate a forecast." **Does not cover an approval handoff to a second user** — a documented gap; if asked for one, compose from already-verified primitives (a `status` column, a filtered approver view, inline cell editing — there's no `update-rows` effect, so approval is direct edit, not a button) and live-verify the composed shape before treating it as settled.
+- `input-table-agent-scenario-planner.json` — editable input-table + AI agent generating scenario rows via `agent-input`. Covers "enter parameters, generate a forecast." **Does not cover an approval handoff to a second user** — a documented gap; if asked for one, compose from already-verified primitives (a `status` column, a filtered approver view, and either an `update-rows`-driven approve button or inline cell editing — see `reference/specification/actions.md` → "`insert-rows` / `delete-rows` / `update-rows`" for the confirmed shape) and live-verify the composed shape before treating it as settled.
 
 **Other (cross-cutting, not use-case-specific):**
 - `data-model-sourced-multi-element-catalog.json` — 6 chart kinds, 3 KPIs, 4 control types side by side in one page. Reach for this when you need to see several chart kinds at once, not as a realistic dashboard to clone wholesale.
-- `styled-card-dashboard.json` — five-recipe element styling system (card framing, accent borders, subtle controls) and the canonical nested-`GridContainer` page-structure example (see `reference/specification/layout.md`).
+- `styled-card-dashboard.json` — five-recipe element styling system (card framing, accent borders, subtle controls) and the canonical nested-`Container` page-structure example (see `reference/specification/layout.md`).
 
 For data-model field-level mechanics (columns, metrics, relationships,
 filters, controls, formatting, folders, column-level security, workflows)

@@ -82,7 +82,14 @@ if "document" in spec:
     json.dump(spec, open(sys.argv[2], "w"))
     sys.exit(0)
 TOP_KEYS = ("name", "folderId", "description")
-DOC_KEYS = ("schemaVersion", "kind", "pages", "layout", "themeOverrides", "folders", "agents")
+# "elements"/"overlays"/"settings" added 2026-08-10, "themeOverrides"
+# removed: the live API now rejects several previously-valid top-level
+# document shapes outright -- pages[].elements ("Move elements to
+# document.elements instead"), a per-page type:"modal" page ("modals
+# now live in document.overlays[]"), and document.themeOverrides ("Use
+# document.settings.theme.overrides instead"). See reference/history.md
+# -> "2026-08-10 -- document.elements flattening" for the full incident.
+DOC_KEYS = ("schemaVersion", "kind", "pages", "layout", "settings", "folders", "agents", "elements", "overlays")
 top = {k: spec[k] for k in TOP_KEYS if spec.get(k) is not None}
 doc = {k: spec[k] for k in DOC_KEYS if spec.get(k) is not None}
 doc.setdefault("kind", "workbook")

@@ -128,47 +128,52 @@ def issues_elements_placed(spec: dict, root: ET.Element | None) -> list[tuple[st
     placed_ids = {
         el.get("elementId")
         for el in root.iter()
-        if el.tag in ("LayoutElement", "GridContainer", "TabbedContainer")
+        if el.tag in ("Element", "Container", "TabbedContainer", "LayoutElement", "GridContainer")
     }
     issues = []
-    for pi, p in enumerate(spec.get("pages", [])):
-        for el in p.get("elements", []):
-            eid = el.get("id")
-            if eid and eid not in placed_ids:
-                issues.append((
-                    "fail",
-                    f"pages[{pi}].elements ({eid}, kind={el.get('kind')}): "
-                    "not placed in the layout XML — will render at the page bottom or not at all."
-                ))
+    for ei, el in enumerate(spec.get("elements", [])):
+        eid = el.get("id")
+        if eid and eid not in placed_ids:
+            issues.append((
+                "fail",
+                f"elements[{ei}] ({eid}, kind={el.get('kind')}): "
+                "not placed in the layout XML — will render at the page bottom or not at all."
+            ))
     return issues
 
 
 def issues_layoutelement_has_children(root: ET.Element | None) -> list[tuple[str, str]]:
     """Forward case of the containers-have-children check.
 
-    `<LayoutElement>` is a leaf tag — it positions exactly one element and
-    takes no children. `<LayoutElement type="grid">` with nested tags parses
-    without error but the children are silently dropped (they never render).
-    Use `<GridContainer>` instead when a tag needs to wrap children.
+    `<Element>` (formerly `<LayoutElement>`) is a leaf tag — it positions
+    exactly one element and takes no children. `<Element type="grid">` with
+    nested tags parses without error but the children are silently dropped
+    (they never render). Use `<Container>` (formerly `<GridContainer>`)
+    instead when a tag needs to wrap children.
 
     Ported 2026-08-03 from the real upstream `sigma-workbooks` skill's manual
     checklist (`reference/workflows/validate.md`) — the local skill's
     `containers-have-children` only caught the inverse (a container element
-    with no matching nested children), not this direction.
+    with no matching nested children), not this direction. Updated
+    2026-08-10 to accept both the current (`Element`/`Container`) and legacy
+    (`LayoutElement`/`GridContainer`) tag names — see `issues_elements_placed`
+    for the same accommodation.
     """
     if root is None:
         return []
     issues = []
-    for el in root.iter("LayoutElement"):
+    for el in root.iter():
+        if el.tag not in ("Element", "LayoutElement"):
+            continue
         children = list(el)
         if children:
             child_tags = ", ".join(c.tag for c in children)
             issues.append((
                 "fail",
-                f"<LayoutElement elementId=\"{el.get('elementId')}\"> has nested "
-                f"child tag(s) ({child_tags}) — LayoutElement is a leaf; children "
+                f"<{el.tag} elementId=\"{el.get('elementId')}\"> has nested "
+                f"child tag(s) ({child_tags}) — {el.tag} is a leaf; children "
                 "nested inside it are silently dropped and never render. Use "
-                "<GridContainer> instead if this element needs to wrap children."
+                "<Container> instead if this element needs to wrap children."
             ))
     return issues
 
@@ -178,23 +183,25 @@ def issues_containers_have_children(spec: dict, root: ET.Element | None) -> list
         return []
     container_ids = [
         el.get("id")
-        for p in spec.get("pages", [])
-        for el in p.get("elements", [])
+        for el in spec.get("elements", [])
         if el.get("kind") == "container"
     ]
     issues = []
     for cid in container_ids:
-        gc = next((el for el in root.iter("GridContainer") if el.get("elementId") == cid), None)
+        gc = next(
+            (el for el in root.iter() if el.tag in ("Container", "GridContainer") and el.get("elementId") == cid),
+            None,
+        )
         if gc is None:
             issues.append((
                 "fail",
-                f"container element `{cid}`: no matching <GridContainer> in layout XML."
+                f"container element `{cid}`: no matching <Container> in layout XML."
             ))
         elif len(list(gc)) == 0:
             issues.append((
                 "fail",
-                f"container element `{cid}`: <GridContainer> has no nested children. "
-                "Children must be nested INSIDE the <GridContainer>, not flat siblings."
+                f"container element `{cid}`: <Container> has no nested children. "
+                "Children must be nested INSIDE the <Container>, not flat siblings."
             ))
     return issues
 
@@ -207,27 +214,26 @@ def issues_column_format_shape(spec: dict) -> list[tuple[str, str]]:
     `{kind: "number", formatString: "$,.2f"}`.
     """
     issues = []
-    for pi, p in enumerate(spec.get("pages", [])):
-        for ei, el in enumerate(p.get("elements", [])):
-            for ci, col in enumerate(el.get("columns", []) or []):
-                fmt = col.get("format")
-                if fmt is None:
-                    continue
-                if not isinstance(fmt, dict):
-                    issues.append((
-                        "fail",
-                        f"pages[{pi}].elements[{ei}].columns[{ci}] ({col.get('id')}): "
-                        f"`format` must be an object, got {type(fmt).__name__}."
-                    ))
-                    continue
-                if "kind" not in fmt:
-                    issues.append((
-                        "fail",
-                        f"pages[{pi}].elements[{ei}].columns[{ci}] ({col.get('id')}): "
-                        "`format` is missing required `kind` field. "
-                        "Verified shape: {kind: \"number\", formatString: \"$,.2f\"}. "
-                        "If this came from a UI export ({type: ..., format: ...}), strip and re-spec."
-                    ))
+    for ei, el in enumerate(spec.get("elements", [])):
+        for ci, col in enumerate(el.get("columns", []) or []):
+            fmt = col.get("format")
+            if fmt is None:
+                continue
+            if not isinstance(fmt, dict):
+                issues.append((
+                    "fail",
+                    f"elements[{ei}].columns[{ci}] ({col.get('id')}): "
+                    f"`format` must be an object, got {type(fmt).__name__}."
+                ))
+                continue
+            if "kind" not in fmt:
+                issues.append((
+                    "fail",
+                    f"elements[{ei}].columns[{ci}] ({col.get('id')}): "
+                    "`format` is missing required `kind` field. "
+                    "Verified shape: {kind: \"number\", formatString: \"$,.2f\"}. "
+                    "If this came from a UI export ({type: ..., format: ...}), strip and re-spec."
+                ))
     return issues
 
 
@@ -251,36 +257,39 @@ def issues_control_id_unique(spec: dict) -> list[tuple[str, str]]:
     """
     seen: dict[str, tuple[str, str]] = {}  # controlId -> (elementId, controlType)
     issues = []
-    for p in spec.get("pages", []):
-        for el in p.get("elements", []):
-            if el.get("kind") != "control":
-                continue
-            cid = el.get("controlId")
-            if not cid:
-                continue
-            ctype = el.get("controlType")
-            if cid in seen:
-                prev_eid, prev_ctype = seen[cid]
-                if ctype == "synced" or prev_ctype == "synced":
-                    continue  # deliberate cross-page sync — not a collision
-                issues.append((
-                    "fail",
-                    f"controlId `{cid}` duplicated on elements {prev_eid} and {el.get('id')}, "
-                    f"neither is `controlType:\"synced\"`. controlId is workbook-wide unique "
-                    "unless one side is a synced stub."
-                ))
-            else:
-                seen[cid] = (el.get("id"), ctype)
+    for el in spec.get("elements", []):
+        if el.get("kind") != "control":
+            continue
+        cid = el.get("controlId")
+        if not cid:
+            continue
+        ctype = el.get("controlType")
+        if cid in seen:
+            prev_eid, prev_ctype = seen[cid]
+            if ctype == "synced" or prev_ctype == "synced":
+                continue  # deliberate cross-page sync — not a collision
+            issues.append((
+                "fail",
+                f"controlId `{cid}` duplicated on elements {prev_eid} and {el.get('id')}, "
+                f"neither is `controlType:\"synced\"`. controlId is workbook-wide unique "
+                "unless one side is a synced stub."
+            ))
+        else:
+            seen[cid] = (el.get("id"), ctype)
     return issues
 
 
 def _all_elements(spec: dict) -> list[tuple[int, dict]]:
-    """Yield (page_index, element) for every element in every page."""
-    out = []
-    for pi, p in enumerate(spec.get("pages", [])):
-        for el in p.get("elements", []):
-            out.append((pi, el))
-    return out
+    """Yield (index, element) for every top-level element.
+
+    Elements moved from a per-page pages[].elements nesting to a single
+    flat document.elements array 2026-08-10 — page membership now lives
+    entirely in the layout XML, not in the JSON. The int this returns is
+    the flat array index (for error-message locators), not a page index;
+    nothing here ever used it for cross-element same-page comparisons —
+    confirmed by reading every call site before this change.
+    """
+    return list(enumerate(spec.get("elements", [])))
 
 
 def _source_table_for(viz: dict, all_elements: list[tuple[int, dict]]) -> dict | None:
@@ -341,7 +350,7 @@ def issues_passthrough_coverage(spec: dict) -> list[tuple[str, str]]:
             if viz_cols <= 2:
                 issues.append((
                     "fail",
-                    f"pages[{pi}].elements ({el.get('id')}, kind={kind}): "
+                    f"elements[{pi}] ({el.get('id')}, kind={kind}): "
                     f"only {viz_cols} columns vs {src_cols} on source table "
                     f"({src_table.get('id')}). Likely passthrough collapse — "
                     "right-click drill will be crippled. Default is "
@@ -350,7 +359,7 @@ def issues_passthrough_coverage(spec: dict) -> list[tuple[str, str]]:
             elif viz_cols <= 4 and src_cols >= 10:
                 issues.append((
                     "warn",
-                    f"pages[{pi}].elements ({el.get('id')}, kind={kind}): "
+                    f"elements[{pi}] ({el.get('id')}, kind={kind}): "
                     f"{viz_cols} columns vs {src_cols} on source table "
                     f"({src_table.get('id')}). May be thin passthrough — "
                     "intentional only if source has many irrelevant cols. "
@@ -360,7 +369,7 @@ def issues_passthrough_coverage(spec: dict) -> list[tuple[str, str]]:
             if viz_cols <= 2:
                 issues.append((
                     "warn",
-                    f"pages[{pi}].elements ({el.get('id')}, kind={kind}): "
+                    f"elements[{pi}] ({el.get('id')}, kind={kind}): "
                     f"only {viz_cols} columns vs {src_cols} on source table "
                     f"({src_table.get('id')}). Pivot may be missing dimension "
                     "or value cols. See SKILL.md → 'Load-bearing rules' → rule #1."
@@ -476,7 +485,7 @@ def issues_controlid_collision(spec: dict) -> list[tuple[str, str]]:
                 if col.get("name") == cid or col.get("id") == cid:
                     issues.append((
                         "fail",
-                        f"pages[{pi}].elements ({el.get('id')}, control): "
+                        f"elements[{pi}] ({el.get('id')}, control): "
                         f"controlId `{cid}` collides with column "
                         f"`{col.get('id')}` (name: `{col.get('name')}`) on filtered "
                         f"element `{target_eid}`. Formulas referencing `[{cid}]` "
@@ -597,11 +606,10 @@ def _inferred_column_name(col: dict) -> str | None:
 def _collect_control_ids(spec: dict) -> set[str]:
     """Every `controlId` on the spec — valid bare-ref targets for formulas."""
     ids: set[str] = set()
-    for page in spec.get("pages", []):
-        for el in page.get("elements", []):
-            cid = el.get("controlId")
-            if cid:
-                ids.add(cid)
+    for el in spec.get("elements", []):
+        cid = el.get("controlId")
+        if cid:
+            ids.add(cid)
     return ids
 
 
@@ -632,37 +640,36 @@ def issues_bare_ref_resolution(spec: dict) -> list[tuple[str, str]]:
     """
     control_ids = _collect_control_ids(spec)
     issues = []
-    for page in spec.get("pages", []):
-        for element in page.get("elements", []):
-            cols = element.get("columns") or []
-            sibling_names = {n for n in (_inferred_column_name(c) for c in cols) if n}
-            valid_targets = sibling_names | control_ids
-            for col in cols:
-                formula = col.get("formula") or ""
-                if not formula:
-                    continue
-                # Find all bare [name] refs (no slash inside the brackets).
-                bare_refs = re.findall(r"\[([^/\]]+)\]", formula)
-                unresolved = [r for r in bare_refs if r not in valid_targets]
-                if unresolved:
-                    el_label = element.get("name") or element.get("id") or "(unnamed)"
-                    col_label = col.get("name") or col.get("id") or "(unnamed)"
-                    refs_str = ", ".join(repr(r) for r in unresolved)
-                    # WARN-level (not fail) because Sigma auto-infers some
-                    # column names this check can't predict — e.g.
-                    # `DateTrunc("week", [Date])` becomes "Week of Date",
-                    # and cross-element references can produce phantom
-                    # `(N)`-suffix names. Inspect each flagged case; if it's
-                    # a real bare ref to a non-sibling, add the source
-                    # prefix. If it's an auto-inferred name, the flag is
-                    # noise.
-                    issues.append((
-                        "warn",
-                        f"element '{el_label}' / column '{col_label}': "
-                        f"bare bracketed refs don't match any sibling column or controlId: {refs_str}. "
-                        f"Add the source prefix (e.g. [<source-name>/{unresolved[0]}]) "
-                        f"or rename a sibling. Formula: {formula}"
-                    ))
+    for element in spec.get("elements", []):
+        cols = element.get("columns") or []
+        sibling_names = {n for n in (_inferred_column_name(c) for c in cols) if n}
+        valid_targets = sibling_names | control_ids
+        for col in cols:
+            formula = col.get("formula") or ""
+            if not formula:
+                continue
+            # Find all bare [name] refs (no slash inside the brackets).
+            bare_refs = re.findall(r"\[([^/\]]+)\]", formula)
+            unresolved = [r for r in bare_refs if r not in valid_targets]
+            if unresolved:
+                el_label = element.get("name") or element.get("id") or "(unnamed)"
+                col_label = col.get("name") or col.get("id") or "(unnamed)"
+                refs_str = ", ".join(repr(r) for r in unresolved)
+                # WARN-level (not fail) because Sigma auto-infers some
+                # column names this check can't predict — e.g.
+                # `DateTrunc("week", [Date])` becomes "Week of Date",
+                # and cross-element references can produce phantom
+                # `(N)`-suffix names. Inspect each flagged case; if it's
+                # a real bare ref to a non-sibling, add the source
+                # prefix. If it's an auto-inferred name, the flag is
+                # noise.
+                issues.append((
+                    "warn",
+                    f"element '{el_label}' / column '{col_label}': "
+                    f"bare bracketed refs don't match any sibling column or controlId: {refs_str}. "
+                    f"Add the source prefix (e.g. [<source-name>/{unresolved[0]}]) "
+                    f"or rename a sibling. Formula: {formula}"
+                ))
     return issues
 
 
@@ -702,7 +709,7 @@ def issues_control_filter_column_exists(spec: dict) -> list[tuple[str, str]]:
             if target is None:
                 issues.append((
                     "fail",
-                    f"pages[{pi}].elements ({ctrl_id}, control '{ctrl_label}'): "
+                    f"elements[{pi}] ({ctrl_id}, control '{ctrl_label}'): "
                     f"filters[{fi}].source.elementId `{target_eid}` does not "
                     f"exist on the workbook. The filter will silently no-op. "
                     "Check for typos or a stale reference to a deleted element."
@@ -721,7 +728,7 @@ def issues_control_filter_column_exists(spec: dict) -> list[tuple[str, str]]:
                 near_hint = f" Did you mean: {', '.join(repr(n) for n in near)}?" if near else ""
                 issues.append((
                     "fail",
-                    f"pages[{pi}].elements ({ctrl_id}, control '{ctrl_label}'): "
+                    f"elements[{pi}] ({ctrl_id}, control '{ctrl_label}'): "
                     f"filters[{fi}].columnId `{column_id}` does not exist on "
                     f"target element `{target_eid}`. The control will render "
                     f"but no downstream element will filter.{near_hint}"
@@ -752,7 +759,9 @@ def issues_action_refs_resolve(spec: dict) -> list[tuple[str, str]]:
     - `set-control-value`: `control` (target) and `value.control` (if
       `value.type == "control"`) are known controlIds.
     - `clear-control`: `scope.control` is a known controlId.
-    - `open-overlay`: `overlayId` matches a page `id` with `type:"modal"`.
+    - `open-overlay`: `overlayId` matches a `document.overlays[].id`
+      (modals moved out of `pages[]` into a top-level `overlays` array
+      2026-08-10 -- `document.pages[].type:"modal"` is no longer valid).
     - `navigate`: `target.page` matches any page `id`.
     - `select-tab`: `tabbedContainer` matches a `kind:"tabbed-container"`
       element `id`, and `selectedTab.index` is in range of that
@@ -767,7 +776,7 @@ def issues_action_refs_resolve(spec: dict) -> list[tuple[str, str]]:
     all_elements = _all_elements(spec)
     control_ids = _collect_control_ids(spec)
     elements_by_id = {el.get("id"): el for _, el in all_elements if el.get("id")}
-    modal_page_ids = {p.get("id") for p in spec.get("pages", []) if p.get("type") == "modal"}
+    modal_page_ids = {o.get("id") for o in (spec.get("overlays") or []) if o.get("id")}
     all_page_ids = {p.get("id") for p in spec.get("pages", [])}
     agent_ids = {a.get("id") for a in (spec.get("agents") or []) if a.get("id")}
 
@@ -799,8 +808,8 @@ def issues_action_refs_resolve(spec: dict) -> list[tuple[str, str]]:
             if overlay_id and overlay_id not in modal_page_ids:
                 issues.append((
                     "fail",
-                    f"{loc}: overlayId `{overlay_id}` does not match any page with "
-                    "`type:\"modal\"`. The overlay will silently fail to open."
+                    f"{loc}: overlayId `{overlay_id}` does not match any "
+                    "`document.overlays[].id`. The overlay will silently fail to open."
                 ))
 
         elif effect == "navigate":
@@ -861,7 +870,7 @@ def issues_action_refs_resolve(spec: dict) -> list[tuple[str, str]]:
         el_label = el.get("id") or "(unnamed)"
         for ai, action in enumerate(el.get("actions", []) or []):
             for fi, fx in enumerate(action.get("effects", []) or []):
-                loc = f"pages[{pi}].elements ({el_label}).actions[{ai}].effects[{fi}]"
+                loc = f"elements[{pi}] ({el_label}).actions[{ai}].effects[{fi}]"
                 _check_effect(fx, loc)
 
         if el.get("kind") == "chat":
@@ -869,7 +878,7 @@ def issues_action_refs_resolve(spec: dict) -> list[tuple[str, str]]:
             if agent_id and agent_id not in agent_ids:
                 issues.append((
                     "fail",
-                    f"pages[{pi}].elements ({el_label}): agentId `{agent_id}` does not "
+                    f"elements[{pi}] ({el_label}): agentId `{agent_id}` does not "
                     "match any `agents[].id` in the spec. The chat element will render "
                     "with no agent attached."
                 ))
@@ -964,7 +973,7 @@ def issues_kpi_value_references_aggregation(spec: dict) -> list[tuple[str, str]]
         refs_str = ", ".join(f"`[{name}]` (sibling `{sid}`)" for name, sid in offending)
         issues.append((
             "warn",
-            f"pages[{pi}].elements ({el.get('id')}, kpi-chart '{kpi_label}'): "
+            f"elements[{pi}] ({el.get('id')}, kpi-chart '{kpi_label}'): "
             f"value formula bare-refs sibling column(s) whose formulas contain "
             f"aggregation functions: {refs_str}. Aggregation refs have no "
             f"per-row value, so the KPI will render 'null'. Inline the "
@@ -997,7 +1006,7 @@ def issues_summary_calc_collision(spec: dict) -> list[tuple[str, str]]:
                 el_label = el.get("id") or "(unnamed)"
                 issues.append((
                     "fail",
-                    f"pages[{pi}].elements ({el_label}, {el.get('kind')}): "
+                    f"elements[{pi}] ({el_label}, {el.get('kind')}): "
                     f"column ID(s) {cols} appear in both `summary` and "
                     f"`groupings[{gi}].calculations`. Sigma rejects this "
                     f"as a duplicate reference. Split into two column "
@@ -1031,7 +1040,7 @@ def issues_description_object_on_kpi_and_table(spec: dict) -> list[tuple[str, st
             preview = desc[:60] + "..." if len(desc) > 60 else desc
             issues.append((
                 "fail",
-                f"pages[{pi}].elements ({el_label}, {el.get('kind')}): "
+                f"elements[{pi}] ({el_label}, {el.get('kind')}): "
                 f"`description` is a string ({preview!r}); on this "
                 f"element kind it must be an object. POST will reject "
                 f"with `Invalid object: string`. Wrap as "
@@ -1070,7 +1079,7 @@ def issues_pivot_missing_rows_and_columns(spec: dict) -> list[tuple[str, str]]:
             title = name.get("text") if isinstance(name, dict) else name
             issues.append((
                 "fail",
-                f"pages[{pi}].elements ({el_label}, pivot-table"
+                f"elements[{pi}] ({el_label}, pivot-table"
                 + (f" '{title}'" if title else "")
                 + f"): has `values` ({', '.join(values)}) but neither "
                 f"`rowsBy` nor `columnsBy` — the pivot will render as a "

@@ -23,10 +23,18 @@ Any build where the user wants to:
   text/number/datetime/checkbox, dropdown (`values`+`pills`), and a
   formula column that references a sibling editable column by name.
 - **Writeback via buttons** — `insert-rows` with constant values,
-  `delete-rows` with a formula `whichRows` filter. Note the append-only
-  doctrine: there's no "clear form" or "edit row" pattern here because
-  `update-rows` doesn't exist — "delete + re-add" is the only mutation
-  primitive beyond a fresh insert.
+  `delete-rows` with a formula `whichRows` filter. This example itself
+  only demonstrates those two; it predates `update-rows` being
+  confirmed as a real effect (targeted single-row update by primary
+  key — see `reference/specification/actions.md` →
+  "`insert-rows` / `delete-rows` / `update-rows`"), so there's no
+  "clear form" or "edit row" pattern here — "delete + re-add" is the
+  only mutation primitive demonstrated beyond a fresh insert. **Future
+  enhancement (not yet built):** add a tool step or button
+  demonstrating `update-rows` directly on this exemplar's
+  `input-tbl-scenarios` table (e.g. an approve/edit-in-place flow) so
+  this becomes the canonical `update-rows` reference too, not just
+  `insert-rows`/`delete-rows`.
 - **Writeback via an agent tool** — the same input-table, written to
   by `agent-scenario`'s one tool, using `agent-input` values so the
   model supplies `scenarioName`/`forecastValue` from natural-language

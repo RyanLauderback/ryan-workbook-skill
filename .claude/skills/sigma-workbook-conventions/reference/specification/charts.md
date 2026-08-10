@@ -55,11 +55,20 @@ element must use the source's prefix (`[<SourceName>/col]`) — see
   and scale — fetch `CartesianAxisFormat` from the OpenAPI for the
   full shape.
 
-> **Legacy axis form** — existing exemplars in this skill (created
-> before 2026-05-21) use `xAxis: {id}` / `yAxis: [{id}]` (array of
-> objects). Both forms POST cleanly; GET returns the modern
-> `columnId` / `columnIds` form. New authoring should prefer the
-> modern form. `scripts/workbook-manifest.py` recognizes both.
+> **Legacy axis form — no longer works as of 2026-08-10.** Existing
+> exemplars in this skill (created before 2026-05-21) use `xAxis: {id}`
+> / `yAxis: [{id}]` (array of objects). This doc previously claimed
+> "both forms POST cleanly" — **that is now false.** Confirmed via live
+> POST today: the legacy form is rejected outright, with a generic/
+> misleading error, `{"message":"document.elements[N]: Invalid kind:
+> \"bar-chart\""}`. Confirmed fixed by switching to the modern
+> `columnId`/`columnIds` form on the same element. The modern form is
+> now **required** for all Cartesian chart kinds — bar/line/area/
+> combo/scatter all independently confirmed live still using
+> `xAxis.columnId` / `yAxis.columnIds`. (`donut-chart`/`pie-chart` did
+> NOT get this rename — both independently confirmed live to still use
+> the old `{id}` single-column shape for `value`/`color`/`holeValue`;
+> that's correct/unchanged, see "Pie / donut chart" below.)
 
 ## Line chart
 
@@ -302,26 +311,37 @@ jq '.components.schemas.ReferenceMark, .components.schemas.Trendline, .component
 
 ### `refMarks` — reference lines and bands
 
+**Corrected 2026-08-10 — `value` shape.** This doc previously showed
+`value` as a bare scalar (e.g. `1000`) and claimed it "can be a
+number, column ID, or formula string." Confirmed via live POST: a
+bare scalar is **rejected** with the same generic "Invalid kind"
+error seen on the legacy-axis-form break above. Wrapping it fixed the
+POST. `value` must be a dynamic-value object — the same `{type:
+"constant", value}` form documented in `dynamic-values.md`:
+
 ```json
 "refMarks": [
   {
     "type": "line",
     "axis": "series",
-    "value": 1000,
+    "value": { "type": "constant", "value": 5000 },
     "line": { "color": "#ef4444", "width": 2 },
     "label": { "text": "Threshold" }
   },
   {
     "type": "band",
     "axis": "series",
-    "value": 800,
+    "value": { "type": "constant", "value": 800 },
     "endValue": 1200
   }
 ]
 ```
 
-`axis` values: `axis` | `series` | `series2`. `value` can be a
-number, column ID, or formula string. Bands require `endValue`.
+`axis` values: `axis` | `series` | `series2` — **unchanged**, confirmed
+via live test using `axis: "axis"` successfully. Bands require
+`endValue`; whether `endValue` also needs the object wrapper is
+**unverified** — likely, given `value`'s behavior, but not
+independently confirmed, so don't assume it without probing first.
 
 ### `trendlines` — regression overlays
 

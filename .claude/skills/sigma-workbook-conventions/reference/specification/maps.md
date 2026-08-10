@@ -36,14 +36,21 @@ For `region-map`, the column's values must match the region system:
 ## Shape gotcha
 
 The binding fields — `geography`, `latitude`, `longitude`, `size`,
-`region` — are **single `{ id }` objects**. But `label` and `tooltip`
-are **arrays** of `{ id }`. Getting this wrong is a common trip.
+`region` — are **single `{ id }` objects**. `label` is documented as
+an **array** of `{ id }` (unverified — not observed either way in
+real data; don't guess, probe before relying on this bare-array shape).
+`tooltip`, however, is **confirmed wrapped**: `{ columns: [...] }`, not
+a bare array. Getting this wrong is a common trip.
 
 ```json
-"region": { "id": "col-state", "regionType": "us-state" },    // single object
-"label":  [ { "id": "col-revenue" } ],                          // array
-"tooltip":[ { "id": "col-revenue" }, { "id": "col-margin" } ]   // array
+"region":  { "id": "col-state", "regionType": "us-state" },        // single object
+"label":   [ { "id": "col-revenue" } ],                             // array (unverified)
+"tooltip": { "columns": [ { "id": "col-revenue" }, { "id": "col-margin" } ] }  // wrapped object (confirmed)
 ```
+
+**Confirmed 2026-08-10 (2 independent live examples, point-map and
+region-map):** `tooltip` is `{"columns": [{"id": "Sru2LfzbEJ"}]}`, not
+the bare array shown in earlier versions of this doc.
 
 ## Verified examples
 
@@ -116,4 +123,4 @@ above is the current source of truth. Expect the same envelope
 - Full element envelope, `source` shape, `columns` semantics —
   [`tables.md`](tables.md) and [`sources.md`](sources.md).
 - `color` channel shape (used identically here) — [`charts.md`](charts.md).
-- Layout placement (`<LayoutElement>`) — [`layout.md`](layout.md).
+- Layout placement (`<Element>`) — [`layout.md`](layout.md).

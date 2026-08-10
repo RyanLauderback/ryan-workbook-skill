@@ -29,6 +29,7 @@ teach — that's what this file is for.
   - [`dropdown` / `radio` — NOT accepted](#dropdown--radio--not-accepted-use-list--selectionmode-single)
   - [`segmented`](#segmented--pill-button-single-select) (with manual + column variants)
   - [`hierarchy`, `switch`, `date`, `number`](#additional-controltype-variants)
+  - [`drill` — drill-down navigation](#drill--drill-down-navigation)
   - [Numeric parameter control referenced from formulas](#numeric-parameter-control-referenced-from-formulas)
 - Patterns:
   - [One control, multiple elements](#one-control-multiple-elements)
@@ -48,9 +49,9 @@ teach — that's what this file is for.
 | `id` | yes | Element ID — must be unique on the page |
 | `controlId` | yes | Formula reference name (e.g., `RegionFilter`). **Must NOT match a column `name` or `id` on filtered elements** — see `reference/conventions.md` → "Control/column ID collision" |
 | `controlType` | yes | Determines the widget + filter behavior (see variants below) |
-| `name` | yes | Display label |
+| `name` | **no** | Display label. **Corrected 2026-08-10** — multiple live `text`/`list` controls (`region`, `Product-Type`, `pProductName`, `pSKU`, `SelectedState`, etc.) omit `name` entirely. |
 | `source` | usually | Points at the column whose values populate the control. Shape: `{kind: "source", source: {kind: "table", elementId: ...}, columnId: ...}` |
-| `filters` | yes | Array of `{source: {kind: "table", elementId: ...}, columnId: ...}` — connects the control to the column(s) it filters |
+| `filters` | **no** | Array of `{source: {kind: "table", elementId: ...}, columnId: ...}` — connects the control to the column(s) it filters. **Corrected 2026-08-10** — confirmed live: unbound scalar controls with no downstream binding omit `filters` entirely (the key is absent, not an empty array). |
 
 ## `controlId` vs `id` — both required
 
@@ -105,7 +106,23 @@ See `containers.md` → "Common style recipes" → "Subtle control fill."
 
 - `mode`: `include` | `exclude`
 - `selectionMode`: `single` | `multiple`
-- `values`: initial selected values. `[]` = none pre-selected.
+- `values`: initial selected values (multi-select). `[]` = none
+  pre-selected. For `selectionMode: "single"`, use scalar `value`
+  instead — see the "dropdown/radio" migration section below.
+
+**New 2026-08-10 — `source.kind: "manual"` on `list`.** Previously
+this doc only showed `source.kind: "manual"` for `segmented`, and only
+`source.kind: "source"` for `list`. Confirmed live: `list` also
+accepts a manual source:
+
+```json
+"source": { "kind": "manual", "valueType": "text" }
+```
+
+No `values`/`labels` sub-fields were observed on this form — unlike
+`segmented`'s manual source, which does carry `values`/`labels`. Don't
+assume the two manual forms are identical; this is confirmed only for
+the bare `{kind, valueType}` shape shown above.
 
 ## `date-range`
 
@@ -340,7 +357,7 @@ render as a single-select dropdown by default:
   "controlType": "list",
   "mode": "include",
   "selectionMode": "single",
-  "values": [],
+  "value": "Georgia",
   "source": {
     "kind": "source",
     "source": { "kind": "table", "elementId": "sales-table" },
@@ -352,6 +369,11 @@ render as a single-select dropdown by default:
   ]
 }
 ```
+
+**Corrected 2026-08-10** — `selectionMode: "single"` uses a **scalar**
+`value` field (e.g. `"Georgia"`, or `null` when unset), never `values`.
+`selectionMode: "multiple"` is the one that uses `values: []` (see the
+`list` section above — that example is unchanged/confirmed correct).
 
 If a future API version restores `dropdown` / `radio` as first-class
 controlTypes, this doc should be updated with a verified example.
@@ -601,6 +623,40 @@ Verified 2026-07-02 against `element-showcase` harvest.
 that gives no hint about the missing field. If you need a scalar
 parameter unbound from any specific column (for use in formulas), use
 the pattern in the next section instead.
+
+## `drill` — drill-down navigation
+
+**New 2026-08-10 — undocumented 15th controlType.** Not previously
+listed anywhere in this file's controlType catalog. Enables
+drill-down navigation between elements: selecting a value on the
+source element drives which rows/detail render on one or more target
+elements.
+
+```json
+{
+  "kind": "control",
+  "controlId": "Products",
+  "controlType": "drill",
+  "source": {
+    "kind": "source",
+    "source": { "kind": "table", "elementId": "<table-id>" },
+    "columnId": "<col-id>"
+  },
+  "categories": [ { "columnId": "<col-id>" } ],
+  "targets": [
+    {
+      "source": { "kind": "table", "elementId": "<other-element-id>" },
+      "columnIds": ["<col-id>", "<col-id2>"]
+    }
+  ],
+  "value": "<currently-drilled-value>"
+}
+```
+
+Note `targets[].columnIds` is a **plural array** — unlike most other
+controlTypes' typical singular column binding (`filters[].columnId`).
+`categories` and `targets` are specific to `drill` and don't appear on
+other controlTypes.
 
 ## Numeric parameter control referenced from formulas
 
