@@ -243,46 +243,12 @@ and not approvable. Full plan-first methodology in
 Workbook prompts often underspecify the dashboard — the user names the data
 and the question, not the visualizations or the filter set. Do not jump
 straight to JSON. Before authoring any spec, surface a written plan and
-wait for explicit approval.
-
-The plan must include:
-
-1. **Destination.** Where the workbook (or data-model update) will be
-   published — folder `name` + `path` + `urlId`, resolved from the
-   user's prompt via `sigma-resolve.py`. If the user named a folder
-   inline, restate it back so they can correct it. If the user did NOT
-   name a folder, this becomes an Open Decision (item 6) the plan must
-   ask, not a default the agent picks. **Plan approval IS the
-   authorization to POST/PUT** — there is no separate "are you sure?"
-   prompt at publish time. The destination must therefore be named
-   explicitly in the plan, never implied.
-2. **Data inventory.** What table(s) and which columns are actually
-   available — pulled via `GET /v2/dataModels/{id}/spec` (data model:
-   returns column types, descriptions, formulas, and the metrics catalog
-   in one call) or `scripts/api/list-table-columns.sh` (raw table: raw
-   warehouse names only), not assumed. Name any column
-   that's missing from your assumed schema (e.g. there *is* a customer
-   dimension; there *isn't* a margin field) so the user can correct
-   before you build on a wrong premise.
-3. **Inference rationale.** For each visualization you propose, one line
-   on *why this chart, this dimension, this metric* answers the user's
-   question. "Quantity, not revenue, because popularity is a unit-volume
-   question" beats "bar chart of products."
-4. **Filter set with reasoning.** Filters aren't free — each one earns
-   its place by mapping to an axis the user is likely to interrogate.
-   List the filters in priority order with a one-line reason, and note
-   what you considered and dropped.
-5. **Layout sketch.** A textual block-diagram of the page is enough
-   (header / KPI row / chart grid / detail). Don't draw the XML yet.
-6. **Open decisions.** Anywhere you had to guess (proxy for a missing
-   dimension, scope of demographic data to bring in, whether to modify a
-   shared data model, **missing/ambiguous destination folder**). Phrase
-   as questions the user can yes/no.
-
-Only after the user approves should you write spec JSON. This convention
-exists because rebuilding a wrong dashboard costs more iterations than
-the 60 seconds spent writing the plan, and because the user can correct
-data-model assumptions you'd otherwise discover at POST time.
+wait for explicit approval. The plan has 6 required sections — Destination,
+Data inventory, Inference rationale, Filter set with reasoning, Layout
+sketch, Open decisions. **Full spec, wording, and worked example:
+`reference/workflows/plan.md` → "Plan content — 6 required sections."**
+This summary is insurance, not a substitute — `plan.md` is already
+required reading on every build per the hard gate above.
 
 If the user has already given you an explicit plan, skip to building —
 don't re-propose.
@@ -290,35 +256,22 @@ don't re-propose.
 ### Approval model — plan is the only gate
 
 Plan approval authorizes **every state-changing API call covered by the
-plan, except DELETE**. POST/PUT to `/v2/workbooks/spec` and
-`/v2/dataModels/*/spec` run silently — `.claude/settings.json` allowlists
-both `Bash(scripts/api/*)` (which covers `publish-workbook.sh`) and the
-direct curl patterns. The user reviews one plan, approves, and the
-build + publish proceed without further interruption.
-
-The rules:
-
-- **POST/PUT inside the workbook/data-model namespace:** silent. Plan
-  approval is the authorization.
-- **POST/PUT outside that namespace** (e.g. `/v2/connections`,
-  `/v2/files` mutations): not pre-authorized — surface to the user.
-- **DELETE on any endpoint:** always asks. The `ask` patterns in
-  `.claude/settings.json` (`Bash(curl * -X DELETE *)` and
-  `Bash(scripts/api/delete-*)`) override the broad `Bash(scripts/api/*)`
-  allow. Even when the plan mentions deletion, every DELETE call is
-  surfaced for explicit confirmation.
-
-That contract puts the burden on the agent:
-
-- The plan needs to name the destination folder (item 1 above) and
-  any shared object it intends to mutate (data models, exemplars) —
-  the `publish-workbook.sh` wrapper can't resolve where to POST
-  without an explicit destination. If a state-changing call wasn't
-  covered in the plan, don't make it — amend the plan first.
-- Any future deletion-wrapper script must be named `scripts/api/delete-*`
-  so the ask pattern catches it. Do not bypass via a different name.
+plan, except DELETE** — POST/PUT to `/v2/workbooks/spec` and
+`/v2/dataModels/*/spec` run silently, DELETE always asks regardless of
+what the plan says. **Full rules and rationale:
+`reference/workflows/plan.md` → "Approval model — plan is the only
+gate."** The practical upshot: the plan must name the destination
+folder and any shared object it intends to mutate before you build —
+if a state-changing call wasn't covered in the plan, amend the plan
+first rather than making it.
 
 ## Conventions
+
+Quick-reference summaries — insurance, not substitutes. The naming
+rubric's full detail lives in `reference/naming.md`; the cross-cutting
+rules (passthrough mandate, ID collisions, etc.) live in
+`reference/conventions.md`, required reading on every build per the
+hard gate above.
 
 ### Naming
 
@@ -435,7 +388,7 @@ direct-curl, and the response-only-fields-to-strip list live in
 
 ## Reference and examples
 
-`reference/` is split into three groups. Load only what the current task
+`reference/` is split into four groups. Load only what the current task
 needs — see "Required reading before authoring" above for the hard-gate
 mapping.
 
@@ -448,9 +401,9 @@ mapping.
   summary-bar pattern, two-tier sourcing, notes-promotion guardrail).
   **Required on every build.**
 - `reference/scope-and-edge-cases.md` — what the code spec does NOT
-  represent (KPI period-comparison, chart series colors / theme
-  palette, pivot heatmap status, axis-label rotation), GET-spec 500
-  cases, warehouse-table fallback, verifying via generated SQL.
+  represent (chart series theme palette, pivot heatmap status,
+  axis-label rotation), GET-spec 500 cases, warehouse-table fallback,
+  verifying via generated SQL.
 - `reference/history.md` — dated incident log. Inline rules in the
   chunks are evergreen; this file carries when each rule was verified
   and the incident that surfaced it.
@@ -516,7 +469,7 @@ index, not a changelog.
   `conditionalFormats` (4 variants) + `tableStyle` +
   `tableComponents` + styled-name + `noDataText` + `summary` bar.
   (`input-table` moved to `input-tables.md`.)
-- `controls.md` — 11 accepted controlTypes (`list`, `date-range`,
+- `controls.md` — 14 accepted controlType values (`list`, `date-range`,
   `date`, `text`, `text-area`, `number`, `number-range`, `slider`,
   `range-slider`, `toggle`/`switch`/`checkbox`, `segmented`,
   `hierarchy`) + 8 date-range modes + `top-n` filter + multi-binding
@@ -559,15 +512,19 @@ index, not a changelog.
   prefixes + friendly-name normalization.
 - `sources.md` — `table` / `data-model` / `join` / `union` / `sql` /
   `transpose` source kinds + two-tier sourcing pattern reference.
-- `reference/patterns/scenario-modeling.md` — forecasting via
-  `CallVariant` + what-if via parameter controls + 2 structural
-  gotchas (controls can't usefully filter input-tables/pivots;
-  input-table rows can't be seeded from code). Deliberately filed
-  under `patterns/`, not `specification/` — a composition of
-  already-verified primitives, not a spec surface of its own.
 - `example-full.yaml` — multi-page reference spec (KPIs, charts, join
   sources, controls, custom layout) authored locally for this skill.
   Read this when in doubt about overall shape.
+
+**Pattern files (`reference/patterns/`):**
+
+Compositions of already-verified `specification/` primitives, not a
+spec surface of their own — deliberately filed separately.
+
+- `scenario-modeling.md` — forecasting via `CallVariant` + what-if via
+  parameter controls + 2 structural gotchas (controls can't usefully
+  filter input-tables/pivots; input-table rows can't be seeded from
+  code).
 
 `examples/` — known-good specs to seed generation. Clone-and-modify rather
 than editing in place. Match your task to the closest exemplar below;

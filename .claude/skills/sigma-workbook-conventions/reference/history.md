@@ -1578,3 +1578,108 @@ model-first framing + schema confirmation) — bundling an unbounded sweep
 into a narrowly-scoped change is exactly the kind of ad hoc partial fix
 that creates fresh inconsistency instead of resolving it. Left for the
 skill's own planned full contradiction review.
+
+## 2026-08-08 — Full contradiction review: a real KPI bug in 5 examples, plus doc drift across ~20 files
+
+The deferred "full contradiction review" ran as 4 parallel sub-agents
+(stale-MCP sweep, cross-file rule-duplication sweep, file-placement
+audit, examples-vs-conventions sweep), each independently verified
+before acting — several claims were spot-checked directly (structural
+JSON parse, live grep, header lookup) rather than relayed as-is.
+
+**Real bug, not just doc drift — 20 KPIs across 5 non-deprecated
+examples used the pre-fix `value:{"id":...}` shape** instead of
+`value:{"columnId":...}` (`kpis.md`'s own rule: `value.id` "will be
+silently ignored or rejected"). `data-model-sourced-cohort-pivot.json`
+and `styled-card-dashboard.json` are both named elsewhere in the skill
+as *the* canonical clone target for their pattern. Fixed via a
+format-preserving, kind-scoped substitution — critically, a first
+attempt using a blind text-pattern match found 23 matches, not the
+expected 20; investigating the discrepancy surfaced that `donut-chart`
+and `pie-chart` elements legitimately use `value:{"id":...}` too (a
+different, correct shape — they reference locally-declared `columns[]`
+entries by `id`, same as every OTHER chart kind; `kpi-chart` is the
+one exception requiring `columnId`). A blind regex would have
+"fixed" 20 real bugs while introducing 3 new ones. Rewrote the fix to
+walk the JSON structurally and scope the substitution to confirmed
+`kpi-chart` elements only, verified via a fresh structural re-parse
+post-fix (all `kpi-chart` → `columnId`, all `donut-chart` → `id`
+untouched) and a full `validate-spec.py` pass (0 fail across all 13
+examples, pre-existing warnings unchanged).
+
+**Doc contradictions fixed:**
+- `text.md` claimed `<u>/<sub>/<sup>/<a>` was "the **complete**"
+  allowed-inline-HTML-tag set, then in the same sentence quoted a live
+  rejection error listing `<span>` as allowed too — and the file's own
+  next section documents `<span style="color...">` as supported.
+  Corrected the "complete" list to include `<span>`.
+- `kpis.md`'s "Known limitations" claimed no delta/comparison field
+  exists on the KPI element; `dashboard-department-scorecard.json`
+  uses `timeline`+`periodComparison` for exactly this, verified live
+  (grabbed the real field values from the example) and already noted
+  elsewhere in this file as "verified ~67 times." Retracted the false
+  limitation, added a "Period-over-period comparison" section
+  documenting the real shape. `reference/scope-and-edge-cases.md` and
+  `SKILL.md` both repeated the same false claim — fixed both to match.
+- `pages.md`'s `modal.width: "large"` entry deferred to "`agents.md`-
+  adjacent findings once that chunk exists" — `agents.md` has existed
+  since Wave 3 (2026-08-04) and contains no such content. Corrected to
+  flag `"large"` as unverified rather than pointing at a citation that
+  doesn't exist.
+- `tables.md`'s intro still described covering `input-table`, moved to
+  `input-tables.md` on 2026-08-04 (the file's own TOC already knew this
+  — only the intro paragraph was stale).
+
+**Stale MCP-as-default references (Wave 1 of this finding, 2026-08-07,
+only covered `discover.md`/`SKILL.md`/`sources.md`) — extended to 9
+more files** this session: `conventions.md`, `plan.md`, `validate.md`,
+`schema.md`, `controls.md`, `formulas.md`, `capability-ledger.md`,
+`sources-warehouse.md`, one exemplar `.prompt.md`, and
+`docs/iteration-playbook.md`'s default Recon step (the single most
+operationally significant one — it's the primary per-attempt protocol
+every build follows). All now lead with the REST call and mention
+`mcp-describe.sh`/`mcp-search.sh` only as an "opportunistically try,
+expect exit 3" aside, matching `discover.md`'s established pattern.
+
+**Duplication collapsed to single sources of truth** (the same failure
+class as the 2026-08-03 "4-place gate-row duplication" fix, just not
+generalized to these other tables at the time): `SKILL.md`'s "Plan
+content" and "Approval model" sections fully restated `plan.md`'s
+content instead of pointing to it — and had already drifted on the
+"Data inventory" step (one said `mcp-describe.sh`, the other said
+REST) before this session's MCP-staleness fixes even landed, direct
+proof the duplication is a real, live risk, not a hypothetical one.
+Trimmed both `SKILL.md` sections to summaries + pointers, matching the
+"insurance, not substitutes" framing already used for the adjacent
+Load-bearing-rules block. Same treatment for a 9-field response-only-
+fields list independently hardcoded in `schema.md`, `crud.md`, and
+`docs/iteration-playbook.md` — `schema.md` is now canonical (it also
+carries the field's actual on-write behavior, ignored not rejected,
+which the other two copies lacked).
+
+**Structural fixes:** `SKILL.md`'s own routing index filed
+`reference/patterns/scenario-modeling.md` under the "Specification
+files" heading despite the bullet's own text saying it's deliberately
+not there — gave `patterns/` its own heading. Fixed "`reference/` is
+split into three groups" → "four" to match. Fixed "11 accepted
+controlTypes" → "14" (the actual distinct `controlType` string count
+per `controls.md`'s own TOC). Added "insurance, not substitutes"
+framing to `SKILL.md`'s inline Conventions block, pointing at
+`naming.md`/`conventions.md`, matching the pattern already used one
+section below it.
+
+**Cosmetic:** stale `../specification/` link-label prefix in `maps.md`;
+`evals/` added to `CLAUDE.md`'s Layout section.
+
+**Net effect on `SKILL.md` line count:** 614 (session start) → 599
+(item 2, narrative trim) → 546 (this item's Plan-content/Approval-model
+trim) → 556 (net, after this item's correctness additions — a few
+lines of accurate content is a reasonable trade against a stale or
+contradictory claim; not chased further at the expense of correctness).
+
+**Deliberately not fixed, flagged as unbacked/unverifiable within this
+session's scope:** the "explicit-name rule / rename-cascade corollary"
+check across all examples was attempted but the sub-agent reported it
+was too noisy to distinguish real violations from intentional unnamed
+drill-down passthrough columns via static analysis alone — would need
+render-time verification. Not treated as a finding either way.

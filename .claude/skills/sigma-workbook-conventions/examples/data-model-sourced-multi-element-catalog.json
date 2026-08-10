@@ -227,7 +227,7 @@
             }
           ],
           "value": {
-            "id": "edDc-4Rjko"
+            "columnId": "edDc-4Rjko"
           },
           "name": "Total Revenue"
         },
@@ -311,7 +311,7 @@
             }
           ],
           "value": {
-            "id": "qeIyqu6uFM"
+            "columnId": "qeIyqu6uFM"
           },
           "name": "Total Profit"
         },
@@ -395,7 +395,7 @@
             }
           ],
           "value": {
-            "id": "xBfG6rdVmt"
+            "columnId": "xBfG6rdVmt"
           },
           "name": "Average Order Value (AOV)"
         },

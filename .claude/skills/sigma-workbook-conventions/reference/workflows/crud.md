@@ -111,18 +111,11 @@ the current value from any working workbook and use it.
 ## Response-only fields to strip on PUT
 
 `GET /v2/workbooks/<id>/spec` returns extra server-managed fields.
-When you take a GET response and PUT it back (the standard iteration
-flow), strip these before submitting:
-
-- `workbookId`
-- `url`
-- `documentVersion`
-- `latestDocumentVersion`
-- `ownerId`
-- `createdBy`
-- `updatedBy`
-- `createdAt`
-- `updatedAt`
+**Canonical list + the fields' actual on-write behavior (ignored, not
+rejected):** `reference/specification/schema.md` → "Response-only
+fields." When you take a GET response and PUT it back (the standard
+iteration flow), stripping them first is cleaner and still the
+recommended practice, even though the server doesn't require it.
 
 `workbook-manifest.py` recognizes these as response-only and won't
 flag them as unknown keys.

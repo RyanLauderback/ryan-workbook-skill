@@ -72,9 +72,13 @@ must be named explicitly in the plan, never implied.
 ### 2. Data inventory
 
 What table(s) and which columns are actually available — pulled via
-`scripts/api/mcp-describe.sh datamodel-element <dm-id> <el-id>`,
-NOT assumed. The describe output returns column types, descriptions,
-formulas, and the data model's metrics catalog.
+`GET /v2/dataModels/{id}/spec` (data model: returns column types,
+descriptions, formulas, and the metrics catalog in one call) or
+`scripts/api/list-table-columns.sh` (raw table: raw warehouse names
+only), NOT assumed. `scripts/api/mcp-describe.sh datamodel-element
+<dm-id> <el-id>` returns the same info as SQL DDL when it works, but
+expect exit 3 under this skill's `client_credentials` auth model — see
+`reference/workflows/discover.md` → "MCP status."
 
 Name any column that's missing from your assumed schema (e.g. there
 *is* a customer dimension; there *isn't* a margin field) so the user
@@ -99,9 +103,9 @@ correct mismatched interpretations before any spec is written.
 
 **Every formula in the rationale must trace to recon** — see
 `reference/conventions.md` → "Inference anchor." `[Metrics/X]`
-references must be in the `mcp-describe` metric catalog;
-sibling-column references must be declared on a recon-confirmed
-source column.
+references must be in the `GET /v2/dataModels/{id}/spec` metric
+catalog; sibling-column references must be declared on a
+recon-confirmed source column.
 
 ### 4. Filter set with reasoning
 
@@ -174,7 +178,7 @@ reference/specification/charts.md, reference/specification/formulas.md
 - Source element: `<element-name>` (id `<element-id>`)
 
 ### 2. Data inventory
-- Recon command: `scripts/api/mcp-describe.sh datamodel-element <dm> <el>`
+- Recon command: `GET /v2/dataModels/<dm>/spec`
 - Available columns: <list>
 - Available metrics: <list>
 - Missing from prompt's premise: <list, if any>
@@ -245,7 +249,8 @@ That contract puts the burden on the agent:
    `audit-workbook-schema.sh`. Exit 1 means the audit found errored
    columns; fix and PUT before proceeding. **Exit 3 means the audit
    couldn't run at all** (its `mcp-describe` dependency failed at the
-   transport level — commonly an OAuth client without MCP scope) —
+   transport level — always, under this skill's `client_credentials`
+   auth model; see `reference/workflows/discover.md` → "MCP status") —
    this is not a pass either; fall back to a manual UI check. **Do not
    report the workbook as built until audit returns clean (exit 0),
    and do not treat exit 3 as equivalent to exit 0.**

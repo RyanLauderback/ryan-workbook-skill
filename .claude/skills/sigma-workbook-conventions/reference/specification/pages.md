@@ -92,7 +92,7 @@ A modal is a **page**, not an element — set `type: "modal"` and a
 | Field | Required | Notes |
 |---|---|---|
 | `type` | yes (for a modal page) | `"modal"` |
-| `modal.width` | no | `"small"` observed; `"large"` also documented elsewhere in this skill (see `agents.md`-adjacent findings once that chunk exists) |
+| `modal.width` | no | `"small"` observed. A `"large"` value has been mentioned in passing but is unverified — not documented or confirmed anywhere else in this skill. Probe before relying on it. |
 | `modal.header.title` | no | Accepts `{{formula}}` interpolation (e.g. `{{CurrentUserFirstName()}}`) per a harvested production workbook — not yet independently re-verified by this skill's own probe |
 | `modal.header.showCloseIcon` | no | `"hidden"` observed |
 | `modal.footer.primaryCta.visible` | no | `"hidden"` observed |

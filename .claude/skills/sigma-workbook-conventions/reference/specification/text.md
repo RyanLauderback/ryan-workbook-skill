@@ -42,11 +42,12 @@ styling:
 - Bullet and ordered lists
 - `**bold**`, `*italic*`, `~~strikethrough~~`
 - `[links](https://example.com)`
-- Inline HTML: `<u>`, `<sub>`, `<sup>`, `<a>` — this is the **complete**
-  allowed-tag set; confirmed verbatim from a live rejection error during
-  a 2026-08-03 probe (`<h2>` was rejected: "not in the allowed inline-HTML
-  set (allowed: <u>, <sub>, <sup>, <span>, <a>)"). Use Markdown headings
-  (`#`/`##`/`###`) for headers, never raw `<h1>`-`<h6>` tags.
+- Inline HTML: `<u>`, `<sub>`, `<sup>`, `<span>`, `<a>` — this is the
+  **complete** allowed-tag set; confirmed verbatim from a live rejection
+  error during a 2026-08-03 probe (`<h2>` was rejected: "not in the
+  allowed inline-HTML set (allowed: <u>, <sub>, <sup>, <span>, <a>)").
+  Use Markdown headings (`#`/`##`/`###`) for headers, never raw
+  `<h1>`-`<h6>` tags.
 - Inline color: `<span style="color: #hex">…</span>` and
   `<span style="background-color: #hex">…</span>` (hex only — `#rgb`
   or `#rrggbb`)

@@ -186,7 +186,7 @@
             }
           ],
           "value": {
-            "id": "kpi-rev-value"
+            "columnId": "kpi-rev-value"
           },
           "name": {
             "text": "Total Revenue",
@@ -255,7 +255,7 @@
             }
           ],
           "value": {
-            "id": "kpi-pf-value"
+            "columnId": "kpi-pf-value"
           },
           "name": {
             "text": "Total Profit",
@@ -314,7 +314,7 @@
             }
           ],
           "value": {
-            "id": "kpi-mg-value"
+            "columnId": "kpi-mg-value"
           },
           "name": {
             "text": "Profit Margin",
@@ -373,7 +373,7 @@
             }
           ],
           "value": {
-            "id": "kpi-aov-value"
+            "columnId": "kpi-aov-value"
           },
           "name": {
             "text": "Average Order Value",

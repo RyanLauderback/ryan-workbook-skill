@@ -162,7 +162,7 @@
             }
           ],
           "value": {
-            "id": "p1-kpi-nii-val"
+            "columnId": "p1-kpi-nii-val"
           },
           "name": "Net Interest Income"
         },
@@ -186,7 +186,7 @@
             }
           ],
           "value": {
-            "id": "p1-kpi-gross-val"
+            "columnId": "p1-kpi-gross-val"
           },
           "name": "Gross Income"
         },
@@ -205,7 +205,7 @@
             }
           ],
           "value": {
-            "id": "p1-kpi-nim-val"
+            "columnId": "p1-kpi-nim-val"
           },
           "name": "Net Interest Margin"
         },
@@ -224,7 +224,7 @@
             }
           ],
           "value": {
-            "id": "p1-kpi-cust-val"
+            "columnId": "p1-kpi-cust-val"
           },
           "name": "Customers Served"
         },
@@ -1292,7 +1292,7 @@
             }
           ],
           "value": {
-            "id": "p3-kpi-cp-val"
+            "columnId": "p3-kpi-cp-val"
           },
           "name": "% Accounts Closed"
         },
@@ -1363,7 +1363,7 @@
             }
           ],
           "value": {
-            "id": "p3-kpi-ar-val"
+            "columnId": "p3-kpi-ar-val"
           },
           "name": "At-Risk Customers (180d)"
         },
@@ -1438,7 +1438,7 @@
             }
           ],
           "value": {
-            "id": "p3-kpi-nr-val"
+            "columnId": "p3-kpi-nr-val"
           },
           "name": "NII at Risk"
         },

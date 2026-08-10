@@ -263,14 +263,32 @@ based on whether the user wants drill-down support. Use judgment.
 
 ## Known limitations
 
-- **No `delta` / comparison field on the KPI element.** The spec
-  carries the date-dimension column that *enables* comparison mode;
-  the specific period (vs prior month / quarter / year) is UI-side
-  state and isn't represented in the code spec. To force a specific
-  comparison period, stack two `kpi-chart` elements side-by-side via
-  layout XML.
 - **No `target` / `goal` field.** To show a value vs. a target,
   build a chart with two columns (value + target) instead.
+
+## Period-over-period comparison (`timeline` + `periodComparison`)
+
+The specific comparison period IS representable in the code spec —
+correcting an earlier claim in this file that it wasn't. `timeline`
+(a date-dimension column reference) + `periodComparison` (e.g.
+`"month"`) together drive the delta shown against the KPI's headline
+value:
+
+```json
+{
+  "id": "kpi-ov-revenue",
+  "kind": "kpi-chart",
+  "value": { "columnId": "kr-val" },
+  "timeline": { "columnId": "kr-month" },
+  "periodComparison": "month"
+}
+```
+
+Verified present ~67 times in a real harvested production dashboard
+(`examples/dashboard-department-scorecard.json` — see
+`reference/history.md`). Distinct from the plain date-dimension-column
+approach above, which drives the sparkline but not an explicit
+comparison-period delta.
 
 ## Tile sizing
 

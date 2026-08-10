@@ -104,7 +104,7 @@
             { "id": "kpi-rev-week", "name": "Week of Date", "formula": "DateTrunc(\"week\", [Customer Cohort Base/Date])" },
             { "id": "kpi-rev-value", "name": "Total Revenue", "formula": "[Metrics/Total Revenue]" }
           ],
-          "value": { "id": "kpi-rev-value" }
+          "value": { "columnId": "kpi-rev-value" }
         },
         {
           "id": "kpi-customers",
@@ -115,7 +115,7 @@
             { "id": "kpi-cust-week", "name": "Week of Date", "formula": "DateTrunc(\"week\", [Customer Cohort Base/Date])" },
             { "id": "kpi-cust-value", "name": "Distinct Customers", "formula": "[Metrics/Distinct Customers]" }
           ],
-          "value": { "id": "kpi-cust-value" }
+          "value": { "columnId": "kpi-cust-value" }
         },
         {
           "id": "kpi-aov",
@@ -126,7 +126,7 @@
             { "id": "kpi-aov-week", "name": "Week of Date", "formula": "DateTrunc(\"week\", [Customer Cohort Base/Date])" },
             { "id": "kpi-aov-value", "name": "AOV", "formula": "[Metrics/AOV]" }
           ],
-          "value": { "id": "kpi-aov-value" }
+          "value": { "columnId": "kpi-aov-value" }
         },
         {
           "id": "pivot-cohort",

@@ -261,8 +261,10 @@ workbooks omit it. When present, looks like:
 ```
 
 The `items` are column IDs grouped under the folder name. UI-side
-organization; doesn't affect render. Inspect via `mcp-describe.sh
-workbook <wb-id>` if you need the structure.
+organization; doesn't affect render. Inspect via
+`GET /v2/workbooks/{id}/spec`'s `folders` field (or opportunistically
+`mcp-describe.sh workbook <wb-id>`, expect exit 3) if you need the
+structure.
 
 ## Theming (`themeOverrides` + theme color references)
 

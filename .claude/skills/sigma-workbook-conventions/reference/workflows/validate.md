@@ -87,7 +87,8 @@ For each column's `formula`:
    - A **sibling** — the portion inside the brackets (no `/`) exactly
      matches a `name` in THIS element's `columns[]` array.
    - A **data-model metric** — `[Metrics/<X>]` where `<X>` is in the
-     source element's metric catalog (from `mcp-describe`).
+     source element's metric catalog (from `GET /v2/dataModels/{id}/spec`,
+     or opportunistically `mcp-describe`, expect exit 3).
    - A **qualified ref** — contains `/`, and the prefix matches one of:
      - The last segment of the `path` array (if source is
        `warehouse-table`)
@@ -104,7 +105,7 @@ For each column's `formula`:
 - A column's `formula` references a name matching its own `name`
   field → circular reference (silent fail at render).
 - A formula references a column name that doesn't exist on the source
-  → re-confirm column names via `mcp-describe`.
+  → re-confirm column names via `GET /v2/dataModels/{id}/spec`.
 - Donut chart requires `value` + `color` (or `holeValue` if used).
 - Layout XML: no `<LayoutElement type="grid">` with children — use
   `<GridContainer>` for nesting (children are silently dropped

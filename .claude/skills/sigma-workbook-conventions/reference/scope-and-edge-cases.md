@@ -27,16 +27,17 @@ addressable in the spec, and a GET-back of a UI-configured workbook will
 not necessarily round-trip every visual setting. Known examples (treat as
 limitations, not bugs to fix):
 
-- **KPI period-comparison configuration** (e.g. "vs prior month" vs "vs
-  prior quarter"): the spec only carries the date-dimension column on the
-  KPI's `columns` array. The actual comparison period Sigma renders from
-  that column is UI-side state and isn't surfaced in the GET response. If
-  a user needs a specific comparison period, configure it in the UI;
-  don't try to set it in the spec. **Narrowed 2026-05-19:** KPI title
-  color, font size, weight, and the element frame (border) ARE spec-able
-  via the styled-name object and the `style` field — see
-  `reference/specification/kpis.md` → "Title styling." Only the
-  comparison-period and sparkline-toggle remain UI-only on KPIs.
+- **Retracted 2026-08-07:** this bullet previously claimed KPI
+  period-comparison configuration ("vs prior month" vs "vs prior
+  quarter") was UI-only state, not representable in the spec. That's
+  wrong — `timeline` (a date-dimension column reference) +
+  `periodComparison` (e.g. `"month"`) together set the comparison
+  period explicitly in the spec, verified ~67 times in a real
+  production dashboard. See `reference/specification/kpis.md` →
+  "Period-over-period comparison." **Narrowed 2026-05-19:** KPI title
+  color, font size, weight, and the element frame (border) are also
+  spec-able via the styled-name object and the `style` field — see
+  `reference/specification/kpis.md` → "Title styling."
 
 - **Chart series colors** beyond the `color.scheme` palette:
   per-chart-spec `color: {by, column, scheme}` lets you set positional

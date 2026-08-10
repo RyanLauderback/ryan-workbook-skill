@@ -89,6 +89,7 @@ for the workflow.
 - `scripts/load-env.sh` — used internally by `_env.sh`. Direct callers rarely need it. `scripts/refresh-vendor.sh` clones the upstream skill repo into `vendor/` for inspection only.
 - `prompts/library/` — reusable prompt fragments (guardrails, framing, etc.).
 - `docs/` — `conventions.md`, `iteration-playbook.md`, `skill-authoring.md`.
+- `evals/` — regression test cases for the skill (real session prompts + expected behavior); see `evals/README.md`.
 
 ## Iteration loop (summary; full playbook in `docs/iteration-playbook.md`)
 

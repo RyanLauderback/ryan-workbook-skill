@@ -1,9 +1,10 @@
 # Tables
 
-The `table`, `pivot-table`, and `input-table` element kinds.
+The `table` and `pivot-table` element kinds. (`input-table` moved to
+`input-tables.md` — 2026-08-04, Wave 3 / C5.)
 
 ```bash
-jq '.components.schemas.Table, .components.schemas.PivotTable, .components.schemas.InputTable' /tmp/sigma-api.json
+jq '.components.schemas.Table, .components.schemas.PivotTable' /tmp/sigma-api.json
 ```
 
 The `table` element is the most common element kind and the primary way

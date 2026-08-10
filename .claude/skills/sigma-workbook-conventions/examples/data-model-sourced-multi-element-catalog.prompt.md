@@ -48,5 +48,6 @@ When cloning this exemplar, substitute:
 - `<DESTINATION_FOLDER_ID>` — the folder UUID where you want the new workbook to land
 
 `scripts/api/find-file-by-urlid.sh <url-slug>` resolves Sigma URL slugs → UUIDs for the
-data model and folder; `scripts/api/mcp-describe.sh datamodel <DATA_MODEL_ID>` lists the
-element IDs and their display names.
+data model and folder; `GET /v2/dataModels/<DATA_MODEL_ID>/spec` lists the
+element IDs and display names (opportunistically `mcp-describe.sh datamodel`,
+expect exit 3).

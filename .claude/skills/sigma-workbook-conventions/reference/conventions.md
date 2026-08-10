@@ -29,8 +29,10 @@ The plan's `Chunks Read:` line must list this file.
 
 **Rule.** Every formula in a proposed plan must trace to one of:
 
-- A `[Metrics/<X>]` confirmed in `mcp-describe.sh datamodel-element <dm> <el>`
-  output for the source element, OR
+- A `[Metrics/<X>]` confirmed in `GET /v2/dataModels/{id}/spec`'s
+  `metrics` array for the source element (or opportunistically
+  `mcp-describe.sh datamodel-element <dm> <el>`, expect exit 3 — see
+  `reference/workflows/discover.md` → "MCP status"), OR
 - A column declared on the source table that recon confirmed exists.
 
 **"Reasonable assumption" formulas are forbidden.** If recon doesn't
@@ -189,11 +191,12 @@ without touching what formulas resolve against.
 ## `[Metrics/<Name>]` resolution + DM-switch hard rule
 
 **Resolution.** `[Metrics/<Name>]` references resolve against the
-data-model element a spec sources from. `mcp-describe.sh
-datamodel-element <dm> <el>` returns the metric catalog FOR THAT
-ELEMENT. Treat that catalog as the source of truth — if a metric
-isn't listed there, do not reference it from a spec that sources off
-that element.
+data-model element a spec sources from. `GET /v2/dataModels/{id}/spec`
+returns the metric catalog FOR THAT ELEMENT in its `metrics` array
+(or opportunistically `mcp-describe.sh datamodel-element <dm> <el>`,
+expect exit 3). Treat that catalog as the source of truth — if a
+metric isn't listed there, do not reference it from a spec that
+sources off that element.
 
 **Slash-in-name caveat:** metric names containing `/` (e.g.
 `Cost/Member/Month`) are not safely addressable as
@@ -203,8 +206,8 @@ parsing of multi-slash names is undefined. Options:
 1. **Rename the metric in the data model** (preferred — fixes for all
    consumers).
 2. **Fall back to a hand-derived formula** using the metric's actual
-   formula visible in `mcp-describe` output (e.g.
-   `Sum([CostMember]) / Count([Month])`).
+   formula visible in `GET /v2/dataModels/{id}/spec`'s `metrics` array
+   (e.g. `Sum([CostMember]) / Count([Month])`).
 
 **Round-trip is not validation.** A spec that POSTs and GETs back
 successfully with `[Metrics/A/B]` is not evidence the reference
@@ -222,8 +225,9 @@ The 2026-05-19 regression was caused by carrying
 `[Metrics/Cost per Unit] * [Metrics/Encounter Volume]` from the
 original DM's plan into a spec sourced against a different DM that
 did not contain those metrics. Treat the prior plan as discarded for
-metric purposes; re-run `mcp-describe.sh datamodel-element <new-dm>
-<new-el>` and regenerate.
+metric purposes; re-run `GET /v2/dataModels/{new-dm}/spec` (or
+opportunistically `mcp-describe.sh datamodel-element <new-dm>
+<new-el>`, expect exit 3) and regenerate.
 
 ### Distinct from official's `[Source/Col]` syntax
 
