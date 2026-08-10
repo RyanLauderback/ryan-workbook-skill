@@ -44,6 +44,14 @@ feature docs under `reference/specification/` — a live spec shows
 current, valid, org-idiomatic structure, including the layout XML the
 OpenAPI doesn't model. Size up only when the request asks for it.
 
+This ladder is one axis — page/element count. Calculation complexity
+(cohort pivots, multi-level aggregation, forecasting) and writeback
+complexity (none, simple input-table, scenario modeling + approval
+workflow) are independent axes with their own exemplars — see
+`SKILL.md` → "Reference and examples" for the full 5-category map.
+A build can be simple on this ladder and complex on another (a 1-page
+dashboard with a cohort pivot, say).
+
 ## When to stop and ask the user
 
 Defer to the user any time the prompt admits more than one reasonable

@@ -1683,3 +1683,70 @@ check across all examples was attempted but the sub-agent reported it
 was too noisy to distinguish real violations from intentional unnamed
 drill-down passthrough columns via static analysis alone — would need
 render-time verification. Not treated as a finding either way.
+
+## 2026-08-10 — Example-set rationalized around 3 independent complexity axes; 2 real gaps documented
+
+Reviewed the 13-file `examples/` set structurally (element kinds, page
+counts, controls, containers extracted programmatically, not just
+SKILL.md's descriptions — which item 3 already caught drifting from
+reality once this session) rather than assuming the file count itself
+was the problem.
+
+**Deleted 2 files, not just relabeled — confirmed genuinely redundant,
+not merely overlapping:**
+- `data-model-sourced-kpi-overview-with-containers.json` — already
+  marked deprecated (pre-fix KPI shape + `controlId` collision), but
+  still cited from `reference/specification/layout.md:361` as the
+  canonical nested-container example. Verified `styled-card-dashboard.json`
+  has the identical outer-section/inner-KPI-row nesting pattern and
+  isn't deprecated; redirected the citation there before deleting.
+  Keeping a file explicitly marked "do not clone" inside a folder whose
+  own stated convention is "known-good specs to seed generation... 
+  clone-and-modify" was itself a contradiction worth resolving, not
+  just documenting.
+- `additional-workbook-features-chart-and-control-catalog.json` — its
+  entire teaching value (3 area-chart stacking modes, pie-chart) is
+  already fully documented inline in `reference/specification/charts.md`
+  with working JSON snippets (confirmed: the stacking values section,
+  and "pie chart — same shape as donut"). Not cited anywhere else in
+  `reference/`. A whole-workbook exemplar earns its place by teaching
+  composition across elements/pages; this one added nothing beyond
+  already-required reading.
+
+**Corrected 1 mislabeled description, kept the file:**
+`data-model-sourced-multi-level-aggregated-table.json` was described as
+a "combo-chart shape reference" — but combo-chart is *also* already
+fully documented in `charts.md` (same redundancy pattern as the deleted
+file above). Confirmed its real, unique value: a live 3-level
+`groupings` table that `reference/specification/tables.md` itself cites
+by name (`tables.md`'s own inline example only goes 2 levels). Fixed
+the description to match what the file is actually for.
+
+**Restructured `SKILL.md`'s catalog around 3 independent complexity
+axes** (page complexity, calculation complexity, writeback complexity)
+instead of the prior ad hoc grouping (Minimal/3-page-canonical/
+Catalog/Editable/Pattern-specific/Deprecated) — a build can be simple
+on one axis and complex on another, and the old grouping conflated
+them. Added a light cross-reference from `composition.md`'s sizing
+ladder (which is really just the page-complexity axis) to this fuller
+map, without rewriting the ladder itself.
+
+**2 real coverage gaps found and documented, not built yet (next
+session's work, per user direction — "reorg first, then address the
+new examples"):**
+- No example demonstrates plain writeback (an editable `input-table`,
+  no AI agent) — the only writeback example bundles input-table +
+  agent + chat together, forcing anyone who wants basic writeback to
+  wade through agent complexity irrelevant to their need.
+- No example demonstrates an approval handoff between two users on top
+  of scenario modeling (enter params → generate a forecast → a second
+  user approves it before it's final). Sketched a composition using
+  already-verified primitives only (a `status` column, a filtered
+  approver view, direct inline cell editing since there's no
+  `update-rows` effect in the verified 9-effect vocabulary) — this
+  should not need new capability probing, just live verification of
+  the composed shape before it's documented as a working pattern.
+
+Net: 13 → 11 example files. `validate-spec.py` re-run clean on all 11
+survivors post-deletion (0 fail; pre-existing warnings on 2 files
+unchanged, unrelated to this change).

@@ -526,29 +526,37 @@ spec surface of their own — deliberately filed separately.
   filter input-tables/pivots; input-table rows can't be seeded from
   code).
 
-`examples/` — known-good specs to seed generation. Clone-and-modify rather
-than editing in place. Match your task to the closest exemplar below;
-`.prompt.md` sidecars (where present) describe the design intent.
+`examples/` — known-good specs to seed generation. Clone-and-modify
+rather than editing in place. `.prompt.md` sidecars (where present)
+describe design intent. Match your task along **three independent
+axes** — page complexity, calculation complexity, and writeback
+complexity — not one ladder; a build can be simple on one axis and
+complex on another (e.g. a 1-page dashboard with a cohort pivot).
 
-- **Minimal / single-page:**
-  - `data-model-sourced-overview.json` — smallest data-model-fed dashboard.
-  - `data-model-sourced-single-page-inventory-health.json` (2026-07-02) — 10-element single-page dashboard with conditional formatting + two shared controls filtering multiple elements. Canonical minimal ops-triage exemplar. Paired with `.prompt.md`.
-  - `dashboard-department-scorecard.json` (2026-08-03) — the "dashboard" tier of `reference/workflows/composition.md`'s sizing ladder: KPI row (period-comparison + timeline styling, modeled on a real production dashboard), one ranked chart and one ranked table both sorted by the metric they rank on, base table on a hidden page. **First exemplar to load for a plain read-only exec dashboard build with no interactive/writeback features.** Paired with `.prompt.md`.
-- **Modern 3-page workbook (canonical):**
-  - `data-model-sourced-sales-command-center.json` (2026-07-02) — 50-element 3-page workbook exercising every 2026-06/2026-07 skill fix (segmented control variants, `gap` safe default, distinct-column `holeValue`, KPI `value.columnId`, element `layout.anchor`, `themeOverrides`, styled `name`, card `style`, hierarchy control, `list + single`). Paired with `.prompt.md`. **First exemplar to load for any modern multi-page build.**
-  - `data-model-sourced-exec-kpi-scorecard.json` (2026-07-02, post-fix) — 35-element exec-review workbook with pivot calculated PoP % delta column, US-state `region-map`, scatter for outlier detection, and two-tier anomaly-detection derived table (`groupings` + conditional-Sum, NOT `Rollup`). Paired with `.prompt.md`. Clone when the ask includes geographic viz or anomaly detection.
-- **Catalog / kitchen-sink** (chart-kind + control-type coverage):
-  - `data-model-sourced-multi-element-catalog.json` — 6 chart kinds, 3 KPIs, 4 control types, multi-level `groupings`.
-  - `data-model-sourced-multi-level-aggregated-table.json` — combo-chart shape reference.
-  - `additional-workbook-features-chart-and-control-catalog.json` — area stacking, pie chart, scatter.
-- **Editable / agent-enabled:**
-  - `input-table-agent-scenario-planner.json` (2026-08-04) — editable input-table with all 6 column shapes, `insert-rows`/`delete-rows` writeback via buttons, and an AI agent whose tool writes to the same table via `agent-input` values. **First exemplar to load for any build involving writeback or an agent.** Paired with `.prompt.md`.
-- **Pattern-specific:**
-  - `data-model-sourced-cohort-pivot.json` — two-tier sourcing (raw → derived) + `Rollup` + weeks-since-first-action pivot. Clone for cohort/retention.
-  - `data-model-sourced-multi-page-profitability-attrition.json` — 4-page reference with per-page source tables + `Lookup()` demographic passthrough.
-  - `styled-card-dashboard.json` — five-recipe element styling system (card framing, accent borders, subtle controls). Paired with `.prompt.md`.
-- **Deprecated (kept for archaeological reference only):**
-  - `data-model-sourced-kpi-overview-with-containers.json` — predates the 2026-07-02 KPI `value.columnId` fix + `controlId` collision rule. Do NOT clone verbatim; use `data-model-sourced-sales-command-center.json` instead.
+**1. Simple 1-page dashboards:**
+- `data-model-sourced-overview.json` — smallest data-model-fed dashboard.
+- `data-model-sourced-single-page-inventory-health.json` — 10-element, conditional formatting + two shared controls. Canonical minimal ops-triage exemplar.
+- `dashboard-department-scorecard.json` — KPI row (period-comparison + timeline styling) + one ranked chart + one ranked table, base table on a hidden page. **First load for a plain read-only exec dashboard, no interactivity.**
+
+**2. Complex multi-page dashboards:**
+- `data-model-sourced-sales-command-center.json` — 50-element 3-page workbook. **First load for any modern multi-page build.**
+- `data-model-sourced-exec-kpi-scorecard.json` — 35-element 3-page workbook with a US-state `region-map` and a two-tier anomaly-detection derived table. Clone for geographic viz or anomaly detection.
+- `data-model-sourced-multi-page-profitability-attrition.json` — 4-page reference with per-page source tables + `Lookup()` demographic passthrough.
+
+**3. Specialized calculation approaches:**
+- `data-model-sourced-cohort-pivot.json` — two-tier sourcing (raw → derived) + `Rollup` + weeks-since-first-action pivot. Clone for cohort/retention.
+- `data-model-sourced-multi-level-aggregated-table.json` — a live 3-level `groupings` example (`tables.md`'s own inline example only goes 2 levels).
+- `reference/patterns/scenario-modeling.md` — `CallVariant` forecasting + what-if parameter controls. **No example workbook yet** — a documented gap, not silently missing; don't assume one exists.
+
+**4. Simple writeback (notes / value overrides, no agent):**
+- **No example yet** — a documented gap. Compose directly from `reference/specification/input-tables.md`: an `input-table` with editable columns, no agent, no buttons beyond `insert-rows`/`delete-rows` if needed.
+
+**5. Complex writeback (scenario modeling + approval workflow):**
+- `input-table-agent-scenario-planner.json` — editable input-table + AI agent generating scenario rows via `agent-input`. Covers "enter parameters, generate a forecast." **Does not cover an approval handoff to a second user** — a documented gap; if asked for one, compose from already-verified primitives (a `status` column, a filtered approver view, inline cell editing — there's no `update-rows` effect, so approval is direct edit, not a button) and live-verify the composed shape before treating it as settled.
+
+**Other (cross-cutting, not use-case-specific):**
+- `data-model-sourced-multi-element-catalog.json` — 6 chart kinds, 3 KPIs, 4 control types side by side in one page. Reach for this when you need to see several chart kinds at once, not as a realistic dashboard to clone wholesale.
+- `styled-card-dashboard.json` — five-recipe element styling system (card framing, accent borders, subtle controls) and the canonical nested-`GridContainer` page-structure example (see `reference/specification/layout.md`).
 
 For data-model field-level mechanics (columns, metrics, relationships,
 filters, controls, formatting, folders, column-level security, workflows)

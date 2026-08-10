@@ -358,8 +358,8 @@ For multi-section pages, nest containers:
 - Inner container per side-by-side pair (each 12-col span inside the outer).
 - Section-header text element above each section.
 
-See `examples/data-model-sourced-kpi-overview-with-containers.json`
-for a canonical page-structure exemplar.
+See `examples/styled-card-dashboard.json` for a canonical page-structure
+exemplar (outer section container wrapping a nested KPI-row container).
 
 ## Cross-cutting rules
 

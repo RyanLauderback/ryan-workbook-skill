@@ -7,9 +7,10 @@ Costco-branded Sales Command Center. Verified against every 2026-06 /
 precondition, donut `holeValue` distinct-column, KPI `value.columnId`,
 element `layout.anchor`, `themeOverrides`, styled `name`, card `style`).
 
-Supersedes `data-model-sourced-kpi-overview-with-containers.json` as the
-"canonical KPI workbook" reference. Older file predates the KPI
-`value.columnId` and `controlId` collision fixes.
+The "canonical KPI workbook" reference — an older exemplar predating
+the KPI `value.columnId` and `controlId` collision fixes was removed
+(2026-08-10, example-set rationalization; see `reference/history.md`)
+rather than kept around as a "don't clone this" trap.
 
 ## When to clone this exemplar
 
