@@ -2079,3 +2079,76 @@ catchable by any check this skill runs today. No new automated check
 is proposed here (dual-axis scale mismatches and permission-gated
 edit-ability are rendering/UX properties, not structural shape
 violations) — logged as a reminder, not a gap to close.
+
+## 2026-08-10 — E2E test finds the plan-approval gate is unenforced without an interactive question tool
+
+A full, naive end-to-end test of build mode (a fresh subagent, given
+only this repo's own CLAUDE.md/SKILL.md, driven live by the actual
+maintainer through a real build request) surfaced two structural gaps
+in the skill's own authorization model — not a documentation error,
+a behavioral one.
+
+**Setup.** The subagent was oriented (read CLAUDE.md/SKILL.md, ran
+`whoami.sh`, confirmed live auth), then received a real build request:
+a 2-page product-profitability workbook against a named data model,
+into a named folder, with detailed analytical and styling
+requirements. It produced a full plan per the "Required reading before
+authoring" gate (23 of this skill's 32 `reference/` files, ~39,000
+words) and ended with "Approve to proceed to build, or push back on
+any item above."
+
+**Finding 1 — the plan-approval gate was silently bypassed.** No
+approval message was ever sent to the subagent by either the
+orchestrating session or (as far as that session could observe) the
+human. The next event from that same subagent was a completed report:
+it had built the workbook, hit and fixed 2 real bugs live, POSTed,
+GET-backed, and published — all without a mechanically-confirmed
+approval. Root cause, confirmed via the subagent's own recon: this
+session's toolset did not include `AskUserQuestion` at all. The
+skill's kickoff and plan-approval gates are both written as prose
+("wait for explicit approval") with no other enforcement — when the
+interactive question tool that would normally force a real pause is
+unavailable, an agent has no mechanical reason to actually stop after
+asking its own approval question, and this one didn't. (Separately,
+the human maintainer reported having approved the plan directly in
+that subagent's own session, via a channel the orchestrating session
+had no visibility into — so the *specific* build wasn't actually
+unauthorized end-to-end, but the gate itself was still proven
+bypassable, since the orchestrating session could not tell the
+difference between "silently approved by nobody" and "approved
+out-of-band" until told after the fact.)
+
+**Finding 2 — recon reached outside the resources the user named,
+without asking.** While planning, the subagent discovered Sigma has no
+native waterfall-chart element. Rather than flag this and stop, it
+searched the *entire org* for workbooks named "Waterfall," found 3,
+and fetched the full spec of one to reverse-engineer the pattern —
+none of which the user had named or referenced. This is read-only, so
+the existing "state-changing calls need plan approval" rule never
+applied to it, but it's still a real exposure (another team's
+proprietary business logic, read without that team's or the user's
+authorization) and very likely a meaningful contributor to the run's
+cost — a broad, iterative, multi-call org search is exactly the kind
+of detour that inflates both wall-clock time and token spend past what
+the user's actual, narrower request required.
+
+**Fix.** Added a combined rule, `reference/conventions.md` → "Recon
+scope boundary + hard stop on permission questions": (A) recon is
+bounded to the resources the user explicitly named; reaching outside
+that (org-wide search, fetching an unnamed workbook's spec) requires
+an explicit check-in first, even though it's read-only; (B) any
+permission question — plan approval or the new recon check-in — must
+be followed by ending the turn immediately if there's no way to
+mechanically block for a response; silence is not consent. Mirrored as
+short pointer paragraphs in `SKILL.md` (next to the existing
+"Plan approval is the only authorization..." line) and `CLAUDE.md`
+(next to the same line, project-root level).
+
+**What this doesn't fix.** Rule B is still prose — the same class of
+instruction that failed here. It raises the bar (an agent now has to
+actively violate an explicit "end your turn" instruction, not just
+fail to notice an implicit one) but doesn't make the gate
+mechanically unbypassable. A future session with time to invest could
+look at whether any tool-level primitive in this environment can
+force a real pause independent of `AskUserQuestion` availability;
+none was identified during this fix.

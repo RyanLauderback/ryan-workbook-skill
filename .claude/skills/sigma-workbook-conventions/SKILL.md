@@ -111,6 +111,8 @@ The kickoff captures **raw inputs**. It does NOT replace the plan-first workflow
 
 After the kickoff, the agent proceeds through Recon → Plan proposal → User approval → Build → GET-back → Visual verify, per `docs/iteration-playbook.md`. **Plan approval is the only authorization for state-changing API calls** (POST/PUT to `/v2/workbooks/spec`, `/v2/dataModels/*/spec`). The 3-gate does not pre-authorize anything except the auth warm-up itself.
 
+**Recon is bounded to what the user named** — the source data model, the destination folder, anything they specifically referenced. Searching the broader workspace for a reference implementation (e.g., hunting for an existing workbook to reverse-engineer an unsupported chart kind) is a distinct, riskier action that needs an explicit check-in first, even though it's read-only. And that check-in — like plan approval — only counts if the agent actually stops: if there's no way to mechanically block for a response, end the turn immediately after asking; don't treat silence as approval. See `reference/conventions.md` → "Recon scope boundary + hard stop on permission questions" for the full rule and the incident that surfaced it.
+
 ### Optional: session-local enrichment via `local-` prefix
 
 To add project-specific context (Tableau migration notes, account-specific

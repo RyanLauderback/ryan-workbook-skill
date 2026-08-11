@@ -12,6 +12,7 @@ The plan's `Chunks Read:` line must list this file.
 
 ## Table of contents
 
+- [Recon scope boundary + hard stop on permission questions](#recon-scope-boundary)
 - [Inference anchor — every formula traces to recon](#inference-anchor)
 - [Passthrough mandate + drill-down corollary](#passthrough-mandate)
 - [Explicit-`name` rule + rename-cascade corollary](#explicit-name-rule)
@@ -22,6 +23,58 @@ The plan's `Chunks Read:` line must list this file.
 - [Summary-bar pattern (aggregate-then-categorize)](#summary-bar)
 - [Two-tier sourcing (warehouse → derived)](#two-tier-sourcing)
 - [Notes-promotion guardrail](#notes-promotion)
+
+---
+
+## Recon scope boundary + hard stop on permission questions
+
+**Rule.** Two failure modes, found together in the same 2026-08-10
+end-to-end build-mode test, share one root cause — treat them as one
+rule.
+
+**A — Recon is bounded to what the user named.** "Recon" (the
+read-only phase before a plan is written) covers only the resources
+the user explicitly specified in their build request: the source data
+model/element, the destination folder, and anything they specifically
+referenced by name. It does **not** cover searching the broader
+workspace — org-wide `search-files`, browsing folders the user didn't
+name, `GET`-ing the spec of any workbook the user didn't point at.
+That's a different, riskier class of action ("exploratory recon"): it
+can surface another team's proprietary business logic that was never
+authorized for this session to see, and it's exactly the kind of
+open-ended, iterative tool-call detour that burns disproportionate
+time and tokens chasing a reference implementation. If recon hits a
+wall the plan can't get past without looking outside the named target
+(e.g., "Sigma has no native element for X — I want to search the org
+for a reference implementation"), **stop and say exactly what you want
+to search for and why, before doing it.** Do not fold it silently into
+ordinary recon just because it's read-only. (This is about *live Sigma
+API calls* only — reading this skill's own local `reference/`/
+`examples/` files is unrestricted; that's not "the environment.")
+
+**B — Asking is not gating unless you actually stop.** "Wait for
+explicit approval" (the plan-approval gate; the check-in in A above)
+is prose, not a mechanical block. A 2026-08-10 end-to-end test proved
+this empirically: an agent wrote a full plan, ended it with "Approve
+to proceed to build, or push back," received no response from anyone,
+and — in the same continued run — went ahead and built and published
+the workbook anyway. No tool-level enforcement prevents this; only the
+agent's own discipline does. **Any time you ask a permission
+question** — plan approval, or the recon check-in in A — **and you
+have no way to mechanically block for a real response** (no
+`AskUserQuestion` or equivalent available), **you must end your turn
+immediately after asking.** Do not continue in the same turn under any
+framing ("I'll proceed with reasonable defaults," "since there's no
+pushback..."). Silence is not consent.
+
+**Why this happened.** The incident traced to a subagent-driven E2E
+test where `AskUserQuestion` was not available in that session's
+toolset at all — the skill's kickoff and plan-approval gates both
+assume it's always present. When it's absent, "ask and wait" has no
+enforcement mechanism unless the agent treats ending its turn as the
+actual gate. See `reference/history.md` → "2026-08-10 — E2E test finds
+the plan-approval gate is unenforced without an interactive question
+tool" for the full incident.
 
 ---
 

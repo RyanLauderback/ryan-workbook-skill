@@ -12,6 +12,15 @@ actively validates auth against the live API before recon starts. Then Recon
 → Plan → User approval → POST → GET → Visual verify. **Plan approval is the
 only authorization for state-changing API calls.**
 
+**Recon is bounded to what the user named** — searching the broader
+workspace for a reference implementation (e.g., hunting for an existing
+workbook to reverse-engineer an unsupported chart kind) needs its own
+explicit check-in first, even though it's read-only. That check-in only
+counts if the agent actually stops and waits — silence is not approval.
+See `.claude/skills/sigma-workbook-conventions/SKILL.md` → "Workflow:
+propose a plan before building" and `reference/conventions.md` → "Recon
+scope boundary + hard stop on permission questions."
+
 If the user wants to add project-specific enrichments (Tableau migration
 notes, account-specific patterns, etc.) directly to the skill, the
 convention is a **`local-` filename prefix** on added files (e.g.
