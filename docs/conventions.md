@@ -24,10 +24,30 @@ conventions, see `.claude/skills/sigma-workbook-conventions/`.
 - Source via `eval "$(scripts/load-env.sh)"`. The script never echoes values.
 - Token retrieval is owned by the skill: `scripts/api/_env.sh` shells out to
   `scripts/api/get-token.sh` (a ~30-line `client_credentials` exchange
-  against `/v2/auth/token`) and caches the token at `/tmp/.sigma_token` for
-  55 min. Override with `SIGMA_TOKEN_FETCHER=/path/to/fetcher.sh` if you want
+  against `/v2/auth/token`) and caches the token at a per-user
+  `$SIGMA_TOKEN_CACHE` path for 55 min. Override with
+  `SIGMA_TOKEN_FETCHER=/path/to/fetcher.sh` if you want
   to use the upstream `sigma-api` plugin's fetcher instead.
 - Never paste a token into a prompt, comment, file, or commit message.
+
+## Platform support
+
+Targets **macOS, Linux (including containerized/CI hosts and Claude Code
+web), and Windows via WSL.** All scripts use `#!/usr/bin/env bash` and are
+bash-3.2-safe (no associative arrays, `mapfile`, or other bash-4+-only
+constructs), so they run unmodified on macOS's stock bash as well as
+Linux/WSL. **Native Windows (outside WSL) is not supported** — `python3`
+isn't reliably on PATH there (it's `python.exe`/`py -3`, or a
+Microsoft-Store stub that opens the Store instead of running), and every
+script hardcodes `python3`. Clone the repo inside the WSL filesystem
+(e.g. `~/...`), not on a Windows-native drive mounted via DrvFs
+(`/mnt/c/...`) — DrvFs doesn't reliably preserve the executable bit on
+`scripts/api/*.sh`, though `.claude/settings.json`'s `bash scripts/api/*`
+allow entries are a fallback if you end up there anyway.
+
+Run `bash scripts/doctor.sh` first on an unfamiliar host — it checks for
+required binaries, resolves which `python3`/interpreter would actually be
+used, and reports the OS, before you run anything that touches the API.
 
 ## Git hygiene
 

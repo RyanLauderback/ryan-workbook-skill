@@ -34,10 +34,10 @@ organized as a visualization reference:
 - `segmented` × 2 (Product-Type-1, date-part)
 
 ## Gaps — patterns NOT exemplified here
-- `combo-chart` — see legacy exemplar `additional-workbook-features-chart-and-control-catalog.json` or `reference/specification/charts.md` → "Combo chart."
-- `pie-chart` — see legacy exemplar `additional-workbook-features-chart-and-control-catalog.json` (donut and pie share a shape; pie example lives there).
+- `combo-chart` — see `reference/specification/charts.md` → "Combo chart" (inline JSON example, no separate exemplar needed).
+- `pie-chart` — donut and pie share a shape; see `reference/specification/charts.md` → "Pie chart — same shape as donut."
 - `control` of `controlType: "number-range"` — documented in `reference/specification/controls.md` → "number-range" only.
-- `container` element — see existing `data-model-sourced-kpi-overview-with-containers.json` for the canonical container + GridContainer pattern.
+- `container` element / nested `GridContainer` pattern — see `styled-card-dashboard.json` for the canonical example (also cited from `reference/specification/layout.md`).
 
 ## Templated placeholders
 
@@ -48,5 +48,6 @@ When cloning this exemplar, substitute:
 - `<DESTINATION_FOLDER_ID>` — the folder UUID where you want the new workbook to land
 
 `scripts/api/find-file-by-urlid.sh <url-slug>` resolves Sigma URL slugs → UUIDs for the
-data model and folder; `scripts/api/mcp-describe.sh datamodel <DATA_MODEL_ID>` lists the
-element IDs and their display names.
+data model and folder; `GET /v2/dataModels/<DATA_MODEL_ID>/spec` lists the
+element IDs and display names (opportunistically `mcp-describe.sh datamodel`,
+expect exit 3).

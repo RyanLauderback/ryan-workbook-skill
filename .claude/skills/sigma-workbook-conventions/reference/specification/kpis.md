@@ -234,6 +234,23 @@ aggregation functions. Warn-level, not fail — a false positive is
 possible when the sibling's aggregation happens to evaluate to a
 single valid scalar (rare); inspect flagged cases.
 
+**This pitfall generalizes to *cross-element* sibling refs too, not
+just same-element ones.** Verified 2026-08-03: a KPI's value formula
+was `[<SourceTable>/Total Revenue]` — a bare reference to a *different*
+element's own column (not one of the KPI's own `columns[]`), where that
+source column's formula was itself an aggregate (`[Metrics/Total
+Revenue]`, broadcasting a `Sum(...)` result over every row of the
+ungrouped source table). The compiled SQL showed Sigma wrapping this in
+a defensive `equal_null(min(x), max(x))` uniformity check — "only use
+this value if it's actually the same on every row" — which collapsed to
+`NULL`. The existing `kpi-value-references-aggregation` validator check
+only inspects bare refs to the KPI's *own* sibling columns and does not
+catch this cross-element form. Fix is the same as the same-element
+case: **write the aggregation directly on the KPI**
+(`Sum([<SourceTable>/Sales Amount])`), never as a bare passthrough of
+another element's already-aggregated column — even when that column
+looks like a clean, reusable "pre-computed metric" to reference.
+
 ## Passthrough columns
 
 The KPI's `columns` array should include the source table's
@@ -246,14 +263,32 @@ based on whether the user wants drill-down support. Use judgment.
 
 ## Known limitations
 
-- **No `delta` / comparison field on the KPI element.** The spec
-  carries the date-dimension column that *enables* comparison mode;
-  the specific period (vs prior month / quarter / year) is UI-side
-  state and isn't represented in the code spec. To force a specific
-  comparison period, stack two `kpi-chart` elements side-by-side via
-  layout XML.
 - **No `target` / `goal` field.** To show a value vs. a target,
   build a chart with two columns (value + target) instead.
+
+## Period-over-period comparison (`timeline` + `periodComparison`)
+
+The specific comparison period IS representable in the code spec —
+correcting an earlier claim in this file that it wasn't. `timeline`
+(a date-dimension column reference) + `periodComparison` (e.g.
+`"month"`) together drive the delta shown against the KPI's headline
+value:
+
+```json
+{
+  "id": "kpi-ov-revenue",
+  "kind": "kpi-chart",
+  "value": { "columnId": "kr-val" },
+  "timeline": { "columnId": "kr-month" },
+  "periodComparison": "month"
+}
+```
+
+Verified present ~67 times in a real harvested production dashboard
+(`examples/dashboard-department-scorecard.json` — see
+`reference/history.md`). Distinct from the plain date-dimension-column
+approach above, which drives the sparkline but not an explicit
+comparison-period delta.
 
 ## Tile sizing
 

@@ -46,7 +46,7 @@ questions. Each question has a defined branch behavior:
 **Q1: Is your `.env` set up?**
 
 - **Yes** — Claude runs two actions in sequence to verify auth end-to-end:
-  1. `bash scripts/api/_env.sh` — warms the token cache at `/tmp/.sigma_token` (55-min TTL).
+  1. `bash scripts/api/_env.sh` — warms the token cache at a per-user `$SIGMA_TOKEN_CACHE` path (55-min TTL).
   2. `scripts/api/whoami.sh` — actively probes `/v2/files?limit=5` to confirm the token works against the live API and surfaces 5 recent files the user can confirm visually.
 
   Why both: passive bootstrap (`_env.sh`) succeeds even when credentials are wrong as long as `.env` has the variables filled in. The active `whoami` probe catches expired clients, wrong region URLs, and revoked tokens *before* recon starts — not mid-build.
@@ -54,8 +54,21 @@ questions. Each question has a defined branch behavior:
 - **No** — Claude shares `.env.example` contents + a link to Sigma's "Administration → Developer Access" docs for OAuth client creation, then re-prompts Q1 once the user confirms setup.
 
 **Q2: What data source will you build against?**
-- Data model URL/slug (`Customer-Financials-461QUZu2VPny8KxImgSmfF`)
-- Warehouse table path (`<CONN>.<DB>.<SCHEMA>.<TABLE>` or `/t/<id>` URL)
+- **Data model** (recommended) — URL/slug (`Customer-Financials-461QUZu2VPny8KxImgSmfF`)
+  or name. Prefer this when one plausibly covers the request: confirmed
+  live (2026-08-07, `reference/history.md`) that a data model's full
+  spec — friendly column names, descriptions, and the metrics catalog —
+  comes back in a single REST call, while a raw warehouse table's REST
+  equivalent returns only raw warehouse column names, no metrics. See
+  `reference/specification/sources.md` → "If no data model fits, fall
+  back to `warehouse-table` — don't manufacture a model" for when a
+  table is the right call anyway.
+- Warehouse table path (`<CONN>.<DB>.<SCHEMA>.<TABLE>` or `/t/<id>` URL).
+  **If the user names table(s) without their schema/DB, ask for it here**
+  before Recon — confirmed live that resolving a bare table name without
+  a known schema means guessing across schemas, which cost 29 wasted
+  calls with zero hits in one real test. See `reference/workflows/discover.md`
+  → "Routing: raw warehouse tables."
 - Mixed prose (the resolver handles it)
 
 **Q3: What would you like to build, and where would you like the workbook placed in Sigma?**
@@ -85,7 +98,7 @@ Claude: [bash scripts/api/_env.sh]
 
 Claude: [writes the verbatim prompt to workbooks/<name>/prompts/<ts>.md]
         [resolves URL slugs via scripts/api/find-file-by-urlid.sh]
-        [enters Recon — mcp-describe.sh on the data model]
+        [enters Recon — GET /v2/dataModels/{id}/spec on the data model]
         [drafts the Plan, surfaces for user approval]
 ```
 
@@ -97,6 +110,8 @@ and stops — does NOT continue into Recon with broken auth.
 The kickoff captures **raw inputs**. It does NOT replace the plan-first workflow.
 
 After the kickoff, the agent proceeds through Recon → Plan proposal → User approval → Build → GET-back → Visual verify, per `docs/iteration-playbook.md`. **Plan approval is the only authorization for state-changing API calls** (POST/PUT to `/v2/workbooks/spec`, `/v2/dataModels/*/spec`). The 3-gate does not pre-authorize anything except the auth warm-up itself.
+
+**Recon is bounded to what the user named** — the source data model, the destination folder, anything they specifically referenced. Searching the broader workspace for a reference implementation (e.g., hunting for an existing workbook to reverse-engineer an unsupported chart kind) is a distinct, riskier action that needs an explicit check-in first, even though it's read-only. And that check-in — like plan approval — only counts if the agent actually stops: if there's no way to mechanically block for a response, end the turn immediately after asking; don't treat silence as approval. See `reference/conventions.md` → "Recon scope boundary + hard stop on permission questions" for the full rule and the incident that surfaced it.
 
 ### Optional: session-local enrichment via `local-` prefix
 
@@ -113,10 +128,10 @@ readers know it's opt-in, not canonical.
 
 Read-only discovery against the Sigma workspace routes through the bash
 helpers in `scripts/api/`. Full protocol — routing table
-(name/URL/messy-prose), MCP-vs-REST fallback, `mcp-describe` batching
-rules, resolver JSON shape, friendly-vs-raw column-name normalization,
-troubleshooting — lives in `reference/workflows/discover.md`. Load it
-before any recon step.
+(name/URL/messy-prose), REST-first / MCP-blocked status, `mcp-describe`
+batching rules, resolver JSON shape, friendly-vs-raw column-name
+normalization, troubleshooting — lives in `reference/workflows/discover.md`.
+Load it before any recon step.
 
 For Sigma **function references** and **REST API endpoint shapes** (not
 workspace discovery), use the native `mcp__claude_ai_Sigma_Docs__*`
@@ -129,8 +144,8 @@ Each `scripts/api/*.sh` sources `_env.sh` on first call — loads `.env`
 (or reads already-exported `SIGMA_*` env vars, e.g. in Claude Code web
 sessions), mints an OAuth token via the repo-local
 `scripts/api/get-token.sh` (a self-contained `client_credentials`
-exchange against `/v2/auth/token`), and caches it at
-`/tmp/.sigma_token` (mode 0600, 55-min TTL). Callers pass no env vars,
+exchange against `/v2/auth/token`), and caches it at a per-user path
+under `$SIGMA_TOKEN_CACHE` (mode 0600, 55-min TTL). Callers pass no env vars,
 no tokens. **CLI and web run identical code** — the skill owns auth
 end-to-end rather than delegating to the upstream `sigma-api` plugin
 (which isn't installed in web sessions opened from a downloaded zip).
@@ -200,14 +215,20 @@ session and cite chunk + section in the plan.
 
 | Task type | Required chunks |
 |---|---|
-| Every build (always) | `reference/conventions.md` + `reference/workflows/plan.md` + `reference/specification/schema.md` + `reference/specification/layout.md` |
+| Every build (always) | `reference/conventions.md` + `reference/workflows/plan.md` + `reference/workflows/composition.md` + `reference/specification/schema.md` + `reference/specification/layout.md` |
 | Viz-heavy build (>2 chart kinds, KPI rows, pivots) | + each `reference/specification/<kind>.md` for the kinds in the plan (`charts.md`, `kpis.md`, `tables.md`, etc.) |
 | Formula-heavy build (custom calcs, metrics, Lookup, Rollup) | + `reference/specification/formulas.md` |
 | Conditional-formatting build (table/pivot cell coloring) | + `reference/specification/tables.md` |
-| Container-styling-heavy build | + `reference/specification/containers.md` |
-| Image / divider / embed / dynamic-text build | + `reference/specification/others.md` + `reference/specification/text.md` |
+| Styling / theming build (container styling, background images, `settings.theme.overrides`, theme color references) | + `reference/specification/containers.md` + `reference/specification/theming.md` |
+| Image / divider / embed / dynamic-text build | + `reference/specification/others.md` + `reference/specification/text.md` + `reference/specification/dynamic-values.md` (for `{{formula}}` interpolation) |
 | Map-bearing build (`geography-map`, `point-map`, `region-map`) | + `reference/specification/maps.md` |
-| Round-trip / edge-case work (POST failures, format fields, axis controls) | + `reference/scope-and-edge-cases.md` + `reference/workflows/validate.md` |
+| Multi-surface build (tabbed containers, modal pages, navigation, page breaks) | + `reference/specification/pages.md` + `reference/specification/layout.md` → "Five-tag grammar" |
+| Interactive build (buttons, on-select, overlays, tab-switching, input-table writeback) | + `reference/specification/actions.md` + `reference/specification/dynamic-values.md` |
+| Editable / writeback build (input tables, `insert-rows`/`delete-rows`) | + `reference/specification/input-tables.md` + `reference/specification/actions.md` |
+| Agent / chat build (`agents[]`, `chat` element, agent tools) | + `reference/specification/agents.md` + `reference/specification/actions.md` + `reference/specification/dynamic-values.md` |
+| Scenario / what-if / forecast build | + `reference/patterns/scenario-modeling.md` + `reference/specification/controls.md` + `reference/specification/input-tables.md` |
+| Round-trip / edge-case work (POST failures, format fields, axis controls) | + `reference/scope-and-edge-cases.md` + `reference/workflows/validate.md` + `reference/capability-ledger.md` |
+| Deciding whether a feature is "supported" (before writing any "not supported" claim) | + `reference/capability-ledger.md` → the retest protocol, first |
 | From-image build (screenshot / mockup reproduction) | + `reference/workflows/from-image.md` (load BEFORE data discovery) |
 
 If chunks are skipped, the agent is operating on memory of prior sessions —
@@ -224,45 +245,12 @@ and not approvable. Full plan-first methodology in
 Workbook prompts often underspecify the dashboard — the user names the data
 and the question, not the visualizations or the filter set. Do not jump
 straight to JSON. Before authoring any spec, surface a written plan and
-wait for explicit approval.
-
-The plan must include:
-
-1. **Destination.** Where the workbook (or data-model update) will be
-   published — folder `name` + `path` + `urlId`, resolved from the
-   user's prompt via `sigma-resolve.py`. If the user named a folder
-   inline, restate it back so they can correct it. If the user did NOT
-   name a folder, this becomes an Open Decision (item 6) the plan must
-   ask, not a default the agent picks. **Plan approval IS the
-   authorization to POST/PUT** — there is no separate "are you sure?"
-   prompt at publish time. The destination must therefore be named
-   explicitly in the plan, never implied.
-2. **Data inventory.** What table(s) and which columns are actually
-   available — pulled via `scripts/api/mcp-describe.sh datamodel-element
-   <dm-id> <el-id>` (returns column types, descriptions, formulas, and
-   the data model's metrics catalog), not assumed. Name any column
-   that's missing from your assumed schema (e.g. there *is* a customer
-   dimension; there *isn't* a margin field) so the user can correct
-   before you build on a wrong premise.
-3. **Inference rationale.** For each visualization you propose, one line
-   on *why this chart, this dimension, this metric* answers the user's
-   question. "Quantity, not revenue, because popularity is a unit-volume
-   question" beats "bar chart of products."
-4. **Filter set with reasoning.** Filters aren't free — each one earns
-   its place by mapping to an axis the user is likely to interrogate.
-   List the filters in priority order with a one-line reason, and note
-   what you considered and dropped.
-5. **Layout sketch.** A textual block-diagram of the page is enough
-   (header / KPI row / chart grid / detail). Don't draw the XML yet.
-6. **Open decisions.** Anywhere you had to guess (proxy for a missing
-   dimension, scope of demographic data to bring in, whether to modify a
-   shared data model, **missing/ambiguous destination folder**). Phrase
-   as questions the user can yes/no.
-
-Only after the user approves should you write spec JSON. This convention
-exists because rebuilding a wrong dashboard costs more iterations than
-the 60 seconds spent writing the plan, and because the user can correct
-data-model assumptions you'd otherwise discover at POST time.
+wait for explicit approval. The plan has 6 required sections — Destination,
+Data inventory, Inference rationale, Filter set with reasoning, Layout
+sketch, Open decisions. **Full spec, wording, and worked example:
+`reference/workflows/plan.md` → "Plan content — 6 required sections."**
+This summary is insurance, not a substitute — `plan.md` is already
+required reading on every build per the hard gate above.
 
 If the user has already given you an explicit plan, skip to building —
 don't re-propose.
@@ -270,35 +258,22 @@ don't re-propose.
 ### Approval model — plan is the only gate
 
 Plan approval authorizes **every state-changing API call covered by the
-plan, except DELETE**. POST/PUT to `/v2/workbooks/spec` and
-`/v2/dataModels/*/spec` run silently — `.claude/settings.json` allowlists
-both `Bash(scripts/api/*)` (which covers `publish-workbook.sh`) and the
-direct curl patterns. The user reviews one plan, approves, and the
-build + publish proceed without further interruption.
-
-The rules:
-
-- **POST/PUT inside the workbook/data-model namespace:** silent. Plan
-  approval is the authorization.
-- **POST/PUT outside that namespace** (e.g. `/v2/connections`,
-  `/v2/files` mutations): not pre-authorized — surface to the user.
-- **DELETE on any endpoint:** always asks. The `ask` patterns in
-  `.claude/settings.json` (`Bash(curl * -X DELETE *)` and
-  `Bash(scripts/api/delete-*)`) override the broad `Bash(scripts/api/*)`
-  allow. Even when the plan mentions deletion, every DELETE call is
-  surfaced for explicit confirmation.
-
-That contract puts the burden on the agent:
-
-- The plan needs to name the destination folder (item 1 above) and
-  any shared object it intends to mutate (data models, exemplars) —
-  the `publish-workbook.sh` wrapper can't resolve where to POST
-  without an explicit destination. If a state-changing call wasn't
-  covered in the plan, don't make it — amend the plan first.
-- Any future deletion-wrapper script must be named `scripts/api/delete-*`
-  so the ask pattern catches it. Do not bypass via a different name.
+plan, except DELETE** — POST/PUT to `/v2/workbooks/spec` and
+`/v2/dataModels/*/spec` run silently, DELETE always asks regardless of
+what the plan says. **Full rules and rationale:
+`reference/workflows/plan.md` → "Approval model — plan is the only
+gate."** The practical upshot: the plan must name the destination
+folder and any shared object it intends to mutate before you build —
+if a state-changing call wasn't covered in the plan, amend the plan
+first rather than making it.
 
 ## Conventions
+
+Quick-reference summaries — insurance, not substitutes. The naming
+rubric's full detail lives in `reference/naming.md`; the cross-cutting
+rules (passthrough mandate, ID collisions, etc.) live in
+`reference/conventions.md`, required reading on every build per the
+hard gate above.
 
 ### Naming
 
@@ -334,8 +309,18 @@ ID semantics and is separate from this workbook-spec behavior.
 
 - Partial updates are NOT supported — both CREATE and UPDATE require the complete spec.
 - A single model cannot contain multiple identically-named tables.
-- Input tables, Python elements, and references to other Sigma elements in custom
-  SQL are **not supported** by the round-trip endpoints. Avoid generating these.
+- Python elements, and references to other Sigma elements in custom
+  SQL are **not supported** by the *data-model* round-trip endpoints
+  (`sigma-data-models` skill scope). Avoid generating these in a data-model spec.
+  **Correction (2026-08-03):** this line previously also named input tables,
+  which read as a blanket prohibition and contradicted
+  `reference/specification/input-tables.md`. Input tables are a
+  *workbook* spec element (`kind: "input-table"`), not a data-model
+  construct — they are fully supported, **live-POST verified**
+  (2026-08-04, Wave 3 / C5) after starting from GET-spec confirmation
+  against 5 real production workbooks holding 27 input-table instances
+  combined. See `reference/capability-ledger.md`. This constraint is
+  scoped to data-model round-trip only.
 
 ### Secrets
 
@@ -396,13 +381,16 @@ violated, ship a broken workbook.
 ## Publishing
 
 Use `scripts/api/publish-workbook.sh` for POST / PUT / GET / metadata —
-it auto-runs `validate-spec.py` before writes, injects auth, and 401-retries
-via `sigma_curl`. Full subcommand reference, DELETE via direct-curl, and
-the response-only-fields-to-strip list live in `reference/workflows/crud.md`.
+it auto-runs `validate-spec.py` before writes, injects auth, 401-retries
+via `sigma_curl`, and auto-runs `audit-workbook-schema.sh` after every
+successful POST/PUT to catch `error`-typed columns that
+`verify-workbook.sh` misses. Full subcommand reference, DELETE via
+direct-curl, and the response-only-fields-to-strip list live in
+`reference/workflows/crud.md`.
 
 ## Reference and examples
 
-`reference/` is split into three groups. Load only what the current task
+`reference/` is split into four groups. Load only what the current task
 needs — see "Required reading before authoring" above for the hard-gate
 mapping.
 
@@ -415,9 +403,9 @@ mapping.
   summary-bar pattern, two-tier sourcing, notes-promotion guardrail).
   **Required on every build.**
 - `reference/scope-and-edge-cases.md` — what the code spec does NOT
-  represent (KPI period-comparison, chart series colors / theme
-  palette, pivot heatmap status, axis-label rotation), GET-spec 500
-  cases, warehouse-table fallback, verifying via generated SQL.
+  represent (chart series theme palette, pivot heatmap status,
+  axis-label rotation), GET-spec 500 cases, warehouse-table fallback,
+  verifying via generated SQL.
 - `reference/history.md` — dated incident log. Inline rules in the
   chunks are evergreen; this file carries when each rule was verified
   and the incident that surfaced it.
@@ -428,14 +416,22 @@ mapping.
 
 - `plan.md` — the 6-section plan format, `Chunks Read:` requirement,
   plan-is-the-only-gate approval model. **Required on every build.**
+- `composition.md` — design judgment, not spec shape: the sizing ladder
+  (single thing / focused view / dashboard), when to stop and ask, three
+  defaults (hidden base tables, sort ranked tables by the ranked metric,
+  never expose intermediate joins), and surfacing structural choices in
+  the build summary. Ported 2026-08-03 from the real upstream
+  `sigma-workbooks` skill. **Required on every build.**
 - `crud.md` — POST/GET/PUT mechanics + ID preservation on POST +
   response-only fields to strip on PUT + the `publish-workbook.sh`
   wrapper.
-- `discover.md` — `mcp-search.sh` / `mcp-describe.sh` sequencing,
-  REST fallbacks, friendly-vs-raw warehouse name normalization.
-- `validate.md` — `validate-spec.py` (pre-submit, 13 checks) +
-  `verify-workbook.sh` (post-create compilation check) + cryptic-error
-  decoding table.
+- `discover.md` — REST-first discovery (`search-files.sh` sequencing,
+  data-model-vs-table routing, raw-table schema-confirmation rule),
+  friendly-vs-raw warehouse name normalization, MCP status (blocked).
+- `validate.md` — `validate-spec.py` (pre-submit, 17 checks) +
+  `verify-workbook.sh` (SQL-compile check) +
+  `audit-workbook-schema.sh` (data-layer schema audit, auto-run by
+  `publish-workbook.sh`) + cryptic-error decoding table.
 - `from-image.md` — image-to-spec workflow (screenshot, mockup,
   PDF, BI-tool export). Load BEFORE data discovery when the user
   supplies a target image.
@@ -443,22 +439,26 @@ mapping.
 **Specification files (`reference/specification/`):**
 
 Per-element-kind recipes + gotchas. Each file opens with the relevant
-OpenAPI `jq` recipe.
+OpenAPI `jq` recipe. Dated verification status and correction history
+for these files lives in `reference/history.md` and
+`reference/capability-ledger.md`, not here — this list is a routing
+index, not a changelog.
 
 - `schema.md` — top-level workbook spec shape, response-only fields,
-  ID preservation on POST, top-level `folders` + `themeOverrides` +
-  `theme` element kind, minimal working example.
+  ID preservation on POST, top-level `folders` + `settings` (theme
+  home) + `theme` element kind, minimal working example.
 - `formulas.md` — formula DSL: column-reference rules,
   `[Metrics/<X>]`, boolean operators trap (`Not` requires space),
   JSON dot notation, window functions, `&` for string concat.
 - `formatting.md` — d3-format + strftime cheat sheets, SI prefix
   currency.
 - `layout.md` — top-level layout XML (24-col grid), XML-vs-object
-  `layout` distinction, `<GridContainer>` vs `<LayoutElement>`
+  `layout` distinction, `<Container>` vs `<Element>`
   silent failure, `gridTemplateRows` normalization quirk,
   page-structure pattern.
 - `containers.md` — `kind: container` + `style` (bg + border) +
-  `backgroundImage` (object with fit/align/tiling), 5-recipe catalog.
+  `backgroundImage` (`source:{kind:"url"|"upload"}` + fit/align/tiling
+  style) + 5-recipe catalog.
 - `charts.md` — bar/line/area/combo/scatter/pie/donut + canonical
   `columnId`/`columnIds` axis shape + `refMarks` + `trendlines` +
   `dataLabel`/`seriesDataLabel` + 3-variant `color` channel
@@ -467,14 +467,15 @@ OpenAPI `jq` recipe.
 - `kpis.md` — `kpi-chart` shape (`value.columnId`), sparkline via
   date dimension, styled-name object form, element-level `layout`
   object (`anchor`), polymorphic `description`, no-delta limitation.
-- `tables.md` — `table` + `pivot-table` + `input-table` (minimal) +
+- `tables.md` — `table` + `pivot-table` +
   `conditionalFormats` (4 variants) + `tableStyle` +
   `tableComponents` + styled-name + `noDataText` + `summary` bar.
-- `controls.md` — 11 accepted controlTypes (`list`, `date-range`,
+  (`input-table` moved to `input-tables.md`.)
+- `controls.md` — 15 accepted controlType values (`list`, `date-range`,
   `date`, `text`, `text-area`, `number`, `number-range`, `slider`,
   `range-slider`, `toggle`/`switch`/`checkbox`, `segmented`,
-  `hierarchy`) + 8 date-range modes + `top-n` filter + multi-binding
-  patterns + control/column collision reference. Note:
+  `hierarchy`, `drill`) + 8 date-range modes + `top-n` filter +
+  multi-binding patterns + control/column collision reference. Note:
   `controlType: "dropdown"` / `"radio"` currently POST-reject; use
   `list + selectionMode: "single"` instead.
 - `text.md` — Markdown subset + inline HTML (color, font-size,
@@ -482,7 +483,31 @@ OpenAPI `jq` recipe.
   text embeds with d3 format suffix.
 - `others.md` — `divider` (with `direction`/`align`/`style`) +
   `image` + `embed` elements + `{{formula}}` in URLs +
-  buttons/modals unsupported note.
+  `data:image/svg+xml;base64,...` inline SVG.
+- `theming.md` — `document.settings.theme.overrides` (`pageWidth`, `space`, +
+  14 more fields cataloged from the live schema; relocated from the
+  now-rejected top-level `themeOverrides` 2026-08-10) + the reusable
+  `{kind:"theme", ref}` color-value form usable across many elements'
+  color fields.
+- `pages.md` — `tabbed-container` (labels-only element + flat
+  tab-content siblings), modal pages (`document.overlays[]`, relocated
+  from `pages[].type:"modal"` 2026-08-10), `navigation`, `page-break`.
+- `actions.md` — `button` element + the `actions[]`/`effects[]`
+  vocabulary: all 10 effects (`set-control-value`, `clear-control`,
+  `open-overlay`/`close-overlay`, `navigate`, `select-tab`,
+  `open-url`, `insert-rows`/`delete-rows`/`update-rows`).
+- `dynamic-values.md` — the slot → accepted-form matrix for dynamic
+  values: all 5 structured `{type: ...}` forms (`constant`, `formula`,
+  `column`, `control`, `agent-input`), plus `{{formula}}` string
+  interpolation.
+- `input-tables.md` — `input-table` element: `empty`/`linked` source,
+  all 6 column shapes (system, key, editable, dropdown, formula, plus
+  `filters`/`sort`/`conditionalFormats`), `insert-rows`/`delete-rows`/
+  `update-rows` writeback.
+- `agents.md` — top-level `agents[]` + `chat` element + agent
+  `tools[].steps[]` (reusing the `actions.md` effect vocabulary,
+  `agent-input` for model-supplied values) + `{{formula}}` in
+  `instructions`.
 - `maps.md` — `geography-map` + `point-map` + `region-map` (with
   `regionType` enum) + single-vs-array shape gotcha on binding
   fields.
@@ -490,30 +515,51 @@ OpenAPI `jq` recipe.
   prefixes + friendly-name normalization.
 - `sources.md` — `table` / `data-model` / `join` / `union` / `sql` /
   `transpose` source kinds + two-tier sourcing pattern reference.
-- `example-full.yaml` — verbatim multi-page reference spec from the
-  upstream skill (KPIs, charts, join sources, controls, custom
-  layout). Read this when in doubt about overall shape.
+- `example-full.yaml` — multi-page reference spec (KPIs, charts, join
+  sources, controls, custom layout) authored locally for this skill.
+  Read this when in doubt about overall shape.
 
-`examples/` — known-good specs to seed generation. Clone-and-modify rather
-than editing in place. Match your task to the closest exemplar below;
-`.prompt.md` sidecars (where present) describe the design intent.
+**Pattern files (`reference/patterns/`):**
 
-- **Minimal / single-page:**
-  - `data-model-sourced-overview.json` — smallest data-model-fed dashboard.
-  - `data-model-sourced-single-page-inventory-health.json` (2026-07-02) — 10-element single-page dashboard with conditional formatting + two shared controls filtering multiple elements. Canonical minimal ops-triage exemplar. Paired with `.prompt.md`.
-- **Modern 3-page workbook (canonical):**
-  - `data-model-sourced-sales-command-center.json` (2026-07-02) — 50-element 3-page workbook exercising every 2026-06/2026-07 skill fix (segmented control variants, `gap` safe default, distinct-column `holeValue`, KPI `value.columnId`, element `layout.anchor`, `themeOverrides`, styled `name`, card `style`, hierarchy control, `list + single`). Paired with `.prompt.md`. **First exemplar to load for any modern multi-page build.**
-  - `data-model-sourced-exec-kpi-scorecard.json` (2026-07-02, post-fix) — 35-element exec-review workbook with pivot calculated PoP % delta column, US-state `region-map`, scatter for outlier detection, and two-tier anomaly-detection derived table (`groupings` + conditional-Sum, NOT `Rollup`). Paired with `.prompt.md`. Clone when the ask includes geographic viz or anomaly detection.
-- **Catalog / kitchen-sink** (chart-kind + control-type coverage):
-  - `data-model-sourced-multi-element-catalog.json` — 6 chart kinds, 3 KPIs, 4 control types, multi-level `groupings`.
-  - `data-model-sourced-multi-level-aggregated-table.json` — combo-chart shape reference.
-  - `additional-workbook-features-chart-and-control-catalog.json` — area stacking, pie chart, scatter.
-- **Pattern-specific:**
-  - `data-model-sourced-cohort-pivot.json` — two-tier sourcing (raw → derived) + `Rollup` + weeks-since-first-action pivot. Clone for cohort/retention.
-  - `data-model-sourced-multi-page-profitability-attrition.json` — 4-page reference with per-page source tables + `Lookup()` demographic passthrough.
-  - `styled-card-dashboard.json` — five-recipe element styling system (card framing, accent borders, subtle controls). Paired with `.prompt.md`.
-- **Deprecated (kept for archaeological reference only):**
-  - `data-model-sourced-kpi-overview-with-containers.json` — predates the 2026-07-02 KPI `value.columnId` fix + `controlId` collision rule. Do NOT clone verbatim; use `data-model-sourced-sales-command-center.json` instead.
+Compositions of already-verified `specification/` primitives, not a
+spec surface of their own — deliberately filed separately.
+
+- `scenario-modeling.md` — forecasting via `CallVariant` + what-if via
+  parameter controls + 2 structural gotchas (controls can't usefully
+  filter input-tables/pivots; input-table rows can't be seeded from
+  code).
+
+`examples/` — known-good specs to seed generation. Clone-and-modify
+rather than editing in place. `.prompt.md` sidecars (where present)
+describe design intent. Match your task along **three independent
+axes** — page complexity, calculation complexity, and writeback
+complexity — not one ladder; a build can be simple on one axis and
+complex on another (e.g. a 1-page dashboard with a cohort pivot).
+
+**1. Simple 1-page dashboards:**
+- `data-model-sourced-overview.json` — smallest data-model-fed dashboard.
+- `data-model-sourced-single-page-inventory-health.json` — 10-element, conditional formatting + two shared controls. Canonical minimal ops-triage exemplar.
+- `dashboard-department-scorecard.json` — KPI row (period-comparison + timeline styling) + one ranked chart + one ranked table, base table on a hidden page. **First load for a plain read-only exec dashboard, no interactivity.**
+
+**2. Complex multi-page dashboards:**
+- `data-model-sourced-sales-command-center.json` — 50-element 3-page workbook. **First load for any modern multi-page build.**
+- `data-model-sourced-exec-kpi-scorecard.json` — 35-element 3-page workbook with a US-state `region-map` and a two-tier anomaly-detection derived table. Clone for geographic viz or anomaly detection.
+- `data-model-sourced-multi-page-profitability-attrition.json` — 4-page reference with per-page source tables + `Lookup()` demographic passthrough.
+
+**3. Specialized calculation approaches:**
+- `data-model-sourced-cohort-pivot.json` — two-tier sourcing (raw → derived) + `Rollup` + weeks-since-first-action pivot. Clone for cohort/retention.
+- `data-model-sourced-multi-level-aggregated-table.json` — a live 3-level `groupings` example (`tables.md`'s own inline example only goes 2 levels).
+- `reference/patterns/scenario-modeling.md` — `CallVariant` forecasting + what-if parameter controls. **No example workbook yet** — a documented gap, not silently missing; don't assume one exists.
+
+**4. Simple writeback (notes / value overrides, no agent):**
+- **No example yet** — a documented gap. Compose directly from `reference/specification/input-tables.md`: an `input-table` with editable columns, no agent, no buttons beyond `insert-rows`/`delete-rows`/`update-rows` if needed.
+
+**5. Complex writeback (scenario modeling + approval workflow):**
+- `input-table-agent-scenario-planner.json` — editable input-table + AI agent generating scenario rows via `agent-input`. Covers "enter parameters, generate a forecast." **Does not cover an approval handoff to a second user** — a documented gap; if asked for one, compose from already-verified primitives (a `status` column, a filtered approver view, and either an `update-rows`-driven approve button or inline cell editing — see `reference/specification/actions.md` → "`insert-rows` / `delete-rows` / `update-rows`" for the confirmed shape) and live-verify the composed shape before treating it as settled.
+
+**Other (cross-cutting, not use-case-specific):**
+- `data-model-sourced-multi-element-catalog.json` — 6 chart kinds, 3 KPIs, 4 control types side by side in one page. Reach for this when you need to see several chart kinds at once, not as a realistic dashboard to clone wholesale.
+- `styled-card-dashboard.json` — five-recipe element styling system (card framing, accent borders, subtle controls) and the canonical nested-`Container` page-structure example (see `reference/specification/layout.md`).
 
 For data-model field-level mechanics (columns, metrics, relationships,
 filters, controls, formatting, folders, column-level security, workflows)

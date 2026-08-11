@@ -24,20 +24,21 @@ detail table").
 ## Required reading before authoring (HARD GATE)
 
 Before writing ANY spec content, `Read` the chunk files mapped to the
-task type. This is not optional, and not a "scan the index then
-proceed." The agent must `Read` the actual chunk files in the current
-session and cite chunk + section in the plan.
+task type in **`SKILL.md` → "Required reading before authoring."** This
+is not optional, and not a "scan the index then proceed." The agent must
+`Read` the actual chunk files in the current session and cite chunk +
+section in the plan.
 
-| Task type | Required chunks |
-|---|---|
-| Every build (always) | `reference/conventions.md` + this file + `reference/specification/schema.md` + `reference/specification/layout.md` |
-| Viz-heavy build (>2 chart kinds, KPI rows, pivots) | + each `reference/specification/<kind>.md` for the kinds in the plan |
-| Formula-heavy build (custom calcs, metrics, Lookup, Rollup) | + `reference/specification/formulas.md` |
-| Conditional-formatting build (table/pivot cell coloring) | + `reference/specification/tables.md` |
-| Container-styling-heavy build (Capability 1 patterns) | + `reference/specification/containers.md` |
-| Image / divider / dynamic-text build (Capabilities 2-4) | + `reference/specification/others.md` + `reference/specification/text.md` |
-| Round-trip / edge-case work (POST failures, axis controls, schema drift) | + `reference/scope-and-edge-cases.md` + `reference/workflows/validate.md` |
-| From-image build (screenshot/mockup reproduction) | + `reference/workflows/from-image.md` (load BEFORE data discovery) |
+**Single-sourced 2026-08-03.** The task-type → chunk mapping table used
+to be duplicated here (and in `CLAUDE.md` and
+`docs/iteration-playbook.md`), and the copies had already drifted from
+`SKILL.md`'s version — missing the map-bearing row, carrying stale
+"Capability 1"/"Capabilities 2-4" labels from an old numbering scheme,
+and listing "schema drift" where `SKILL.md` said "format fields." That
+drift is the same failure class as the validator/`validate.md` doc-code
+mismatch (`reference/history.md`). `SKILL.md`'s table is now the only
+copy; this file, `CLAUDE.md`, and `docs/iteration-playbook.md` all point
+here instead of re-listing the rows.
 
 If chunks are skipped, the agent is operating on memory of prior
 sessions — which is exactly how the 2026-05-19 regression happened
@@ -71,9 +72,13 @@ must be named explicitly in the plan, never implied.
 ### 2. Data inventory
 
 What table(s) and which columns are actually available — pulled via
-`scripts/api/mcp-describe.sh datamodel-element <dm-id> <el-id>`,
-NOT assumed. The describe output returns column types, descriptions,
-formulas, and the data model's metrics catalog.
+`GET /v2/dataModels/{id}/spec` (data model: returns column types,
+descriptions, formulas, and the metrics catalog in one call) or
+`scripts/api/list-table-columns.sh` (raw table: raw warehouse names
+only), NOT assumed. `scripts/api/mcp-describe.sh datamodel-element
+<dm-id> <el-id>` returns the same info as SQL DDL when it works, but
+expect exit 3 under this skill's `client_credentials` auth model — see
+`reference/workflows/discover.md` → "MCP status."
 
 Name any column that's missing from your assumed schema (e.g. there
 *is* a customer dimension; there *isn't* a margin field) so the user
@@ -98,9 +103,9 @@ correct mismatched interpretations before any spec is written.
 
 **Every formula in the rationale must trace to recon** — see
 `reference/conventions.md` → "Inference anchor." `[Metrics/X]`
-references must be in the `mcp-describe` metric catalog;
-sibling-column references must be declared on a recon-confirmed
-source column.
+references must be in the `GET /v2/dataModels/{id}/spec` metric
+catalog; sibling-column references must be declared on a
+recon-confirmed source column.
 
 ### 4. Filter set with reasoning
 
@@ -173,7 +178,7 @@ reference/specification/charts.md, reference/specification/formulas.md
 - Source element: `<element-name>` (id `<element-id>`)
 
 ### 2. Data inventory
-- Recon command: `scripts/api/mcp-describe.sh datamodel-element <dm> <el>`
+- Recon command: `GET /v2/dataModels/<dm>/spec`
 - Available columns: <list>
 - Available metrics: <list>
 - Missing from prompt's premise: <list, if any>
@@ -240,7 +245,15 @@ That contract puts the burden on the agent:
 2. **Validate** via `scripts/validate-spec.py workbooks/<name>/spec.json`.
    Fix everything reported.
 3. **POST** via `scripts/api/publish-workbook.sh post workbooks/<name>/spec.json`.
-   The wrapper runs validation first, then POSTs.
+   The wrapper runs validate-spec.py, POSTs, then auto-runs
+   `audit-workbook-schema.sh`. Exit 1 means the audit found errored
+   columns; fix and PUT before proceeding. **Exit 3 means the audit
+   couldn't run at all** (its `mcp-describe` dependency failed at the
+   transport level — always, under this skill's `client_credentials`
+   auth model; see `reference/workflows/discover.md` → "MCP status") —
+   this is not a pass either; fall back to a manual UI check. **Do not
+   report the workbook as built until audit returns clean (exit 0),
+   and do not treat exit 3 as equivalent to exit 0.**
 4. **GET-back** via `scripts/api/publish-workbook.sh get-spec <wb-id>`.
    Save to `workbooks/<name>/spec.json` (overwriting the authored
    version) so subsequent PUTs start from the server's source of

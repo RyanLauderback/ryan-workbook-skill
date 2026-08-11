@@ -11,7 +11,17 @@ preserved verbatim — see the "ID preservation" section below.
 
 ## OpenAPI reference
 
+**This URL is confirmed dead (404) as of 2026-08-04** — Sigma's docs
+site restructured. See `reference/specification/schema.md` →
+"OpenAPI reference — known-dead URL" for the full finding, including
+why the two current replacement bundles do NOT cover this. If you
+already have a cached `/tmp/sigma-api.json` from before this date,
+it's still a valid reference. Otherwise, fall back to live-POST
+bisection against the real API — see `reference/capability-ledger.md`
+→ "retest protocol."
+
 ```bash
+# BROKEN as of 2026-08-04 — do not rely on this succeeding:
 curl -sf https://help.sigmacomputing.com/openapi/sigma-computing-public-rest-api.json > /tmp/sigma-api.json
 jq '.paths."/v2/workbooks/spec".post, .paths."/v2/workbooks/{workbookId}/spec".get, .paths."/v2/workbooks/{workbookId}/spec".put' /tmp/sigma-api.json
 ```
@@ -27,11 +37,16 @@ scripts/api/publish-workbook.sh get-meta <workbookId>                 # url, nam
 ```
 
 The wrapper:
-- Sources `_env.sh` for auth (caches OAuth token at `/tmp/.sigma_token`)
-- Runs `scripts/validate-spec.py` before POST (fails fast on the
+- Sources `_env.sh` for auth (caches OAuth token at a per-user `$SIGMA_TOKEN_CACHE` path)
+- Runs `scripts/validate-spec.py` before POST/PUT (fails fast on the
   passthrough-coverage and controlid-collision gotchas)
 - Uses `sigma_curl` for auth-injected, 401-retrying requests
 - Reports the HTTP status alongside the body
+- Runs `scripts/api/audit-workbook-schema.sh` after every successful
+  POST/PUT — catches `error`-typed columns that `verify-workbook.sh`
+  misses. Non-zero exit propagates. See
+  `reference/workflows/validate.md` → §4. Suppress with
+  `SIGMA_SKIP_AUDIT=1`.
 
 **No `delete` subcommand** — DELETE goes via direct curl on purpose so
 it triggers the `ask` pattern in `.claude/settings.json`. See
@@ -96,18 +111,11 @@ the current value from any working workbook and use it.
 ## Response-only fields to strip on PUT
 
 `GET /v2/workbooks/<id>/spec` returns extra server-managed fields.
-When you take a GET response and PUT it back (the standard iteration
-flow), strip these before submitting:
-
-- `workbookId`
-- `url`
-- `documentVersion`
-- `latestDocumentVersion`
-- `ownerId`
-- `createdBy`
-- `updatedBy`
-- `createdAt`
-- `updatedAt`
+**Canonical list + the fields' actual on-write behavior (ignored, not
+rejected):** `reference/specification/schema.md` → "Response-only
+fields." When you take a GET response and PUT it back (the standard
+iteration flow), stripping them first is cleaner and still the
+recommended practice, even though the server doesn't require it.
 
 `workbook-manifest.py` recognizes these as response-only and won't
 flag them as unknown keys.
@@ -171,7 +179,7 @@ skill's per-workbook folder is preferred for iteration audit trails.
 
 | Error | Cause | Fix |
 |---|---|---|
-| `401 Unauthorized` | Token missing or expired | Delete `/tmp/.sigma_token`, re-run any `scripts/api/*.sh` to re-fetch |
+| `401 Unauthorized` | Token missing or expired | Delete the file at `$SIGMA_TOKEN_CACHE`, re-run any `scripts/api/*.sh` to re-fetch |
 | `403 Forbidden` on POST | Credential can't create in this folder | Ask user's Sigma admin to check folder permissions |
 | `schemaVersion mismatch` | Hardcoded `1` against a newer API | Read `schemaVersion` from a reference GET, use that value |
 | `Invalid kind: pages[0].elements[N], got "..."` | Inner element shape mismatch (NOT kind unsupported) | See `reference/workflows/validate.md` → "Decoding cryptic errors" |

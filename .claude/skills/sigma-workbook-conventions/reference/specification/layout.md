@@ -1,12 +1,31 @@
 # Layout
 
-Top-level `layout` XML — when to write it, the two-tag grammar, and
-the silent-failure traps the OpenAPI doesn't surface.
+Top-level `layout` XML — when to write it, the **five-tag grammar**
+(corrected 2026-08-03 — see below), and the silent-failure traps the
+OpenAPI doesn't surface.
 
 **Default to writing explicit `layout` XML for multi-element workbooks.**
 
 For container element bodies (the `kind: "container"` JSON placeholders
-that pair with `<GridContainer>` in this XML), see `containers.md`.
+that pair with `<Container>` in this XML), see `containers.md`.
+
+## Table of contents
+
+- [When to write layout vs. let Sigma auto-arrange](#when-to-write-layout-vs-let-sigma-auto-arrange)
+- [Layout is top-level (NOT per-page)](#layout-is-top-level-not-per-page)
+- [Two flavors: XML layout vs. element-level `layout` object](#two-flavors-xml-layout-vs-element-level-layout-object)
+- [Five-tag grammar](#five-tag-grammar)
+  - [`<TabbedContainer>` / `<Tab>` — the two tags the old grammar missed](#tabbedcontainer--tab--the-two-tags-the-old-grammar-missed)
+  - [Modal pages get a 12-column grid, not 24](#modal-pages-get-a-12-column-grid-not-24)
+- [`<Container>` vs `<Element>` — silent failure](#container-vs-element--silent-failure)
+- [`gridTemplateRows`: keep it `"auto"`](#gridtemplaterows-keep-it-auto)
+  - [Side-by-side](#side-by-side)
+  - [Stacked rows inside a container](#stacked-rows-inside-a-container)
+  - [Container children use LOCAL row coordinates — not the page's absolute numbering](#container-children-use-local-row-coordinates--not-the-pages-absolute-numbering)
+- [After CREATE: IDs are preserved](#after-create-ids-are-preserved)
+- [Page-structure pattern (apply by default)](#page-structure-pattern-apply-by-default)
+- [Cross-cutting rules](#cross-cutting-rules)
+- [What `layout` does NOT capture](#what-layout-does-not-capture)
 
 ## When to write layout vs. let Sigma auto-arrange
 
@@ -19,7 +38,7 @@ Write explicit `layout` when **any** of these apply:
 - The user asked for specific positioning ("logo on left, title on
   right", "KPIs across the top", side-by-side charts).
 - There's a `kind: "container"` element on the page. Containers
-  without a matching `<GridContainer>` are functionally no-ops.
+  without a matching `<Container>` are functionally no-ops.
 - The workbook has more than ~4 elements on a page. Auto-arrange
   becomes a long scroll.
 
@@ -36,19 +55,43 @@ below are copy-paste); a visually broken dashboard is expensive.
 ## Layout is top-level (NOT per-page)
 
 `layout` lives on the **top-level workbook spec**, not nested under
-`pages[i]`. Multi-page workbooks concatenate per-page XML documents:
+`pages[i]`. Per-page layout placed under `pages[i]` is silently discarded —
+verified 2026-05-11. See `reference/history.md`.
+
+**Correction (2026-08-03) — exactly ONE `<?xml ?>` declaration for the
+whole string, not one per page.** This file previously said multi-page
+workbooks "concatenate per-page XML documents... each with its own `<?xml
+?>` declaration." **That's wrong.** A real, live-POST-verified spec
+(`b9e4bc48-afa8-4085-b94d-fdd61c06bf0d`, the Wave 1 probe workbook) shows
+a single declaration followed by every `<Page>` as a bare sibling:
 
 ```json
 {
   "name": "Multi-page Dashboard",
   "pages": [...],
-  "layout": "<?xml ...?><Page id=\"page-1\" ...>...</Page><?xml ...?><Page id=\"page-2\" ...>...</Page>"
+  "layout": "<?xml version=\"1.0\" encoding=\"utf-8\"?><Page id=\"page-1\" ...>...</Page><Page id=\"page-2\" ...>...</Page>"
 }
 ```
 
-Each `<Page id="...">` matches a `pages[].id`. Per-page layout
-placed under `pages[i]` is silently discarded — verified
-2026-05-11. See `reference/history.md`.
+**NOT** `<?xml ?><Page id="page-1">...</Page><?xml ?><Page id="page-2">...</Page>`
+(a declaration repeated per page). A repeated-declaration layout string is
+rejected by the live API — but with a **generic, unhelpful 400** that gives
+no field-level hint at all:
+
+```
+HTTP 400 {"code":"invalid_request","message":"An error has occurred. Please try again later (incident-id=...)"}
+```
+
+This doesn't match any of the other cryptic-error patterns in
+`reference/workflows/validate.md` (`Invalid kind`, `Cannot resolve
+columns`, etc.) — it's a distinct, worse failure mode: no path, no field
+name, nothing to grep for. Verified 2026-08-03 during a real build-mode
+session (not a probe) via bisection: a spec with one `<?xml ?>` per page
+(the natural thing to write from this file's old, wrong prose) 400'd
+every time; collapsing to a single leading declaration fixed it
+immediately with no other change. Each `<Page id="...">` still matches a
+`pages[].id`. See `reference/history.md` → "2026-08-03 — Multi-page
+`<?xml ?>` declaration bug" for the full incident.
 
 ## Two flavors: XML layout vs. element-level `layout` object
 
@@ -81,16 +124,40 @@ These are two different things using the same key name:
 Both can coexist — the XML places the KPI on the grid; the object
 sets the KPI content's vertical anchor within its allocated cell.
 
-## Two-tag grammar
+## Five-tag grammar
+
+**Corrected 2026-08-03.** Previously documented as a "two-tag grammar"
+with a "closed" attribute set — both claims were wrong. Live-POST
+verified (not just observed via GET-spec) against a scratch probe
+workbook: the grammar has **five** tags, and two of them
+(`TabbedContainer`, `Tab`) exist specifically to represent the
+`tabbed-container` element kind — see `pages.md` for that element's
+JSON shape.
+
+**Breaking change, confirmed live 2026-08-10:** two of the five tags
+were renamed — `<GridContainer>` → `<Container>` and `<LayoutElement>`
+→ `<Element>`. Same attributes on each (`elementId`, `type`,
+`gridColumn`, `gridRow`, `gridTemplateColumns`, `gridTemplateRows`),
+only the tag name changed; every example below uses the new names.
+`<TabbedContainer>`/`<Tab>` did **not** rename — confirmed unchanged,
+still exactly as documented. `<Page>` itself is also unchanged.
 
 ```xml
 <?xml version="1.0" encoding="utf-8"?>
 <Page type="grid" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto" id="<pageId>">
-  <GridContainer elementId="<containerId>" type="grid" gridColumn="1 / 25" gridRow="1 / 4"
+  <Container elementId="<containerId>" type="grid" gridColumn="1 / 25" gridRow="1 / 4"
                  gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
-    <LayoutElement elementId="<childId>" gridColumn="1 / 13" gridRow="1 / 4"/>
-  </GridContainer>
-  <LayoutElement elementId="<elementId>" gridColumn="1 / 25" gridRow="4 / 16"/>
+    <Element elementId="<childId>" gridColumn="1 / 13" gridRow="1 / 4"/>
+  </Container>
+  <Element elementId="<elementId>" gridColumn="1 / 25" gridRow="4 / 16"/>
+  <TabbedContainer elementId="<tabsElementId>" type="tabbed-container" gridColumn="1 / 25" gridRow="16 / 40">
+    <Tab gridTemplateColumns="repeat(12, 1fr)" gridTemplateRows="auto">
+      <Element elementId="<tabAContentId>" gridColumn="1 / 13" gridRow="1 / 6"/>
+    </Tab>
+    <Tab gridTemplateColumns="repeat(12, 1fr)" gridTemplateRows="auto">
+      <Element elementId="<tabBContentId>" gridColumn="1 / 13" gridRow="1 / 6"/>
+    </Tab>
+  </TabbedContainer>
 </Page>
 ```
 
@@ -98,20 +165,74 @@ Each `<Page id>` matches a `pages[].id`. Each `elementId` matches an
 element on that page. `gridColumn` / `gridRow` use standard CSS grid
 line syntax (`start / end`); the default grid is **24 columns wide**.
 
-## `<GridContainer>` vs `<LayoutElement>` — silent failure
+### `<TabbedContainer>` / `<Tab>` — the two tags the old grammar missed
 
-> ⚠️ Use `<GridContainer>` for any tag that has children nested
-> inside it. `<LayoutElement type="grid">` with children parses
+- **`<TabbedContainer elementId="X" type="tabbed-container" ...>`** —
+  positioned exactly like a `<Container>` (same `gridColumn`/
+  `gridRow` attributes), but appears as a **direct child of `<Page>`**
+  in every observed case, not nested inside a `<Container>`.
+  `elementId` matches the workbook's `kind:"tabbed-container"` element.
+  Verified: the whole tag round-trips byte-for-byte through POST → GET
+  when authored as shown above.
+- **`<Tab gridTemplateColumns="..." gridTemplateRows="...">`** — **no
+  `elementId` at all.** Tabs bind to the element's own `tabs[]` JSON
+  array **positionally** — the first `<Tab>` is `tabs[0]`, the second
+  is `tabs[1]`, and so on. This is a silent-failure class identical in
+  shape to the `<Container>` vs `<Element>` trap below: get
+  the `<Tab>` order wrong (or add/remove one without updating both the
+  XML and the `tabs[]` array in lockstep) and content lands on the
+  wrong tab with no error. Each `<Tab>` carries its **own**
+  `gridTemplateColumns`/`gridTemplateRows` (independent of the parent
+  page's), and its children are ordinary `<Element>`/
+  `<Container>` tags — tab content elements are declared as **flat
+  siblings on the same page** in the JSON (never nested inside the
+  tabbed-container element itself); only the layout XML expresses which
+  tab they belong to.
+- **TabbedContainers nest.** A `<Tab>` may contain another
+  `<TabbedContainer>` (observed in a harvested production workbook, not
+  yet independently POST-verified by this skill).
+
+### Modal pages get a 12-column grid, not 24
+
+**Live-POST discovery, 2026-08-03** (framing note added 2026-08-10:
+modals were still `pages[].type:"modal"` entries at the time of this
+discovery; they're `document.overlays[]` entries now, but the modal's
+content is still expressed as a `<Page>` block in the layout XML using
+the overlay's own id, so this finding is unaffected): a modal's
+`<Page>` block authored with `gridTemplateColumns="repeat(24, 1fr)"`
+(matching a normal page) round-tripped with that attribute **silently
+rewritten to `repeat(12, 1fr)`** on GET-back — Sigma normalizes modal
+pages to a 12-column grid regardless of what's authored. `gridColumn` values
+written for a 24-column span (e.g. `"1 / 25"`) were still accepted and
+stored without a clamp/error, but author modal-page content against a
+**12-column** grid (e.g. `"1 / 13"` for full width) to avoid relying on
+this normalization. See `pages.md` for the modal page's JSON shape.
+
+**The modal page's `<Page>` tag itself still says `type="grid"`, never
+`type="modal"`.** Verified 2026-08-03 against the same probe workbook and
+independently reproduced during a later real build-mode session: the
+modal/non-modal distinction lives *only* in the JSON `pages[].type`
+field. Mirroring it into the layout XML (`<Page type="modal" ...>`) is a
+natural mistake to make and is wrong — combined with the repeated-`<?xml
+?>`-declaration bug above, it produces the same generic, field-less 400.
+Correct modal-page layout tag: `<Page type="grid"
+gridTemplateColumns="repeat(12, 1fr)" gridTemplateRows="auto"
+id="<modalPageId>">`.
+
+## `<Container>` vs `<Element>` — silent failure
+
+> ⚠️ Use `<Container>` for any tag that has children nested
+> inside it. `<Element type="grid">` with children parses
 > successfully **as a leaf** and the children are silently dropped —
 > no error, the child elements just disappear from the page.
 
-- `<LayoutElement elementId="X" .../>` — **leaf**. Positions a single
+- `<Element elementId="X" .../>` — **leaf**. Positions a single
   element. No children.
-- `<GridContainer elementId="X" ...>...</GridContainer>` — **container**.
-  Wraps child `<LayoutElement>`s inside its own inner grid.
+- `<Container elementId="X" ...>...</Container>` — **container**.
+  Wraps child `<Element>`s inside its own inner grid.
 
 `scripts/validate-spec.py`'s `layout-element-ids` check catches some
-layout-XML issues pre-POST but does NOT detect `<LayoutElement>`-
+layout-XML issues pre-POST but does NOT detect `<Element>`-
 with-children. The manual layout pass in `validate.md` does.
 
 ## `gridTemplateRows`: keep it `"auto"`
@@ -125,18 +246,27 @@ with-children. The manual layout pass in `validate.md` does.
 Because row tracks collapse to `"auto"`, height comes from children,
 not from the container's `gridTemplateRows`. Two patterns work:
 
+> ⚠️ **Both examples below happen to use a container whose own `gridRow`
+> starts at page-row 1** (`"1 / 4"`), which makes each child's `gridRow`
+> look like it "matches the parent." That's a coincidence of these
+> specific examples, not the rule — see "Container children use
+> LOCAL row coordinates" further down for the real rule (children are
+> always local to their own container, starting at row 1, regardless of
+> where the container itself sits on the page) and the bug that resulted
+> from missing this distinction.
+
 ### Side-by-side
 
 Children share the container's row range, differ by `gridColumn`:
 
 ```xml
-<GridContainer elementId="kpi-row" type="grid"
+<Container elementId="kpi-row" type="grid"
                gridColumn="1 / 25" gridRow="1 / 4"
                gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
-  <LayoutElement elementId="kpi-1" gridColumn="1 / 9"   gridRow="1 / 4"/>
-  <LayoutElement elementId="kpi-2" gridColumn="9 / 17"  gridRow="1 / 4"/>
-  <LayoutElement elementId="kpi-3" gridColumn="17 / 25" gridRow="1 / 4"/>
-</GridContainer>
+  <Element elementId="kpi-1" gridColumn="1 / 9"   gridRow="1 / 4"/>
+  <Element elementId="kpi-2" gridColumn="9 / 17"  gridRow="1 / 4"/>
+  <Element elementId="kpi-3" gridColumn="17 / 25" gridRow="1 / 4"/>
+</Container>
 ```
 
 ### Stacked rows inside a container
@@ -146,19 +276,66 @@ container's outer `gridRow` to encompass its children — declare
 generously and let normalization clamp:
 
 ```xml
-<GridContainer elementId="header-row" type="grid"
+<Container elementId="header-row" type="grid"
                gridColumn="1 / 25" gridRow="1 / 12"
                gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
-  <LayoutElement elementId="title"  gridColumn="1 / 25" gridRow="1 / 4"/>
-  <LayoutElement elementId="kpi-1"  gridColumn="1 / 9"  gridRow="4 / 12"/>
-  <LayoutElement elementId="kpi-2"  gridColumn="9 / 17" gridRow="4 / 12"/>
-  <LayoutElement elementId="kpi-3"  gridColumn="17 / 25" gridRow="4 / 12"/>
-</GridContainer>
+  <Element elementId="title"  gridColumn="1 / 25" gridRow="1 / 4"/>
+  <Element elementId="kpi-1"  gridColumn="1 / 9"  gridRow="4 / 12"/>
+  <Element elementId="kpi-2"  gridColumn="9 / 17" gridRow="4 / 12"/>
+  <Element elementId="kpi-3"  gridColumn="17 / 25" gridRow="4 / 12"/>
+</Container>
 ```
 
 Use stacked rows when you want a section header above a row of
 charts inside the same container, instead of moving those elements
 out to the page level.
+
+### Container children use LOCAL row coordinates — not the page's absolute numbering
+
+**This is the single most consequential layout rule in this file, and
+every prior version of this section (through 2026-08-03) had it wrong.**
+A `<Container>`'s children's `gridRow`/`gridColumn` values are
+**local to that container** — the container's own top edge is row 1,
+regardless of where that container's own `gridRow` sits in the page's
+absolute numbering. They are **not** page-absolute coordinates, and they
+do **not** need to match the parent's own `gridRow` attribute.
+
+**Proof, from a real canonical exemplar**
+(`examples/dashboard-department-scorecard.json`, a known-good, clone-safe
+spec): its `ctr-kpi-row` container sits at page-absolute `gridRow="4 / 12"`,
+but its three KPI children all carry `gridRow="1 / 9"` — starting at row 1,
+not row 4. The header container immediately above it happens to sit at
+`gridRow="1 / 4"` (page-absolute row 1), so its children *also* read
+`gridRow="1 / 4"` — which looks like "children match the parent" only by
+coincidence, because that particular container's local and absolute
+numbering happen to coincide (both start at row 1). Every illustrative
+example earlier in this file (the "Five-tag grammar" snippet, "Side-by-side",
+"Stacked rows") made the same mistake of only ever showing containers that
+start at page-row 1 — hiding the local/absolute distinction entirely.
+
+**The bug this caused, concretely (2026-08-03, a real build-mode session):**
+authoring children with *absolute* page-matching coordinates (matching
+what the parent's own `gridRow` said) caused Sigma to keep silently
+re-expanding the container on every subsequent PUT — because a child
+`gridRow` of, say, `"26 / 58"` was being interpreted as *local* row 26
+through 58 within a container whose local space was never meant to be
+that large, forcing the container to keep growing to accommodate it. Each
+follow-up fix that re-matched the *new*, larger absolute numbers made the
+problem visibly worse, not better, because the underlying misunderstanding
+compounded with every round-trip. No error anywhere in the pipeline
+(POST/validate/verify all passed) — this is a pure layout consequence,
+and it reads to a user as "the dashboard is poorly laid out."
+
+**The fix, confirmed stable across a PUT → GET-back round-trip with zero
+drift:** give every `<Container>`'s children `gridRow`/`gridColumn`
+values relative to that container's own top-left (starting at `1`),
+independent of the container's own page-absolute position. Only the
+container's *own* `gridRow`/`gridColumn` (on the `<Container>` tag
+itself) uses page-absolute coordinates to position it relative to
+siblings. `<Tab>` children already worked this way correctly (tab content
+uses local coordinates starting at 1, as documented in "Five-tag grammar"
+above) — this rule generalizes that same local-coordinate model to every
+`<Container>`, not just `<Tab>`.
 
 ## After CREATE: IDs are preserved
 
@@ -193,8 +370,8 @@ For multi-section pages, nest containers:
 - Inner container per side-by-side pair (each 12-col span inside the outer).
 - Section-header text element above each section.
 
-See `examples/data-model-sourced-kpi-overview-with-containers.json`
-for a canonical page-structure exemplar.
+See `examples/styled-card-dashboard.json` for a canonical page-structure
+exemplar (outer section container wrapping a nested KPI-row container).
 
 ## Cross-cutting rules
 
@@ -208,6 +385,10 @@ corollary, summary-bar pattern — see `reference/conventions.md`.
 - `ContainerSpacing` / inter-element gap — UI-only.
 - `gap` between grid cells — UI-only.
 
-Layout XML attributes are limited to `gridColumn`, `gridRow`,
+Layout XML attributes observed so far: `gridColumn`, `gridRow`,
 `gridTemplateColumns`, `gridTemplateRows`, `elementId`, `type`, `id`.
-See `containers.md` → "What style does NOT capture."
+**Correction (2026-08-03):** this was previously called a closed set —
+it isn't. `<Tab>` carries no `elementId` at all (positional binding —
+see "Five-tag grammar" above), and the set may not be exhaustive beyond
+that; treat it as "observed," not "closed." See `containers.md` → "What
+style does NOT capture."

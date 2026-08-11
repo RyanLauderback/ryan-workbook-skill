@@ -1,9 +1,10 @@
 # Tables
 
-The `table`, `pivot-table`, and `input-table` element kinds.
+The `table` and `pivot-table` element kinds. (`input-table` moved to
+`input-tables.md` — 2026-08-04, Wave 3 / C5.)
 
 ```bash
-jq '.components.schemas.Table, .components.schemas.PivotTable, .components.schemas.InputTable' /tmp/sigma-api.json
+jq '.components.schemas.Table, .components.schemas.PivotTable' /tmp/sigma-api.json
 ```
 
 The `table` element is the most common element kind and the primary way
@@ -24,7 +25,7 @@ Table element:
   - [`visibleAsSource`](#visibleassource)
   - [`folders` — column folder groupings](#folders--column-folder-groupings)
   - [`tableStyle` — banding + presets + header styling](#tablestyle--banding--presets--header-styling)
-  - [`tableComponents` — collapsed columns](#tablecomponents--collapsed-columns)
+  - [`tableComponents` — collapsed columns / summary bar toggles](#tablecomponents--collapsed-columns--summary-bar-toggles)
 - [Conditional formatting — `conditionalFormats`](#conditional-formatting--conditionalformats) (single, backgroundScale, fontScale, dataBars)
 
 Pivot tables:
@@ -36,9 +37,7 @@ Pivot tables:
 
 Input tables:
 
-- [Input tables](#input-tables) (minimal — value limited until actions land)
-
-- [Cross-references](#cross-references)
+- [Input tables](#input-tables) — moved to `input-tables.md` (2026-08-04, Wave 3 / C5, live-POST verified)
 
 ---
 
@@ -139,6 +138,22 @@ canonical. Legacy `{id, columnId}` and `{id}`-only forms are
 render-hint serializations from older GET-backs — they don't
 aggregate. Use the canonical shape for any new authoring. See
 `reference/history.md` → "2026-05-13 — Cohort iteration."
+
+**Every column in `columns[]` must be either a `groupBy` dimension or a
+`calculations` entry once a table has `groupings` — an orphaned column
+(declared in `columns[]` but referenced by neither) renders as a
+nonsensical "summary" value instead of the actual per-row data.**
+Verified 2026-08-03: a state-filtered detail table grouped by Product
+Name only, with `Store State` declared as a plain passthrough column
+outside the grouping structure (kept only so a filter control had an
+`id` to bind to), displayed a garbled value for Store State instead of
+the state name. Fix: fold every column that needs to appear meaningfully
+into either `groupBy` (as an additional dimension — a compound
+`groupBy: ["col-a", "col-b"]` is accepted, not just single-column) or
+`calculations`. If a column only exists so a control can filter on it
+and doesn't need to be *visible*, that's a signal to reconsider whether
+it belongs on this element at all, rather than leaving it structurally
+homeless.
 
 Multi-level groupings produce real `GROUP BY` SQL — one per level,
 joined so each detail row carries the aggregates from its ancestor
@@ -242,16 +257,24 @@ live in the OpenAPI:
 jq '.components.schemas.TableStyle // .. | select(.properties?.banding? or .properties?.preset?)' /tmp/sigma-api.json
 ```
 
-### `tableComponents` — collapsed columns
+### `tableComponents` — collapsed columns / summary bar toggles
+
+**Corrected 2026-08-10.** Earlier versions of this doc described
+`collapsedColumns` as an array of column IDs. The only live instance
+found shows a **string** toggle instead, paired with a sibling
+`summaryBar` field (also a string):
 
 ```json
 "tableComponents": {
-  "collapsedColumns": ["col-order-id", "col-cust-key"]
+  "collapsedColumns": "hidden",
+  "summaryBar": "hidden"
 }
 ```
 
-`collapsedColumns` names column IDs whose values should render
-collapsed by default. UI-side hint; doesn't affect data.
+Both `collapsedColumns` and `summaryBar` read as UI-visibility toggles
+for a components region, not a per-column list. Confirmed value for
+both: `"hidden"`. Other enum values are unverified — don't guess what
+else the enum might include.
 
 ## Conditional formatting — `conditionalFormats`
 
@@ -318,11 +341,17 @@ Style block supports `backgroundColor`, `color`, `bold`, `italic`,
 
 ### `dataBars` — inline horizontal bars
 
+**Confirmed 2026-08-10 (2 independent live examples — one `table`, one
+`pivot-table`):** uses `scheme` (array of colors), not a singular
+`color`. Also carries an optional `includeValues: true` boolean
+(undocumented; also seen alongside `backgroundScale`).
+
 ```json
 {
   "type": "dataBars",
   "columnIds": ["col-revenue"],
-  "color": "#3b82f6"
+  "scheme": ["#eaff00", "#8300ed"],
+  "includeValues": true
 }
 ```
 
@@ -431,52 +460,11 @@ See `reference/conventions.md` → "Two-tier sourcing."
 
 # Input tables
 
-The `input-table` element is an editable table — users type values
-directly into cells, backed by a provisioned warehouse table.
-
-**Status (2026-07-02):** documented by upstream eng skill; no
-harvested exemplar in this skill's corpus yet. Practical value is
-limited until Sigma exposes actions (buttons that write cell values
-back to the warehouse) via the spec. Keep the docs minimal until
-that lands.
-
-## Shape
-
-Required fields: `id`, `kind: input-table`, `source`, `inputMode`.
-
-```json
-{
-  "id": "input-forecast",
-  "kind": "input-table",
-  "inputMode": "edit",
-  "source": { "kind": "empty" },
-  "columns": [
-    { "id": "col-region",   "name": "Region",   "columnType": "text" },
-    { "id": "col-forecast", "name": "Forecast", "columnType": "number" }
-  ]
-}
-```
-
-- `inputMode`: `"edit"` observed. Inspect the OpenAPI for other modes.
-- `source.kind`: `"empty"` (blank editable table) or `"linked"` (backed
-  by an existing warehouse table).
-- Column shape differs from `table` — includes `columnType` and system
-  columns (audit fields). Pull the full schema before authoring:
-
-```bash
-jq --arg k input-table 'first(.. | objects | select((.allOf? and any(.allOf[]?; .properties?.kind?.enum==[$k])) or .properties?.kind?.enum==[$k]))' /tmp/sigma-api.json
-```
-
-Also supports `filters`, `conditionalFormats` (see above), `sort`,
-`summary`, and the styled title-section `name` / `noDataText`.
-
-## Cross-references
-
-- `reference/conventions.md` → "Passthrough mandate" — every table
-  that's a source for downstream elements should declare full
-  passthrough columns.
-- `reference/conventions.md` → "Explicit-`name` rule" — every
-  passthrough column needs an explicit `name`.
-- `reference/conventions.md` → "Summary-bar pattern" — use
-  `summary` for aggregate-then-categorize compositions.
-- `formulas.md` — column reference rules + the #1 mistake.
+Moved to its own chunk: **`reference/specification/input-tables.md`**
+(2026-08-04, Wave 3 / C5) — split out because it's the only element
+kind where the workbook holds state *the user typed*, which changes
+correctness reasoning globally (idempotency, seeding, latest-row-wins).
+Every shape there is now live-POST verified (previously GET-spec/harvest
+evidence only): both `empty` and `linked` source variants, all six
+column shapes, and `insert-rows`/`delete-rows` writeback. See that file
+for the full reference.

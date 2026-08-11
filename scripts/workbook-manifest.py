@@ -207,7 +207,30 @@ def has_template_var(s: Any) -> bool:
     return bool(re.search(r"\{\{[^}]*\}\}|\$\{[^}]*\}", s))
 
 
-def page_summary(page: dict, idx: int, layouts_by_pid: dict[str, str]) -> list[str]:
+def _element_ids_in_layout(layout_xml: str) -> set[str]:
+    """Every elementId a page's layout XML chunk claims via a placement tag.
+
+    Elements moved from a per-page pages[].elements nesting to a single
+    flat document.elements array 2026-08-10 (Sigma's API now rejects the
+    old nesting outright) — page membership is no longer in the JSON at
+    all, only in the layout XML. Same 3 placement tags validate-spec.py's
+    elements-placed-in-layout check already uses.
+    """
+    try:
+        root = ET.fromstring(layout_xml)
+    except ET.ParseError:
+        return set()
+    return {
+        el.attrib.get("elementId")
+        for el in root.iter()
+        if el.tag in ("LayoutElement", "GridContainer", "TabbedContainer")
+        and el.attrib.get("elementId")
+    }
+
+
+def page_summary(
+    page: dict, idx: int, layouts_by_pid: dict[str, str], all_elements: list[dict]
+) -> list[str]:
     lines: list[str] = []
     pid = page.get("id", "<no-id>")
     pname = page.get("name", "<unnamed>")
@@ -223,7 +246,9 @@ def page_summary(page: dict, idx: int, layouts_by_pid: dict[str, str]) -> list[s
     if unknown_page_keys:
         lines.append(f"- ⚠️  unknown page-level keys: `{unknown_page_keys}`")
 
-    elements = page.get("elements", []) or []
+    page_layout = layouts_by_pid.get(pid)
+    page_element_ids = _element_ids_in_layout(page_layout) if page_layout else set()
+    elements = [el for el in all_elements if el.get("id") in page_element_ids]
     lines.append(f"- elements: {len(elements)}")
 
     by_kind: dict[str, int] = {}
@@ -234,7 +259,6 @@ def page_summary(page: dict, idx: int, layouts_by_pid: dict[str, str]) -> list[s
         breakdown = ", ".join(f"{k}={v}" for k, v in sorted(by_kind.items()))
         lines.append(f"- kind breakdown: {breakdown}")
 
-    page_layout = layouts_by_pid.get(pid)
     if page_layout:
         lines.extend(summarize_layout(page_layout))
 
@@ -534,10 +558,9 @@ def top_level_summary(spec: dict) -> list[str]:
 
     # Cross-page kind tally.
     all_kinds: dict[str, int] = {}
-    for p in pages:
-        for el in (p.get("elements") or []):
-            k = el.get("kind", "<no-kind>")
-            all_kinds[k] = all_kinds.get(k, 0) + 1
+    for el in (spec.get("elements") or []):
+        k = el.get("kind", "<no-kind>")
+        all_kinds[k] = all_kinds.get(k, 0) + 1
     if all_kinds:
         lines.append("")
         lines.append("**Element kinds across all pages:**")
@@ -552,11 +575,10 @@ def top_level_summary(spec: dict) -> list[str]:
 def collect_unknown_kinds(spec: dict) -> list[str]:
     """Net-new element kinds across the whole spec — surfaces at the top."""
     found: set[str] = set()
-    for p in spec.get("pages") or []:
-        for el in (p.get("elements") or []):
-            k = el.get("kind")
-            if k and k not in KNOWN_KINDS:
-                found.add(k)
+    for el in (spec.get("elements") or []):
+        k = el.get("kind")
+        if k and k not in KNOWN_KINDS:
+            found.add(k)
     return sorted(found)
 
 
@@ -592,7 +614,7 @@ def _load_spec(spec_path: Path) -> dict:
     not installed the script emits a helpful install hint rather than a
     cryptic ImportError. JSON loading uses stdlib only.
     """
-    text = spec_path.read_text()
+    text = spec_path.read_text(encoding="utf-8")
     suffix = spec_path.suffix.lower()
     if suffix in (".yaml", ".yml"):
         try:
@@ -620,8 +642,9 @@ def manifest(spec_path: Path) -> str:
                      + ", ".join(f"`{k}`" for k in new_kinds))
         lines.append("")
 
+    all_elements = spec.get("elements") or []
     for idx, page in enumerate(spec.get("pages") or []):
-        lines.extend(page_summary(page, idx, layouts_by_pid))
+        lines.extend(page_summary(page, idx, layouts_by_pid, all_elements))
         lines.append("")
 
     lines.append("---")
@@ -643,9 +666,14 @@ def main() -> int:
 
     out = manifest(args.spec)
     if args.out:
-        args.out.write_text(out)
+        args.out.write_text(out, encoding="utf-8")
         print(f"Wrote {args.out}")
     else:
+        # The manifest contains non-ASCII markers (warning triangles, etc.);
+        # reconfigure stdout to UTF-8 with a graceful fallback rather than
+        # crash on a non-UTF-8 locale (Windows cp1252, or LC_ALL=C on a
+        # minimal Linux image).
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
         sys.stdout.write(out)
         sys.stdout.write("\n")
     return 0

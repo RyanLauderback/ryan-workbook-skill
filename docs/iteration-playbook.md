@@ -22,7 +22,7 @@ silently fail to render. Trusting HTTP 200 alone produces broken dashboards.
 
 Before the per-attempt protocol runs, a build-mode session opens with a
 3-question `AskUserQuestion` gate (full spec in
-`.claude/skills/sigma-workbook-conventions/SKILL.md` → "Session modes"):
+`.claude/skills/sigma-workbook-conventions/SKILL.md` → "Session kickoff"):
 
 - **Q1: Is your `.env` set up?**
   - Yes → run `bash scripts/api/_env.sh` to warm the token cache, then
@@ -43,19 +43,15 @@ Step 1 (Recon).
 ### 0. Required reading (HARD GATE before any spec authoring)
 
 Before drafting a plan or writing any spec JSON, `Read` the chunk files
-mapped to the task type. This is not optional and not satisfied by reading
-the SKILL.md index alone.
+mapped to the task type in the skill's
+`.claude/skills/sigma-workbook-conventions/SKILL.md` →
+"Required reading before authoring." This is not optional and not
+satisfied by reading the SKILL.md index alone.
 
-| Task type | Required chunks |
-|---|---|
-| Every build | `.claude/skills/sigma-workbook-conventions/reference/conventions.md` + `.claude/skills/sigma-workbook-conventions/reference/workflows/plan.md` + `.claude/skills/sigma-workbook-conventions/reference/specification/schema.md` + `.claude/skills/sigma-workbook-conventions/reference/specification/layout.md` |
-| Viz-heavy build | + per-kind files under `.claude/skills/sigma-workbook-conventions/reference/specification/` (`charts.md`, `kpis.md`, `tables.md`, etc.) |
-| Formula-heavy build | + `.claude/skills/sigma-workbook-conventions/reference/specification/formulas.md` |
-| Map-bearing build | + `.claude/skills/sigma-workbook-conventions/reference/specification/maps.md` |
-| Round-trip / edge-case work | + `.claude/skills/sigma-workbook-conventions/reference/scope-and-edge-cases.md` + `.claude/skills/sigma-workbook-conventions/reference/workflows/validate.md` |
-
-For the full task-type → chunks table (with more categories), see the
-skill's `SKILL.md` → "Required reading before authoring."
+**Single-sourced 2026-08-03** — this file used to carry its own partial
+copy of the task-type → chunks table, which had already drifted (missing
+several rows `SKILL.md` had gained). `SKILL.md`'s table is now the only
+copy; do not re-add rows here.
 
 The plan in step 2 must include a `Chunks Read:` line listing files
 consulted. Plans without it are not approvable. This gate was added 2026-05-19
@@ -71,11 +67,15 @@ prompt file so future iterations don't re-discover them.
 # Folder — resolve url-id slug to the internal UUID.
 scripts/api/find-file-by-urlid.sh <folder-urlId>
 
-# Data model — list elements, then describe the one you'll source from.
-# Returns SQL DDL with column names, types, descriptions, formulas, AND the
-# metrics catalog with usage examples. Replaces hand-walking the JSON spec.
-scripts/api/mcp-describe.sh datamodel <dataModelId>
-scripts/api/mcp-describe.sh datamodel-element <dataModelId> <elementId>
+# Data model — GET the full spec: columns, types, descriptions, formulas,
+# and the metrics catalog, all in one call.
+source scripts/api/_env.sh
+sigma_curl "$SIGMA_BASE_URL/v2/dataModels/<dataModelId>/spec" | jq .
+
+# scripts/api/mcp-describe.sh returns the same info as SQL DDL, but is
+# blocked under this skill's client_credentials auth model (see
+# reference/workflows/discover.md → "MCP status") — try it
+# opportunistically if you like, expect exit 3.
 ```
 
 If the data model has `metrics`, plan to use `[Metrics/<Name>]` rather than
@@ -195,6 +195,9 @@ TS=$(date +%Y%m%d-%H%M)
 scripts/api/publish-workbook.sh get-spec <workbookId> \
   | jq . > workbooks/<name>/iterations/${TS}-from-sigma.json
 
+# The 9 fields deleted below are response-only — canonical list lives in
+# reference/specification/schema.md → "Response-only fields." If Sigma's
+# API adds/removes one, update that list first, then this command.
 diff <(jq -S 'del(.workbookId, .url, .documentVersion, .latestDocumentVersion, .ownerId, .createdBy, .updatedBy, .createdAt, .updatedAt)' workbooks/<name>/spec.json) \
      <(jq -S 'del(.workbookId, .url, .documentVersion, .latestDocumentVersion, .ownerId, .createdBy, .updatedBy, .createdAt, .updatedAt)' workbooks/<name>/iterations/${TS}-from-sigma.json)
 ```
@@ -277,7 +280,7 @@ treated as immutable — prefer adding new ones over modifying old.
   account/data quirks.** Account specifics go to memory, not skills.
 - **Hand-editing exemplars.** They're anchors. If an exemplar needs an edit,
   it usually means it's wrong — replace it instead.
-- **Echoing tokens or secrets.** The cached token at `/tmp/.sigma_token` is
+- **Echoing tokens or secrets.** The cached token at `$SIGMA_TOKEN_CACHE` is
   mode 0600 and never logged. Never `echo $SIGMA_API_TOKEN` or paste it into a
   prompt/file/commit.
 - **Skipping recon** because "the user told me what they want." Recon catches

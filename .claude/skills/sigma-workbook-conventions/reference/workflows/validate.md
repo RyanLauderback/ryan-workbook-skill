@@ -3,9 +3,12 @@
 Validation runs in three phases:
 
 1. **Pre-submit** — `scripts/validate-spec.py` catches what's visible
-   in the spec text (13 checks).
-2. **Post-create** — `scripts/api/verify-workbook.sh` catches what
-   Sigma's compiler discovers but the spec parser tolerates.
+   in the spec text (17 checks; see the note on JSON/YAML input below).
+2. **Post-create** — `scripts/api/verify-workbook.sh` catches
+   unresolved / circular refs in the compiled SQL;
+   `scripts/api/audit-workbook-schema.sh` catches `error`-typed
+   columns in the schema. Both run automatically via
+   `publish-workbook.sh`.
 3. **Visual** — open the workbook URL and confirm it renders.
 
 Both API phases matter. Silent compilation failures are the largest
@@ -19,23 +22,54 @@ Load this before any POST or PUT.
 scripts/validate-spec.py workbooks/<name>/spec.json
 ```
 
-13 checks (as of 2026-07-02):
+Accepts `.json` or `.yaml`/`.yml` (YAML needs PyYAML or `yq` on PATH —
+added 2026-08-03, ported from upstream's `validate-spec.sh` fallback chain).
+
+**This table was reconciled against the actual `CHECKS` array on 2026-08-03.**
+It had drifted badly: 5 rows below described checks that did not exist in
+code (`id-uniqueness`, `schema-keys`, `layout-element-ids`,
+`metrics-existence`, and `name-required-on-passthrough` — the last one was
+implemented, calibrated against 12 canonical examples + 5 live production
+workbooks, found to false-positive at massive scale (587 hits on one working
+dashboard), and retracted rather than shipped — see the function's docstring
+in `validate-spec.py` and `reference/history.md`). 4 implemented checks had
+no row at all. The table below is the 14 entries in `CHECKS` from that
+reconciliation, plus a 15th (`schema-version`) added the same day after
+a live Wave 1 POST probe caught an invalid `schemaVersion` value that
+local validation alone couldn't have flagged without this check. A 16th
+(`action-refs-resolve`) was added the same wave (Wave 2 / C3) alongside
+the action/effect vocabulary itself. A 17th (`channel-exclusivity`) was
+added 2026-08-04 after a Wave 3 test session hit the exact channel-reuse
+rejection `reference/conventions.md` had documented since 2026-07-02 but
+flagged as "planned; not yet implemented" — the second real-session
+recurrence of the same failure mode.
 
 | # | Check | What it catches |
 |---|---|---|
-| 1 | `passthrough-coverage` | Chart elements with ≤2 cols sourced from tables with ≥5 cols (the passthrough-collapse signature). FAIL on charts; WARN on thin-but-not-collapsed. KPIs excluded. See `reference/conventions.md` → "Passthrough mandate." |
-| 2 | `controlid-collision` | Controls whose `controlId` matches a column `name` or `id` on the filtered element. See `reference/conventions.md` → "Control/column ID collision." |
-| 3 | `name-required-on-passthrough` | Passthrough columns missing explicit `name` field. See `reference/conventions.md` → "Explicit-`name` rule." |
-| 4 | `id-uniqueness` | Duplicate element IDs or column IDs within scope. |
-| 5 | `bare-ref-resolution` | Bare `[column_name]` references (no `/`) that don't match any sibling column or controlId. **WARN-level** — Sigma auto-infers some column names (e.g. `DateTrunc("week", [Date])` → "Week of Date") that this regex-based check can't predict, so flags require inspection. Added 2026-05-21 — ported from upstream `validate-spec.sh`. See `reference/specification/formulas.md` → "The #1 formula mistake." |
-| 6 | `schema-keys` | Unknown top-level keys (warns when GET-spec metadata wasn't stripped before PUT). |
-| 7 | `layout-element-ids` | Layout XML `elementId` attrs that don't match any element on the page (silent-drop trap). |
-| 8 | `metrics-existence` | `[Metrics/<X>]` references that aren't in the data model's recon catalog (best-effort — requires recon JSON in `workbooks/<name>/recon/`). |
-| 9 | `control-filter-column-exists` | Control `filters[].columnId` values that don't exist on the target element. Catches typos that pass POST but silently break every downstream query on the page. Added 2026-07-02 after a fresh-agent build test surfaced this class of bug. Includes "did you mean" suggestions for near-match column IDs. |
-| 10 | `kpi-value-references-aggregation` | KPI value formulas that bare-ref sibling columns whose formulas contain aggregation functions (`Sum`, `Avg`, `Count*`, etc.). The bare ref evaluates per-row, an aggregation has no per-row value, and the KPI renders `null`. WARN-level — regex-based, so occasional false positives are possible. Fix: inline the aggregation into the value formula, or promote to a data-model metric. Added 2026-07-02 after `Marketing-and-Promotions-Performance`'s Promo Lift KPI rendered null. See `reference/specification/kpis.md` → "Value formula pitfall." |
-| 11 | `summary-calc-collision` | Column IDs that appear in both `summary[]` and a `groupings[].calculations[]` list on the same table. POST rejects with `Duplicate column or folder reference`. Fix: split into two column definitions with distinct IDs. Added 2026-07-02 after `exec-scorecard` v1 hit this mid-build. See `reference/specification/tables.md` → "summary — summary-bar pattern." |
-| 12 | `description-object-on-kpi-and-table` | Plain-string `description` on `kpi-chart`, `table`, `pivot-table`, or `input-table` elements. POST rejects with `Invalid object: string`. Fix: wrap as `{"text": "..."}` or `{"visibility": "hidden"}`. Chart elements accept the string form. Added 2026-07-02 after `inventory-health` build hit this. See `reference/specification/kpis.md` → "Description must be an object." |
-| 13 | `pivot-missing-rows-and-columns` | Pivot-tables that have `values` but neither `rowsBy` nor `columnsBy` — the pivot compiles cleanly (passes POST + verify) but renders as a single grand-total row. Fix: add at least one `rowsBy` or `columnsBy` entry (`[{"id": "<dim-col-id>"}]`). Added 2026-07-02 after `Product-and-Basket-Performance` shipped two pivots that rendered as grand-total-only in the UI. See `reference/specification/tables.md` → "Shape" (pivot section). |
+| 0 | `schema-version` | Top-level `schemaVersion` isn't `1` — the only value every canonical exemplar and every successful POST has used. **WARN**, not fail, since `conventions.md`/`crud.md` already flag this as potentially unstable long-term. Added 2026-08-03 after a live probe POST was rejected with `schemaVersion: Invalid 1: number` on a spec that used `2`. |
+| 1 | `no-per-page-layout` | A per-page `pages[i].layout` field — Sigma silently discards it; layout must be the single top-level `layout` string with every `<Page>` as a sibling. |
+| 2 | `elements-placed-in-layout` | Every element `id` must appear as an `elementId` on a `<Element>`, `<Container>`, or `<TabbedContainer>` tag. Fails outright if there's no top-level `layout` at all. (`TabbedContainer` added 2026-08-03 — its absence produced a false FAIL on every tabbed-container element; verified against 2 independent production workbooks.) |
+| 3 | `containers-have-children` | Every `kind:"container"` element has a matching `<Container>` in the layout XML, **and** that `<Container>` has nested children (not flat siblings). |
+| 4 | `layoutelement-has-children` | The forward case of #3: a `<Element>` (a leaf tag) with nested child tags — they parse without error but are silently dropped and never render. Added 2026-08-03, ported from upstream's manual checklist. |
+| 5 | `column-format-shape` | `column.format` must be an object carrying `kind` (verified shape: `{kind, formatString}`). The UI-export shape (`{type, format}`) is rejected with a misleading "Missing 'kind' field." |
+| 6 | `control-id-unique` | `controlId` must be workbook-wide unique — **except** when one side is `controlType:"synced"`, Sigma's first-class cross-page control-sync stub (a primary control on one page + thin `synced` placeholders on others, deliberately sharing a `controlId`). Only fails when a duplicate exists where *neither* side is `synced`. (Exemption added 2026-08-03 after Bergey's Unified Insights showed the exact mechanism — a `segmented` primary + 4 `synced` stubs sharing one `controlId`.) |
+| 7 | `passthrough-coverage` | Chart elements with ≤2 cols sourced from tables with ≥5 cols (the passthrough-collapse signature). FAIL on charts; WARN on thin-but-not-collapsed. KPIs excluded. See `reference/conventions.md` → "Passthrough mandate." |
+| 8 | `controlid-collision` | Controls whose `controlId` matches a column `name` or `id` on the filtered element. See `reference/conventions.md` → "Control/column ID collision." |
+| 9 | `bare-ref-resolution` | Bare `[column_name]` references (no `/`) that don't match any sibling column or controlId. **WARN-level** — Sigma auto-infers some column names (e.g. `DateTrunc("week", [Date])` → "Week of Date") that this regex-based check can't predict, so flags require inspection. Added 2026-05-21 — ported from upstream `validate-spec.sh`. See `reference/specification/formulas.md` → "The #1 formula mistake." |
+| 10 | `control-filter-column-exists` | Control `filters[].columnId` values that don't exist on the target element, and `filters[].source.elementId` values that don't exist on the workbook. Catches typos that pass POST but silently break every downstream query on the page. Added 2026-07-02 after a fresh-agent build test surfaced this class of bug. Includes "did you mean" suggestions for near-match column IDs. |
+| 11 | `action-refs-resolve` | Every action/effect reference resolves to something real: `set-control-value`/`clear-control` target/source controls exist; `open-overlay.overlayId` matches a `document.overlays[].id` (modals moved out of `pages[]` 2026-08-10, see `reference/specification/pages.md`); `navigate.target.page` matches a page; `select-tab.tabbedContainer` matches a tabbed-container element and `selectedTab.index` is in range; `insert-rows`/`delete-rows.table` matches an input-table element, and `insert-rows.values` keys match its columns. Added 2026-08-03 (Wave 2 / C3) alongside the action/effect vocabulary itself — positive-control tested against 5 deliberately-corrupted references (all caught) and 5 real production workbooks with actions (0 false positives). See `reference/specification/actions.md`. |
+| 12 | `kpi-value-references-aggregation` | KPI value formulas that bare-ref sibling columns whose formulas contain aggregation functions (`Sum`, `Avg`, `Count*`, etc.). The bare ref evaluates per-row, an aggregation has no per-row value, and the KPI renders `null`. WARN-level — regex-based, so occasional false positives are possible. Fix: inline the aggregation into the value formula, or promote to a data-model metric. Added 2026-07-02 after `Marketing-and-Promotions-Performance`'s Promo Lift KPI rendered null. See `reference/specification/kpis.md` → "Value formula pitfall." |
+| 13 | `summary-calc-collision` | Column IDs that appear in both `summary[]` and a `groupings[].calculations[]` list on the same table. POST rejects with `Duplicate column or folder reference`. Fix: split into two column definitions with distinct IDs. Added 2026-07-02 after `exec-scorecard` v1 hit this mid-build. See `reference/specification/tables.md` → "summary — summary-bar pattern." |
+| 14 | `description-object-on-kpi-and-table` | Plain-string `description` on `kpi-chart`, `table`, `pivot-table`, or `input-table` elements. POST rejects with `Invalid object: string`. Fix: wrap as `{"text": "..."}` or `{"visibility": "hidden"}`. Chart elements accept the string form. Note: a GET-spec readback of any of these 4 kinds emits `description` as a plain string — a harvested spec must be normalized before it can be re-POSTed. Added 2026-07-02 after `inventory-health` build hit this. See `reference/specification/kpis.md` → "Description must be an object." |
+| 15 | `pivot-missing-rows-and-columns` | Pivot-tables that have `values` but neither `rowsBy` nor `columnsBy` — the pivot compiles cleanly (passes POST + verify) but renders as a single grand-total row. Fix: add at least one `rowsBy` or `columnsBy` entry (`[{"id": "<dim-col-id>"}]`). Added 2026-07-02 after `Product-and-Basket-Performance` shipped two pivots that rendered as grand-total-only in the UI. See `reference/specification/tables.md` → "Shape" (pivot section). |
+| 16 | `channel-exclusivity` | A column id bound to 2+ distinct binding channels on the same chart/map/KPI element (e.g. a region-map's `color.column` and `label[].id` both pointing at the same column). Sigma **rejects at POST** with `Column '<id>' is referenced from both 'X' and 'Y'; a column can only be on one channel at a time` — a hard failure, not a rendering quirk. FAIL-level. Covers `bar-chart`/`line-chart`/`area-chart`/`combo-chart`/`scatter-chart` (`xAxis`, `yAxis`, `color`, `size`), `pie-chart`/`donut-chart` (`value`, `color`, `holeValue`), `region-map`/`point-map`/`geography-map` (region/lat-lon/geography, `color`, `size`, `label`, `tooltip`), and `kpi-chart` (`value`). Fix: duplicate the column (same formula, a distinct id) and bind one id per channel. Added 2026-08-04 after a Wave 3 test session hit this live at POST — the second real-session recurrence since the rule was first documented (`exec-scorecard-v2`, 2026-07-02) without a validator check. See `reference/conventions.md` → "Channel exclusivity." |
+
+**What this validator does not cover, even when it exits 0** (printed as a
+footer on every run): qualified `[Source/Column]` refs are not verified —
+the server checks those on publish; and `action-refs-resolve` (#11) does
+not yet cover `agentId` references in `agents[].tools[].steps[]` effects,
+since the agent surface has no chunk yet — that check extends once
+`agents.md` lands.
 
 Fix everything reported before continuing. If exit 0, proceed to the
 manual pass.
@@ -53,7 +87,8 @@ For each column's `formula`:
    - A **sibling** — the portion inside the brackets (no `/`) exactly
      matches a `name` in THIS element's `columns[]` array.
    - A **data-model metric** — `[Metrics/<X>]` where `<X>` is in the
-     source element's metric catalog (from `mcp-describe`).
+     source element's metric catalog (from `GET /v2/dataModels/{id}/spec`,
+     or opportunistically `mcp-describe`, expect exit 3).
    - A **qualified ref** — contains `/`, and the prefix matches one of:
      - The last segment of the `path` array (if source is
        `warehouse-table`)
@@ -70,10 +105,10 @@ For each column's `formula`:
 - A column's `formula` references a name matching its own `name`
   field → circular reference (silent fail at render).
 - A formula references a column name that doesn't exist on the source
-  → re-confirm column names via `mcp-describe`.
+  → re-confirm column names via `GET /v2/dataModels/{id}/spec`.
 - Donut chart requires `value` + `color` (or `holeValue` if used).
-- Layout XML: no `<LayoutElement type="grid">` with children — use
-  `<GridContainer>` for nesting (children are silently dropped
+- Layout XML: no `<Element type="grid">` with children — use
+  `<Container>` for nesting (children are silently dropped
   otherwise).
 - Controls bind via `filters[].columnId` matching a column `id` on
   the target element (NOT `name`).
@@ -122,6 +157,36 @@ Most common causes of post-create failure:
 - **Circular reference.** A column named `Quarter` with formula
   `[Quarter]` — easy when copying warehouse column names verbatim
   into a sibling-reference position. Rename one side.
+
+### `audit-workbook-schema.sh` — the data-layer companion
+
+`verify-workbook.sh` grep's the compiled SQL text. It misses the
+class where SQL compiles but Sigma rejects the formula at query
+time — the column shows `type: error` in the schema and downstream
+renders as `Reference to errored column`. `audit-workbook-schema.sh`
+inspects the schema via `mcp-describe workbook-element` and reports
+`error`-typed columns with element + column + formula.
+
+Runs automatically after every POST/PUT via `publish-workbook.sh`;
+non-zero exit propagates so publish fails outright. Common causes:
+unknown functions (e.g. `NTile`), aggregation-across-element-boundary
+on grouped-source columns, `Rollup` arg3 mismatches. A cascade of
+errors usually traces to one upstream errored column — fix the root,
+downstream clears. Suppress with `SIGMA_SKIP_AUDIT=1`; standalone
+re-audit via `scripts/api/audit-workbook-schema.sh <wb-id>`.
+
+**Exit 3 means the gate didn't actually run — treat it as a hard
+blocker, not a pass.** Found via a live build-mode test 2026-08-03: when
+this org's OAuth client lacks MCP scope, every `mcp-describe` call 403s,
+and the script previously bucketed that the same way as a genuinely
+non-queryable element (control/text/container) — reporting "0 queryable
+element(s) checked, no error-typed columns" with exit 0, indistinguishable
+from a real clean audit. Fixed so `mcp-describe.sh` exits 3 specifically
+for transport-level failures (distinct from its exit 1 for "responded but
+not describable"), and `audit-workbook-schema.sh` now exits 3 and prints
+a loud `INCOMPLETE` warning instead of silently reporting clean. **Do not
+report a workbook as built-and-verified on an exit-3 audit** — fall back
+to a manual UI check, or fix the underlying MCP-scope grant and re-run.
 
 ## 5. Visual verify in the UI
 

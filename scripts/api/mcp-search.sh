@@ -16,6 +16,17 @@
 #   --limit   Max results (1-20). Default: 10.
 #
 # Env:    self-bootstrapped via _env.sh (loads .env, caches OAuth token)
+#
+# Exit codes:
+#   0 — success (including "no matches", which prints `[]`)
+#   1 — MCP responded but reported an error
+#   2 — usage error (bad args)
+#   3 — MCP endpoint itself failed at the HTTP/transport level. As of
+#       2026-07-30, this fires on every call when auth is a client_credentials
+#       API token: Sigma's /mcp/v2 now only accepts interactive user OAuth
+#       (confirmed by Sigma's MCP engineering team — see reference/history.md
+#       → "2026-08-07"). Use scripts/api/search-files.sh instead — same
+#       "find by name" job via REST, substring not semantic match.
 set -euo pipefail
 source "$(dirname "$0")/_env.sh"
 
@@ -50,7 +61,7 @@ if [ -z "$QUERY" ]; then
 fi
 
 python3 - "$SIGMA_BASE_URL" "$SIGMA_API_TOKEN" "$QUERY" "$TYPES" "$LIMIT" <<'PY'
-import json, re, sys, urllib.request
+import json, re, sys, urllib.error, urllib.request
 
 base, tok, query, types_csv, limit_s = sys.argv[1:]
 types = [t.strip() for t in types_csv.split(",") if t.strip()]
@@ -75,7 +86,25 @@ req = urllib.request.Request(
         "Accept": "application/json, text/event-stream",
     },
 )
-raw = urllib.request.urlopen(req).read().decode()
+try:
+    raw = urllib.request.urlopen(req).read().decode()
+except urllib.error.HTTPError as e:
+    err_body = e.read().decode(errors="replace")[:500]
+    sys.stderr.write(
+        f"mcp-search: MCP endpoint returned HTTP {e.code} for query '{query}'.\n"
+        f"  This is a transport-level failure, not \"no matches\" — a 403 here\n"
+        f"  commonly means this org's OAuth client lacks MCP scope. As of\n"
+        f"  2026-07-30, Sigma's /mcp/v2 only accepts interactive user OAuth,\n"
+        f"  not client_credentials API tokens (confirmed by Sigma's MCP\n"
+        f"  engineering team — see reference/history.md). Use\n"
+        f"  scripts/api/search-files.sh \"{query}\" instead — REST-based,\n"
+        f"  substring match rather than semantic search.\n"
+        f"  Response body: {err_body}\n"
+    )
+    sys.exit(3)
+except urllib.error.URLError as e:
+    sys.stderr.write(f"mcp-search: could not reach MCP endpoint: {e.reason}\n")
+    sys.exit(3)
 
 # SSE: `event: message\ndata: {...json...}\n\n`
 m = re.search(r"data:\s*(\{.+\})", raw, re.DOTALL)

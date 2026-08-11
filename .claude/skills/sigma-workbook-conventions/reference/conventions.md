@@ -12,6 +12,7 @@ The plan's `Chunks Read:` line must list this file.
 
 ## Table of contents
 
+- [Recon scope boundary + hard stop on permission questions](#recon-scope-boundary)
 - [Inference anchor — every formula traces to recon](#inference-anchor)
 - [Passthrough mandate + drill-down corollary](#passthrough-mandate)
 - [Explicit-`name` rule + rename-cascade corollary](#explicit-name-rule)
@@ -25,12 +26,66 @@ The plan's `Chunks Read:` line must list this file.
 
 ---
 
+## Recon scope boundary + hard stop on permission questions
+
+**Rule.** Two failure modes, found together in the same 2026-08-10
+end-to-end build-mode test, share one root cause — treat them as one
+rule.
+
+**A — Recon is bounded to what the user named.** "Recon" (the
+read-only phase before a plan is written) covers only the resources
+the user explicitly specified in their build request: the source data
+model/element, the destination folder, and anything they specifically
+referenced by name. It does **not** cover searching the broader
+workspace — org-wide `search-files`, browsing folders the user didn't
+name, `GET`-ing the spec of any workbook the user didn't point at.
+That's a different, riskier class of action ("exploratory recon"): it
+can surface another team's proprietary business logic that was never
+authorized for this session to see, and it's exactly the kind of
+open-ended, iterative tool-call detour that burns disproportionate
+time and tokens chasing a reference implementation. If recon hits a
+wall the plan can't get past without looking outside the named target
+(e.g., "Sigma has no native element for X — I want to search the org
+for a reference implementation"), **stop and say exactly what you want
+to search for and why, before doing it.** Do not fold it silently into
+ordinary recon just because it's read-only. (This is about *live Sigma
+API calls* only — reading this skill's own local `reference/`/
+`examples/` files is unrestricted; that's not "the environment.")
+
+**B — Asking is not gating unless you actually stop.** "Wait for
+explicit approval" (the plan-approval gate; the check-in in A above)
+is prose, not a mechanical block. A 2026-08-10 end-to-end test proved
+this empirically: an agent wrote a full plan, ended it with "Approve
+to proceed to build, or push back," received no response from anyone,
+and — in the same continued run — went ahead and built and published
+the workbook anyway. No tool-level enforcement prevents this; only the
+agent's own discipline does. **Any time you ask a permission
+question** — plan approval, or the recon check-in in A — **and you
+have no way to mechanically block for a real response** (no
+`AskUserQuestion` or equivalent available), **you must end your turn
+immediately after asking.** Do not continue in the same turn under any
+framing ("I'll proceed with reasonable defaults," "since there's no
+pushback..."). Silence is not consent.
+
+**Why this happened.** The incident traced to a subagent-driven E2E
+test where `AskUserQuestion` was not available in that session's
+toolset at all — the skill's kickoff and plan-approval gates both
+assume it's always present. When it's absent, "ask and wait" has no
+enforcement mechanism unless the agent treats ending its turn as the
+actual gate. See `reference/history.md` → "2026-08-10 — E2E test finds
+the plan-approval gate is unenforced without an interactive question
+tool" for the full incident.
+
+---
+
 ## Inference anchor — every formula traces to recon
 
 **Rule.** Every formula in a proposed plan must trace to one of:
 
-- A `[Metrics/<X>]` confirmed in `mcp-describe.sh datamodel-element <dm> <el>`
-  output for the source element, OR
+- A `[Metrics/<X>]` confirmed in `GET /v2/dataModels/{id}/spec`'s
+  `metrics` array for the source element (or opportunistically
+  `mcp-describe.sh datamodel-element <dm> <el>`, expect exit 3 — see
+  `reference/workflows/discover.md` → "MCP status"), OR
 - A column declared on the source table that recon confirmed exists.
 
 **"Reasonable assumption" formulas are forbidden.** If recon doesn't
@@ -189,11 +244,12 @@ without touching what formulas resolve against.
 ## `[Metrics/<Name>]` resolution + DM-switch hard rule
 
 **Resolution.** `[Metrics/<Name>]` references resolve against the
-data-model element a spec sources from. `mcp-describe.sh
-datamodel-element <dm> <el>` returns the metric catalog FOR THAT
-ELEMENT. Treat that catalog as the source of truth — if a metric
-isn't listed there, do not reference it from a spec that sources off
-that element.
+data-model element a spec sources from. `GET /v2/dataModels/{id}/spec`
+returns the metric catalog FOR THAT ELEMENT in its `metrics` array
+(or opportunistically `mcp-describe.sh datamodel-element <dm> <el>`,
+expect exit 3). Treat that catalog as the source of truth — if a
+metric isn't listed there, do not reference it from a spec that
+sources off that element.
 
 **Slash-in-name caveat:** metric names containing `/` (e.g.
 `Cost/Member/Month`) are not safely addressable as
@@ -203,8 +259,8 @@ parsing of multi-slash names is undefined. Options:
 1. **Rename the metric in the data model** (preferred — fixes for all
    consumers).
 2. **Fall back to a hand-derived formula** using the metric's actual
-   formula visible in `mcp-describe` output (e.g.
-   `Sum([CostMember]) / Count([Month])`).
+   formula visible in `GET /v2/dataModels/{id}/spec`'s `metrics` array
+   (e.g. `Sum([CostMember]) / Count([Month])`).
 
 **Round-trip is not validation.** A spec that POSTs and GETs back
 successfully with `[Metrics/A/B]` is not evidence the reference
@@ -222,8 +278,9 @@ The 2026-05-19 regression was caused by carrying
 `[Metrics/Cost per Unit] * [Metrics/Encounter Volume]` from the
 original DM's plan into a spec sourced against a different DM that
 did not contain those metrics. Treat the prior plan as discarded for
-metric purposes; re-run `mcp-describe.sh datamodel-element <new-dm>
-<new-el>` and regenerate.
+metric purposes; re-run `GET /v2/dataModels/{new-dm}/spec` (or
+opportunistically `mcp-describe.sh datamodel-element <new-dm>
+<new-el>`, expect exit 3) and regenerate.
 
 ### Distinct from official's `[Source/Col]` syntax
 
@@ -324,18 +381,24 @@ channel per element.
 ```
 
 Verified 2026-07-02 against `exec-scorecard-v2` (2 POST rejections
-on region-map channel reuse before this rule was formalized).
+on region-map channel reuse before this rule was formalized). Confirmed
+again 2026-08-04 (Wave 3 test session, `map-profit-by-state`'s
+`color`/`label` both referencing the same column) — this second
+real-session recurrence is what triggered implementing the check below.
 
 `validate-spec.py`'s `channel-exclusivity` check catches this
-pre-POST (planned; not yet implemented — see `reference/workflows/validate.md`).
+pre-POST (implemented 2026-08-04 — see `reference/workflows/validate.md`).
 
 ---
 
 ## Bar-chart orientation + categorical-axis sort rule
 
-Bar charts accept `orientation: "horizontal" | "vertical"` (default
-vertical). **Bar charts only** — line/area/combo/scatter use time-on-x
-or metric-on-x by design.
+Bar charts accept `orientation: "horizontal"` or omit the field
+entirely (vertical is the default and the **only** other valid state —
+explicit `orientation: "vertical"` is **rejected at POST**, confirmed
+2026-08-04 against the live OpenAPI schema, where `orientation`'s enum
+is `["horizontal"]` only). **Bar charts only** — line/area/combo/scatter
+use time-on-x or metric-on-x by design.
 
 | X-axis type | Examples | `orientation` | `xAxis.sort` |
 |---|---|---|---|

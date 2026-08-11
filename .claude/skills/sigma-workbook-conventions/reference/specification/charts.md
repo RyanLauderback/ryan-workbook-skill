@@ -22,7 +22,7 @@ element must use the source's prefix (`[<SourceName>/col]`) — see
   - [Line chart](#line-chart)
   - [Bar chart](#bar-chart) (with orientation + categorical-sort rule)
   - [Area chart](#area-chart)
-  - [Combo chart](#combo-chart)
+  - [Combo chart](#combo-chart) (with `yAxis2` secondary-axis mechanism)
   - [Scatter / bubble chart](#scatter--bubble-chart)
   - [Pie / donut chart](#pie--donut-chart) (with `holeValue` distinct-column rule)
 - Cartesian-only optional features:
@@ -55,11 +55,20 @@ element must use the source's prefix (`[<SourceName>/col]`) — see
   and scale — fetch `CartesianAxisFormat` from the OpenAPI for the
   full shape.
 
-> **Legacy axis form** — existing exemplars in this skill (created
-> before 2026-05-21) use `xAxis: {id}` / `yAxis: [{id}]` (array of
-> objects). Both forms POST cleanly; GET returns the modern
-> `columnId` / `columnIds` form. New authoring should prefer the
-> modern form. `scripts/workbook-manifest.py` recognizes both.
+> **Legacy axis form — no longer works as of 2026-08-10.** Existing
+> exemplars in this skill (created before 2026-05-21) use `xAxis: {id}`
+> / `yAxis: [{id}]` (array of objects). This doc previously claimed
+> "both forms POST cleanly" — **that is now false.** Confirmed via live
+> POST today: the legacy form is rejected outright, with a generic/
+> misleading error, `{"message":"document.elements[N]: Invalid kind:
+> \"bar-chart\""}`. Confirmed fixed by switching to the modern
+> `columnId`/`columnIds` form on the same element. The modern form is
+> now **required** for all Cartesian chart kinds — bar/line/area/
+> combo/scatter all independently confirmed live still using
+> `xAxis.columnId` / `yAxis.columnIds`. (`donut-chart`/`pie-chart` did
+> NOT get this rename — both independently confirmed live to still use
+> the old `{id}` single-column shape for `value`/`color`/`holeValue`;
+> that's correct/unchanged, see "Pie / donut chart" below.)
 
 ## Line chart
 
@@ -111,8 +120,9 @@ Same axis shape as line-chart. Adds `stacking` and the
 }
 ```
 
-`stacking`: `none` | `stacked` | `"100"` (the percent-stacked variant
-must be quoted in JSON/YAML to keep it a string).
+`stacking`: `"none"` | `"stacked"` | `"normalized"` (the percent-stacked
+variant — confirmed 2026-08-04 against the live OpenAPI schema; an
+earlier version of this doc incorrectly named it `"100"`).
 
 ### Orientation + categorical-axis sort rule
 
@@ -132,7 +142,14 @@ largest→smallest, the conventional categorical read order. Horizontal
 on time-series compresses the time scale.
 
 Verified 2026-07-02 against `exec-scorecard-v2` build (1 POST retry
-on explicit-`"vertical"` before this rule was documented).
+on explicit-`"vertical"` before this rule was documented). Reconfirmed
+2026-08-04 directly against the live OpenAPI schema (`orientation`'s
+enum is `["horizontal"]` only — no `"vertical"` value exists at all,
+so an explicit `"vertical"` fails the whole element's `oneOf` match
+and surfaces as a misleading `Invalid kind: "bar-chart"` POST error
+rather than a targeted enum-mismatch message) — see
+`reference/history.md` → "2026-08-04 — bar-chart orientation" for the
+incident this caught in `examples/dashboard-department-scorecard.json`.
 
 ### Color channel
 
@@ -198,6 +215,53 @@ override:
 ```
 
 `type` values: `"line"`, `"bar"`, `"area"`, `"scatter"`.
+
+### Secondary y-axis — `yAxis2`
+
+`yAxis.columnIds` alone puts every series on **one shared scale** —
+`type` only changes the render shape (bar vs line), not the axis a
+series plots against. Mixing a large-magnitude metric (e.g. revenue,
+in the thousands/millions) with a small-magnitude one (e.g. a
+percentage-scale metric like margin) on that single scale renders
+the small one flat/near-zero.
+
+Confirmed live (2026-08-10, extracted from a workbook where this was
+manually fixed in the UI via **column menu → Axis → Right**): a
+sibling **`yAxis2`** field, at the same level as `yAxis`/`xAxis`,
+carries the column(s) that should render against the secondary
+scale:
+
+```json
+"yAxis": {
+  "columnIds": [
+    "col-bar-revenue",
+    { "columnId": "col-line-margin", "type": "line" }
+  ]
+},
+"yAxis2": {
+  "columnIds": ["col-line-margin"]
+}
+```
+
+Notes on the confirmed shape:
+- The secondary-axis column stays listed in `yAxis.columnIds` too
+  (still carrying its `type` override there) — it is **not** moved
+  out of `yAxis` and into `yAxis2` exclusively. `yAxis2.columnIds`
+  is an additional pointer, not a replacement location.
+- `yAxis2.columnIds` takes bare column-id strings (no `{ columnId,
+  type }` override form observed there — the `type` override still
+  lives on the `yAxis.columnIds` entry for that column).
+- Same mechanism family as `xAxis`/`yAxis` — object with a
+  `columnIds` array. Not yet confirmed whether `yAxis2` accepts a
+  `format` sibling the way `yAxis`/`xAxis` do (see "Axis shape —
+  canonical" above); treat that as unverified until tested.
+- UI docs confirm this same left/right secondary-axis mechanism is
+  also available on bar, line, scatter, box-and-whisker, and
+  waterfall charts (not combo-only) — see
+  https://help.sigmacomputing.com/docs/format-chart-axis-position.
+  The `yAxis2` field name itself was only directly confirmed via a
+  combo-chart spec; assume the same field name applies to those
+  other Cartesian kinds until independently verified.
 
 ## Scatter / bubble chart
 
@@ -294,26 +358,37 @@ jq '.components.schemas.ReferenceMark, .components.schemas.Trendline, .component
 
 ### `refMarks` — reference lines and bands
 
+**Corrected 2026-08-10 — `value` shape.** This doc previously showed
+`value` as a bare scalar (e.g. `1000`) and claimed it "can be a
+number, column ID, or formula string." Confirmed via live POST: a
+bare scalar is **rejected** with the same generic "Invalid kind"
+error seen on the legacy-axis-form break above. Wrapping it fixed the
+POST. `value` must be a dynamic-value object — the same `{type:
+"constant", value}` form documented in `dynamic-values.md`:
+
 ```json
 "refMarks": [
   {
     "type": "line",
     "axis": "series",
-    "value": 1000,
+    "value": { "type": "constant", "value": 5000 },
     "line": { "color": "#ef4444", "width": 2 },
     "label": { "text": "Threshold" }
   },
   {
     "type": "band",
     "axis": "series",
-    "value": 800,
+    "value": { "type": "constant", "value": 800 },
     "endValue": 1200
   }
 ]
 ```
 
-`axis` values: `axis` | `series` | `series2`. `value` can be a
-number, column ID, or formula string. Bands require `endValue`.
+`axis` values: `axis` | `series` | `series2` — **unchanged**, confirmed
+via live test using `axis: "axis"` successfully. Bands require
+`endValue`; whether `endValue` also needs the object wrapper is
+**unverified** — likely, given `value`'s behavior, but not
+independently confirmed, so don't assume it without probing first.
 
 ### `trendlines` — regression overlays
 

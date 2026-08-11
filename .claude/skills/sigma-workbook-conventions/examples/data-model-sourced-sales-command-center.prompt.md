@@ -7,9 +7,10 @@ Costco-branded Sales Command Center. Verified against every 2026-06 /
 precondition, donut `holeValue` distinct-column, KPI `value.columnId`,
 element `layout.anchor`, `themeOverrides`, styled `name`, card `style`).
 
-Supersedes `data-model-sourced-kpi-overview-with-containers.json` as the
-"canonical KPI workbook" reference. Older file predates the KPI
-`value.columnId` and `controlId` collision fixes.
+The "canonical KPI workbook" reference — an older exemplar predating
+the KPI `value.columnId` and `controlId` collision fixes was removed
+(2026-08-10, example-set rationalization; see `reference/history.md`)
+rather than kept around as a "don't clone this" trap.
 
 ## When to clone this exemplar
 
@@ -22,8 +23,14 @@ Any multi-page dashboard build with:
   container accents)
 
 **Do NOT clone this** for single-page dashboards (see
-`data-model-sourced-single-page-inventory-health.json`) or when the
-build needs UI-only features Sigma doesn't spec (buttons, modals).
+`data-model-sourced-single-page-inventory-health.json`), or for a
+plain read-only exec dashboard where the base table should be hidden
+rather than exposed (see `dashboard-department-scorecard.json` instead —
+this exemplar predates that pattern and puts `tbl-tx` visibly on the
+dashboard page). **Correction (2026-08-03):** this line previously also
+said "or when the build needs UI-only features Sigma doesn't spec
+(buttons, modals)" — that claim was retracted skill-wide; see
+`reference/capability-ledger.md`.
 
 ## Templated placeholders
 

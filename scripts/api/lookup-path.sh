@@ -14,12 +14,23 @@ fi
 CONN="$1"; shift
 PATH_JSON=$(python3 -c "import json,sys; print(json.dumps(sys.argv[1:]))" "$@")
 
-HTTP_CODE=0
-RESP=$(curl -sS -o /tmp/.lookup-path.$$ -w "%{http_code}" \
+# mktemp with an explicit template + a trap, not a predictable fixed-prefix
+# name in a world-writable dir — the old `/tmp/.lookup-path.$$` was both
+# guessable (PIDs collide across containers/PID namespaces) and
+# symlink-followable via `curl -o`.
+tmp_body="$(mktemp "${TMPDIR:-/tmp}/lookup-path.XXXXXX")"
+trap 'rm -f "$tmp_body"' EXIT
+
+HTTP_CODE=$(curl -sS -o "$tmp_body" -w "%{http_code}" \
   -X POST -H "Authorization: Bearer $SIGMA_API_TOKEN" -H "Content-Type: application/json" \
-  "$SIGMA_BASE_URL/v2/connection/$CONN/lookup" -d "{\"path\":$PATH_JSON}") || HTTP_CODE=$?
-BODY=$(cat /tmp/.lookup-path.$$); rm -f /tmp/.lookup-path.$$
-HTTP_CODE="$RESP"
+  "$SIGMA_BASE_URL/v2/connection/$CONN/lookup" -d "{\"path\":$PATH_JSON}") || {
+  # curl itself failed (DNS/connection/TLS — not an HTTP error status,
+  # which curl -w reports with exit 0). Preserve the original behavior of
+  # reporting rather than hard-crashing.
+  echo '{"error": true, "code": "connection_failed", "message": "curl could not reach the Sigma API"}' >&2
+  exit 1
+}
+BODY=$(cat "$tmp_body")
 
 if [ "$HTTP_CODE" = "200" ]; then
   echo "$BODY" | python3 -c "

@@ -42,7 +42,12 @@ styling:
 - Bullet and ordered lists
 - `**bold**`, `*italic*`, `~~strikethrough~~`
 - `[links](https://example.com)`
-- Inline HTML: `<u>`, `<sub>`, `<sup>`
+- Inline HTML: `<u>`, `<sub>`, `<sup>`, `<span>`, `<a>` — this is the
+  **complete** allowed-tag set; confirmed verbatim from a live rejection
+  error during a 2026-08-03 probe (`<h2>` was rejected: "not in the
+  allowed inline-HTML set (allowed: <u>, <sub>, <sup>, <span>, <a>)").
+  Use Markdown headings (`#`/`##`/`###`) for headers, never raw
+  `<h1>`-`<h6>` tags.
 - Inline color: `<span style="color: #hex">…</span>` and
   `<span style="background-color: #hex">…</span>` (hex only — `#rgb`
   or `#rrggbb`)
@@ -114,34 +119,34 @@ Use this for:
 
 Text elements participate in the page grid like any other element.
 
-**Page-level title row above a `<GridContainer>`:**
+**Page-level title row above a `<Container>`:**
 
 ```xml
-<LayoutElement elementId="text-header" gridColumn="1 / 25" gridRow="1 / 4"/>
-<GridContainer elementId="header-row" type="grid" ...>
+<Element elementId="text-header" gridColumn="1 / 25" gridRow="1 / 4"/>
+<Container elementId="header-row" type="grid" ...>
   ...
-</GridContainer>
+</Container>
 ```
 
 **Inside a container, on its own row above the chart row** (see
 `layout.md` → "Stacking children inside a container"):
 
 ```xml
-<GridContainer elementId="header-row" type="grid" gridColumn="1 / 25" gridRow="1 / 12" ...>
-  <LayoutElement elementId="text-header" gridColumn="1 / 25" gridRow="1 / 4"/>
-  <LayoutElement elementId="kpi-1"       gridColumn="1 / 9"  gridRow="4 / 12"/>
-  <LayoutElement elementId="kpi-2"       gridColumn="9 / 17" gridRow="4 / 12"/>
-  <LayoutElement elementId="kpi-3"       gridColumn="17 / 25" gridRow="4 / 12"/>
-</GridContainer>
+<Container elementId="header-row" type="grid" gridColumn="1 / 25" gridRow="1 / 12" ...>
+  <Element elementId="text-header" gridColumn="1 / 25" gridRow="1 / 4"/>
+  <Element elementId="kpi-1"       gridColumn="1 / 9"  gridRow="4 / 12"/>
+  <Element elementId="kpi-2"       gridColumn="9 / 17" gridRow="4 / 12"/>
+  <Element elementId="kpi-3"       gridColumn="17 / 25" gridRow="4 / 12"/>
+</Container>
 ```
 
 **Side-by-side with a control on the same row:**
 
 ```xml
-<GridContainer elementId="header-row" type="grid" ...>
-  <LayoutElement elementId="text-header"     gridColumn="1 / 18"  gridRow="1 / 4"/>
-  <LayoutElement elementId="ctrl-date-range" gridColumn="18 / 25" gridRow="1 / 4"/>
-</GridContainer>
+<Container elementId="header-row" type="grid" ...>
+  <Element elementId="text-header"     gridColumn="1 / 18"  gridRow="1 / 4"/>
+  <Element elementId="ctrl-date-range" gridColumn="18 / 25" gridRow="1 / 4"/>
+</Container>
 ```
 
 ## Text elements do not carry `style`

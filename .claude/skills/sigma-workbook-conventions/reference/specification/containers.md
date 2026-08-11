@@ -9,7 +9,7 @@ jq '.components.schemas.Container' /tmp/sigma-api.json
 
 A container is the visual grouping primitive: a labeled section, a
 branded header strip, a row of KPIs treated as a unit. It pairs with a
-matching `<GridContainer elementId="...">` in the layout XML (see
+matching `<Container elementId="...">` in the layout XML (see
 `layout.md`) — the spec declares the container exists; the XML
 positions it and its children.
 
@@ -44,12 +44,23 @@ Containers accept three optional styling fields:
 
 Verified fields:
 
-- `backgroundColor` — hex color string.
+- `backgroundColor` — hex color string. **Corrected 2026-08-10:** also
+  confirmed live accepting a CSS custom-property string, e.g.
+  `"var(--colors-fillPrimary)"`.
 - `borderRadius` — observed: `"round"`, `"pill"`. Absence renders
   sharp corners.
-- `borderColor` — hex color string.
+- `borderColor` — hex color string. **Corrected 2026-08-10:** also
+  confirmed live accepting a theme-ref object, e.g.
+  `{"kind": "theme", "ref": "colors-border"}` — the same `{kind:
+  "theme", ref}` form already documented elsewhere in this skill for
+  other color fields.
 - `borderWidth` — integer pixels (observed: `1` for cards, `3` for
   accent headers).
+
+```json
+"borderColor": { "kind": "theme", "ref": "colors-border" },
+"backgroundColor": "var(--colors-fillPrimary)"
+```
 
 **Partial styling is accepted.** Any subset of the four keys is
 valid; spacer containers omit `borderRadius` (sharp corners); some
@@ -57,12 +68,20 @@ containers omit `backgroundColor` for transparency.
 
 ### `backgroundImage` — image filling the container
 
+**Corrected 2026-08-04 (Wave 4 / C7) — the field shape below was wrong.**
+Previously documented with a flat `url` field directly on
+`backgroundImage`; **live-POST tested and rejected** with `Invalid
+value: undefined` at `backgroundImage.source`. The real shape nests the
+URL under a `source` object — the exact same `{kind:"url", url}` /
+`{kind:"upload", key}` shape as the standalone `image` element (see
+`others.md` → "Image"):
+
 ```json
 {
   "id": "hero",
   "kind": "container",
   "backgroundImage": {
-    "url": "https://cdn.example.com/hero.jpg",
+    "source": { "kind": "url", "url": "https://cdn.example.com/hero.jpg" },
     "style": {
       "fit": "cover",
       "horizontalAlign": "middle",
@@ -73,7 +92,7 @@ containers omit `backgroundColor` for transparency.
 }
 ```
 
-`backgroundImage` is an **object**, not a string. `url` is the only
+`backgroundImage` is an **object**, not a string. `source` is the only
 required field. The optional inner `style`:
 
 - `fit`: `contain` | `cover` | `none` | `scale-down` | `stretch`
@@ -81,10 +100,13 @@ required field. The optional inner `style`:
 - `verticalAlign`: `start` | `middle` | `end`
 - `tiling`: `none` | `repeat`
 
-The full shape round-trips through GET unchanged; PUT-based edits
-are stable. URL supports `{{formula}}` references if you need the
-image to switch based on a control value — same syntax as the
-image element (`others.md`) and text body (`text.md`).
+**Live-POST verified** (Wave 4 / C7 probe,
+`b77b5b05-d1f5-40ba-96eb-00458726da29`) — the full shape above,
+including `source.url` with a hosted HTTPS URL, round-tripped
+byte-for-byte. `source.url` supports `{{formula}}` references if you
+need the image to switch based on a control value — same syntax as the
+image element (`others.md`) and text body (`text.md`); not
+independently re-probed for `backgroundImage` specifically this wave.
 
 ### Combining `style` + `backgroundImage`
 
@@ -94,24 +116,33 @@ Both can appear on the same container; they're independent:
 {
   "id": "hero",
   "kind": "container",
-  "backgroundImage": { "url": "..." },
+  "backgroundImage": { "source": { "kind": "url", "url": "..." } },
   "style": { "borderRadius": "round", "borderWidth": 0 }
 }
 ```
 
-## What `style` does NOT capture (UI-only)
+## Padding / spacing — DOES persist to the code spec
 
-These styling controls appear in the Sigma UI but **do not appear in
-the code spec** on GET-back:
+**Corrected 2026-08-10.** This doc previously claimed `padding`,
+inter-element gap, and grid-cell `gap` were UI-only and didn't survive
+to the code spec. **That claim is now false** — confirmed live,
+GET-returned on real containers: containers carry a `style.padding`
+field directly, plus top-level `elementGap` and `spacing` fields:
 
-- `padding` / "padding enabled" toggle
-- `ContainerSpacing` / inter-element gap
-- `gap` between grid cells
+```json
+{
+  "id": "ctr-section",
+  "kind": "container",
+  "style": { "padding": "none" },
+  "elementGap": "hidden",
+  "spacing": "medium"
+}
+```
 
-Verified 2026-05-21 against the retail-sales harvest — its design
-spec mentions all three but none survive into the JSON. Do not
-promise these in plans; do not template them in code specs. Layout
-XML attributes are limited to `gridColumn`, `gridRow`,
+Confirmed observed values: `style.padding: "none"`, `elementGap:
+"hidden"`, `spacing: "medium"`. Other enum values are unverified —
+don't invent a full enum from one example each. Layout XML attributes
+are unaffected by this correction and remain `gridColumn`, `gridRow`,
 `gridTemplateColumns`, `gridTemplateRows`, `elementId`, `type`, `id`.
 
 ## Common `style` recipes
@@ -147,12 +178,12 @@ heading, sharp corners for clean alignment:
 ```
 
 **Layout placement for spacer containers.** A spacer container must
-have a matching `<GridContainer>` (with children) in the layout XML
-— placing it as a `<LayoutElement>` leaf fails `validate-spec`'s
+have a matching `<Container>` (with children) in the layout XML
+— placing it as a `<Element>` leaf fails `validate-spec`'s
 `containers-have-children` check. Two valid patterns:
 
 1. **Wrap pattern** — nest the next section's container inside the
-   spacer's `<GridContainer>`. The spacer's `gridRow` spans both
+   spacer's `<Container>`. The spacer's `gridRow` spans both
    the visible band region AND the nested section, giving a
    concentric two-color frame. `examples/styled-card-dashboard.json`
    uses this for every section break on page 1.
@@ -204,12 +235,12 @@ Paired layout XML places logo and title side-by-side inside the
 header container:
 
 ```xml
-<GridContainer elementId="header" type="grid"
+<Container elementId="header" type="grid"
                gridColumn="1 / 25" gridRow="1 / 6"
                gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
-  <LayoutElement elementId="logo"  gridColumn="1 / 6"  gridRow="1 / 6"/>
-  <LayoutElement elementId="title" gridColumn="6 / 25" gridRow="1 / 6"/>
-</GridContainer>
+  <Element elementId="logo"  gridColumn="1 / 6"  gridRow="1 / 6"/>
+  <Element elementId="title" gridColumn="6 / 25" gridRow="1 / 6"/>
+</Container>
 ```
 
 ## Recipe — KPI on top of a background image
@@ -232,11 +263,11 @@ header container:
 ```
 
 ```xml
-<GridContainer elementId="hero" type="grid"
+<Container elementId="hero" type="grid"
                gridColumn="1 / 25" gridRow="1 / 8"
                gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
-  <LayoutElement elementId="revenue-kpi" gridColumn="1 / 25" gridRow="1 / 8"/>
-</GridContainer>
+  <Element elementId="revenue-kpi" gridColumn="1 / 25" gridRow="1 / 8"/>
+</Container>
 ```
 
 **Note:** overlapping `gridRow` ranges between siblings inside one
@@ -250,7 +281,7 @@ full extent and the child element sits on top of it naturally.
 
 If you don't need a visual grouping (no shared background, no
 logical section), put elements directly on the page and position
-them with `<LayoutElement>` in the page-level layout XML. A
+them with `<Element>` in the page-level layout XML. A
 container that holds a single element is usually overkill — unless
 you specifically need the background image or styled frame.
 

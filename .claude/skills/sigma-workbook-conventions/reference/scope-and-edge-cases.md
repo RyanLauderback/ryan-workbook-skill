@@ -27,16 +27,17 @@ addressable in the spec, and a GET-back of a UI-configured workbook will
 not necessarily round-trip every visual setting. Known examples (treat as
 limitations, not bugs to fix):
 
-- **KPI period-comparison configuration** (e.g. "vs prior month" vs "vs
-  prior quarter"): the spec only carries the date-dimension column on the
-  KPI's `columns` array. The actual comparison period Sigma renders from
-  that column is UI-side state and isn't surfaced in the GET response. If
-  a user needs a specific comparison period, configure it in the UI;
-  don't try to set it in the spec. **Narrowed 2026-05-19:** KPI title
-  color, font size, weight, and the element frame (border) ARE spec-able
-  via the styled-name object and the `style` field — see
-  `reference/specification/kpis.md` → "Title styling." Only the
-  comparison-period and sparkline-toggle remain UI-only on KPIs.
+- **Retracted 2026-08-07:** this bullet previously claimed KPI
+  period-comparison configuration ("vs prior month" vs "vs prior
+  quarter") was UI-only state, not representable in the spec. That's
+  wrong — `timeline` (a date-dimension column reference) +
+  `periodComparison` (e.g. `"month"`) together set the comparison
+  period explicitly in the spec, verified ~67 times in a real
+  production dashboard. See `reference/specification/kpis.md` →
+  "Period-over-period comparison." **Narrowed 2026-05-19:** KPI title
+  color, font size, weight, and the element frame (border) are also
+  spec-able via the styled-name object and the `style` field — see
+  `reference/specification/kpis.md` → "Title styling."
 
 - **Chart series colors** beyond the `color.scheme` palette:
   per-chart-spec `color: {by, column, scheme}` lets you set positional
@@ -57,12 +58,14 @@ limitations, not bugs to fix):
   `padding`, `ContainerSpacing`, `gap` but none survive into the JSON or
   layout XML on GET-back. UI-only.
 
-- **Modal / popover pages, tabbed containers, buttons, action sequences**
-  — per Sigma's official workbooks-as-code limitations, these are NOT
-  supported in the spec. Workbooks that use them render in the UI but
-  break GET-spec — see "GET-spec can 500" below. When the user asks for
-  one, surface during planning and propose a substitute (drill-through
-  actions, separate pages, etc.).
+- ~~Modal / popover pages, tabbed containers, buttons, action sequences —
+  per Sigma's official workbooks-as-code limitations, these are NOT
+  supported in the spec.~~ **Retracted 2026-08-03.** All five are fully
+  spec-able — verified via clean GET-spec (HTTP 200) against 5 real
+  production workbooks. See `reference/capability-ledger.md` for dated
+  evidence and `reference/specification/others.md` → "What about buttons
+  and modals?" for the full retraction and the retest protocol that should
+  have been applied before this claim was written.
 
 (Add new findings here when you discover other UI-only properties.)
 

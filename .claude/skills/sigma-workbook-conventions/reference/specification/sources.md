@@ -17,6 +17,21 @@ IDs), see `reference/workflows/discover.md`.
 
 ---
 
+## Table of contents
+
+- [table — cross-element reference](#table--cross-element-reference)
+  - [Optional `groupingId`](#optional-groupingid)
+- [data-model](#data-model)
+- [join](#join)
+  - [Column formula prefixes with joins](#column-formula-prefixes-with-joins)
+- [union](#union)
+- [Other source kinds](#other-source-kinds)
+- [Two-tier sourcing pattern](#two-tier-sourcing-pattern)
+- [Basket / co-occurrence / self-join patterns](#basket--co-occurrence--self-join-patterns)
+  - [Three practical approaches](#three-practical-approaches)
+  - [When to ship a workaround vs push back](#when-to-ship-a-workaround-vs-push-back)
+- [Choosing the right source kind](#choosing-the-right-source-kind)
+
 ## table — cross-element reference
 
 Sources another element in the same workbook. This is the most common
@@ -81,9 +96,11 @@ Column formulas can reference:
   `reference/conventions.md` → "`[Metrics/<Name>]` resolution"
 
 Discover available data models with
-`scripts/api/mcp-search.sh "<topic>" --types dataModel`. Inspect a
-specific model's elements + metrics with
-`scripts/api/mcp-describe.sh datamodel-element <dm-id> <el-id>`.
+`scripts/api/search-files.sh "<topic>" --types data-model`. Inspect a
+specific model's elements + metrics via `GET /v2/dataModels/{id}/spec`,
+or opportunistically try `scripts/api/mcp-describe.sh datamodel-element
+<dm-id> <el-id>` (expect exit 3 — see `reference/workflows/discover.md`
+→ "MCP status").
 
 If no data model fits, fall back to `warehouse-table` — don't
 manufacture a model.

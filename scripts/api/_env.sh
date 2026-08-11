@@ -3,12 +3,14 @@
 #
 # After sourcing, these vars are set in the calling script's shell:
 #   SIGMA_BASE_URL   from .env (or already-exported env vars — Claude Code web)
-#   SIGMA_API_TOKEN  cached on disk (/tmp/.sigma_token, mode 0600), refreshed
-#                    when older than 55 min, fetched fresh via the repo-local
+#   SIGMA_API_TOKEN  cached on disk at $SIGMA_TOKEN_CACHE (per-user path under
+#                    XDG_RUNTIME_DIR/TMPDIR, mode 0600), refreshed when older
+#                    than 55 min, fetched fresh via the repo-local
 #                    scripts/api/get-token.sh on first call of a session.
 #
 # Override the token-fetcher path via $SIGMA_TOKEN_FETCHER if you want to use
 # the upstream sigma-api plugin's get-token.sh or a custom fetcher instead.
+# Override the cache path via $SIGMA_TOKEN_CACHE if needed.
 #
 # Usage from a script in scripts/api/:
 #   set -euo pipefail
@@ -17,26 +19,80 @@
 
 # Don't impose `set -euo pipefail` here — inherit the caller's shell options.
 
+# BASH_SOURCE[0] is empty when this file is sourced from a non-bash shell
+# (e.g. zsh, the macOS/many-Linux-distro default login shell) rather than
+# from inside a bash script/`bash -c`. dirname of an empty string silently
+# resolves to ".", turning the "../.." below into a walk from the *caller's
+# cwd* instead of this file's location — landing on a wrong-but-plausible
+# repo root 2 directories shallower, with load-env.sh then failing on a
+# garbled path instead of a clear error. Fail loudly here instead.
+if [ -z "${BASH_SOURCE[0]:-}" ]; then
+  echo "_env.sh: \$BASH_SOURCE is unset — this file must be sourced from" >&2
+  echo "  bash, not zsh/sh/dash. Run the wrapping script via 'bash scripts/api/<name>.sh'," >&2
+  echo "  or if sourcing _env.sh directly (e.g. for its sigma_curl helper)," >&2
+  echo "  do so from inside a bash shell: bash -c 'source scripts/api/_env.sh; ...'" >&2
+  return 1 2>/dev/null || exit 1
+fi
+
 _sigma_repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-_sigma_token_cache="/tmp/.sigma_token"
+# SIGMA_ENV_SH: absolute path to this file, exported so sigma_curl's 401
+# self-heal (below) can re-source it even when the function itself was
+# inherited via `export -f` into a child bash with no BASH_SOURCE of its own.
+SIGMA_ENV_SH="${BASH_SOURCE[0]}"
+export SIGMA_ENV_SH
+
+# Preflight: every scripts/api/*.sh needs curl + python3. Failing here with
+# a clear message beats a bare "command not found" three calls deep, and
+# is the first thing worth checking on an unfamiliar/minimal host.
+for _sigma_bin in curl python3; do
+  if ! command -v "$_sigma_bin" >/dev/null 2>&1; then
+    echo "_env.sh: required binary '$_sigma_bin' not found on PATH." >&2
+    return 1 2>/dev/null || exit 1
+  fi
+done
+unset _sigma_bin
+
+# SIGMA_PYTHON: resolved once here so a future portability pass (native
+# Windows, where the interpreter is `python`/`py -3`, not `python3`) is a
+# find-replace across scripts/ rather than a design change. Not yet
+# threaded through call sites — this repo currently targets macOS/Linux/WSL,
+# where `python3` is always present.
+SIGMA_PYTHON="${SIGMA_PYTHON:-$(command -v python3 || command -v python)}"
+export SIGMA_PYTHON
+
+# Token cache: per-user, not a fixed world-guessable /tmp path. A shared
+# /tmp/.sigma_token on a multi-user host or container risks cross-UID EACCES
+# (umask only governs *creation*, not an existing file's mode) or a
+# pre-planted symlink redirecting the token. XDG_RUNTIME_DIR is preferred
+# when set (already per-user by convention); TMPDIR/`/tmp` + uid as fallback.
+SIGMA_TOKEN_CACHE="${SIGMA_TOKEN_CACHE:-${XDG_RUNTIME_DIR:-${TMPDIR:-/tmp}}/.sigma_token.$(id -u)}"
+export SIGMA_TOKEN_CACHE
 _sigma_token_ttl=$((55 * 60))   # refresh 5 min before the 60-min OAuth expiry
 
 # 1. Load .env if the relevant vars aren't already exported.
 if [ -z "${SIGMA_BASE_URL:-}" ] || [ -z "${SIGMA_CLIENT_ID:-}" ] || [ -z "${SIGMA_CLIENT_SECRET:-}" ]; then
-  eval "$("${_sigma_repo_root}/scripts/load-env.sh")"
+  # Capture load-env.sh's own stdout+exit code rather than `eval`-ing it
+  # directly — `eval ""` on a failed/empty run returns 0, so a missing or
+  # misplaced .env used to proceed silently with every SIGMA_* var empty,
+  # surfacing far later as an opaque empty-token failure.
+  if ! _sigma_envout="$("${_sigma_repo_root}/scripts/load-env.sh")"; then
+    echo "_env.sh: could not load .env (see load-env.sh output above)." >&2
+    return 1 2>/dev/null || exit 1
+  fi
+  eval "$_sigma_envout"
 fi
 
 # 2. Resolve SIGMA_API_TOKEN via cache → fresh fetch.
 if [ -z "${SIGMA_API_TOKEN:-}" ]; then
   _fresh=false
-  if [ -f "$_sigma_token_cache" ]; then
+  if [ -f "$SIGMA_TOKEN_CACHE" ]; then
     # Linux: stat -c %Y   |   macOS/BSD: stat -f %m
     # Order matters: on Linux, `stat -f` prints a filesystem report to
     # *stdout* (not stderr), so trying the BSD form first silently
     # "succeeds" with garbage. `stat -c` is a hard error on BSD, so this
     # order fails cleanly to the fallback on macOS.
-    _mtime=$(stat -c %Y "$_sigma_token_cache" 2>/dev/null \
-          || stat -f %m "$_sigma_token_cache" 2>/dev/null \
+    _mtime=$(stat -c %Y "$SIGMA_TOKEN_CACHE" 2>/dev/null \
+          || stat -f %m "$SIGMA_TOKEN_CACHE" 2>/dev/null \
           || echo 0)
     [ -z "${_mtime:-}" ] && _mtime=0
     _age=$(( $(date +%s) - _mtime ))
@@ -46,7 +102,7 @@ if [ -z "${SIGMA_API_TOKEN:-}" ]; then
   fi
 
   if $_fresh; then
-    SIGMA_API_TOKEN=$(cat "$_sigma_token_cache")
+    SIGMA_API_TOKEN=$(cat "$SIGMA_TOKEN_CACHE")
   else
     # Skill owns auth: default to the repo-local fetcher (present in every
     # checkout / zip, in CLI and web alike). $SIGMA_TOKEN_FETCHER overrides
@@ -63,8 +119,10 @@ if [ -z "${SIGMA_API_TOKEN:-}" ]; then
       echo "_env.sh: token fetch returned empty." >&2
       return 1 2>/dev/null || exit 1
     fi
-    # Cache for subsequent invocations in this session (mode 0600).
-    ( umask 077 && printf '%s' "$SIGMA_API_TOKEN" > "$_sigma_token_cache" )
+    # Cache for subsequent invocations in this session. Create with 0600
+    # up front (umask only affects creation, not an existing file's mode).
+    ( umask 077 && : > "$SIGMA_TOKEN_CACHE" && chmod 600 "$SIGMA_TOKEN_CACHE" )
+    printf '%s' "$SIGMA_API_TOKEN" > "$SIGMA_TOKEN_CACHE"
   fi
 fi
 
@@ -80,7 +138,7 @@ export SIGMA_BASE_URL SIGMA_API_TOKEN
 #
 # On HTTP 401, evicts the cached token, re-bootstraps _env.sh to fetch fresh,
 # and retries the call once. Eliminates the stale-cache footgun where a
-# revoked or wrong-base-URL token in /tmp/.sigma_token would silently fail.
+# revoked or wrong-base-URL token in the cache would silently fail.
 sigma_curl() {
   local _resp _body _status _retries=0
   while :; do
@@ -93,9 +151,13 @@ sigma_curl() {
     _body="${_resp%HTTP_STATUS:*}"
     _body="${_body%$'\n'}"
     if [ "$_status" = "401" ] && [ "$_retries" -eq 0 ]; then
-      rm -f /tmp/.sigma_token
+      rm -f "$SIGMA_TOKEN_CACHE"
       unset SIGMA_API_TOKEN
-      source "${BASH_SOURCE[0]}"
+      # Use $SIGMA_ENV_SH, not $BASH_SOURCE[0] — this function may have
+      # been inherited via `export -f` into a child bash with no source
+      # file of its own, in which case BASH_SOURCE[0] here would not be
+      # this file's path.
+      source "$SIGMA_ENV_SH"
       _retries=1
       continue
     fi
@@ -105,4 +167,6 @@ sigma_curl() {
 }
 export -f sigma_curl
 
-unset _sigma_repo_root _sigma_token_cache _sigma_token_ttl _fresh _mtime _age _gettoken
+unset _sigma_repo_root _sigma_token_ttl _fresh _mtime _age _gettoken _sigma_envout
+# SIGMA_ENV_SH and SIGMA_TOKEN_CACHE stay exported — sigma_curl's 401
+# self-heal and any child script need both.

@@ -71,8 +71,8 @@ set -e
 # message. Sigma returns 500 with `code: service_error` on workbooks
 # whose UI features the spec serializer can't represent (confirmed
 # trigger: pivot conditional formatting; suspected: maps, color-by).
-if python3 -c "import json,sys; d=json.load(open('$out_dir/spec.json')); sys.exit(0 if d.get('code')=='service_error' else 1)" 2>/dev/null; then
-  err_msg=$(python3 -c "import json; print(json.load(open('$out_dir/spec.json')).get('message',''))" 2>/dev/null)
+if python3 -c "import json,sys; d=json.load(open(sys.argv[1])); sys.exit(0 if d.get('code')=='service_error' else 1)" "$out_dir/spec.json" 2>/dev/null; then
+  err_msg=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1])).get('message',''))" "$out_dir/spec.json" 2>/dev/null)
   echo "" >&2
   echo "✗ GET-spec returned service_error for this workbook (exit=$get_exit):" >&2
   echo "    $err_msg" >&2

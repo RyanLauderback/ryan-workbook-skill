@@ -181,7 +181,8 @@ The prefix depends on the source type:
     explicitly.
 
 - **Data-model element:** `SourceName` = the DM element's `name`
-  field (returned by `mcp-describe.sh datamodel-element`).
+  field (returned by `GET /v2/dataModels/{id}/spec`, or
+  opportunistically `mcp-describe.sh datamodel-element`, expect exit 3).
   - DM element named "Transactions with Details" →
     `[Transactions with Details/Date]`.
   - **Special characters in the name are safe.** `&`, `(`, `)`, and
@@ -239,8 +240,9 @@ DM defines metrics like "Total Revenue" with their formulas + format.
 The workbook references the metric by name; resolution happens at
 render against the DM's metric catalog.
 
-**Discover available metrics** via `mcp-describe.sh datamodel-element
-<dm> <el>` — the response includes a `metrics` array.
+**Discover available metrics** via `GET /v2/dataModels/{dm}/spec` — the
+`metrics` array (opportunistically `mcp-describe.sh
+datamodel-element <dm> <el>`, expect exit 3).
 
 **The slash-in-name caveat:** metric names containing `/` (e.g.,
 `Cost/Member/Month`) are not safely addressable as
@@ -315,8 +317,23 @@ above.
 | `Min([col])` | Minimum value |
 | `Max([col])` | Maximum value |
 | `Median([col])` | Median value |
-| `Percentile([col], 0.95)` | Nth percentile |
+| `PercentileCont([col], 0.95)` | Nth percentile (continuous — interpolates between values) |
+| `PercentileDisc([col], 0.95)` | Nth percentile (discrete — returns an actual value from the data) |
 | `Mode([col])` | Most frequent value |
+
+> ⚠️ `Percentile(<col>, <k>)` (no `Cont`/`Disc` suffix) does **NOT** exist in
+> Sigma — a hallucination, same failure class as the `DivideSafe` incident
+> below. Confirmed 2026-08-04 via a live compiled-SQL check (a Wave 3 test
+> session's build used it in a `summary` column; the raw SQL literally
+> contained `'Unknown function Percentile'`, which then cascaded into a
+> "reference to errored column" error on every downstream formula
+> referencing that column — POST, `validate-spec.py`, and
+> `verify-workbook.sh` all reported clean, since none of them execute or
+> inspect the actual aggregate-function names in a formula; only pulling the
+> raw compiled SQL via `GET /v2/workbooks/{id}/elements/{eid}/query`, or a
+> human opening the workbook, surfaces it). Use `PercentileCont`/
+> `PercentileDisc` instead — same argument order (`column, k` where `k` is
+> 0–1). See `reference/history.md` → "2026-08-04" for the full incident.
 
 ## Date functions
 
@@ -576,6 +593,22 @@ If([denom] = 0, Null, [num] / [denom])
 Zn([num] / [denom])
 ```
 
+**`Sum()` (and other aggregates) over an all-null input returns `NULL`,
+not `0`.** A derived cost/profit column like `Sum([Quantity] *
+[Unit Cost])` will render `NULL` — not `0` — for any group whose rows
+all have a null `Unit Cost` (a plausible real-world case: returns,
+promotional items, or any transaction type that doesn't carry cost
+data). That `NULL` then poisons any downstream sibling-ref formula that
+subtracts or divides by it (`[Revenue] - [COGS]` → `NULL` for that
+group, when the intent was almost always "treat missing cost as $0
+cost"). Verified 2026-08-03: a ranked revenue/profit/COGS breakdown
+table rendered `null` Profit cells for exactly the groups with
+incomplete cost data — no error anywhere in the pipeline, since this is
+a data-shape problem, not a formula-shape one. **Wrap any aggregate
+that feeds an arithmetic sibling-ref chain in `Zn(...)`** —
+`Zn(Sum([Quantity] * [Unit Cost]))` — so missing data reads as `0`
+rather than propagating `NULL` through every downstream calculation.
+
 > ⚠️ `DivideSafe(<num>, <denom>)` does NOT exist in Sigma. This
 > was a hallucination caught 2026-05-15 and removed from prior
 > skill content. Use one of the patterns above. See
@@ -614,6 +647,20 @@ element:
    placed in layout XML, so it doesn't exist at render.
 5. **Boolean operator as function call** — `Not(...)` instead of
    `Not (...)`.
+
+**If `verify-workbook.sh` reports clean but the workbook still shows an
+error in the UI** (e.g. "reference to errored column"): the script only
+greps compiled SQL for two specific text markers ("Unknown column",
+"Circular column reference") — a hallucinated/nonexistent function name
+(confirmed 2026-08-04: `Percentile` instead of `PercentileCont`) compiles
+to a *different* literal error string (`'Unknown function <Name>'`) that
+this check doesn't match, and any column referencing the broken one
+cascades into "reference to errored column." Pull the raw compiled SQL
+directly (`GET /v2/workbooks/{id}/elements/{eid}/query`, the same
+endpoint `verify-workbook.sh` uses) and read the actual `sql` field for
+any `'...'` string-literal markers rather than trusting a clean
+`verify-workbook.sh` exit code alone when a user reports a UI-visible
+column error.
 
 See `reference/workflows/validate.md` → "Post-create — verify-workbook.sh"
 for the triage flow.

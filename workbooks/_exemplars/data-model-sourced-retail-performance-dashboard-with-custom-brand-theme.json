@@ -1,0 +1,2084 @@
+{
+  "workbookId": "58de86a3-3084-457b-a04d-724c7372664f",
+  "name": "LL Bean Performance",
+  "url": "https://app.sigmacomputing.com/papercrane/workbook/LL-Bean-Performance-2HH1cBswstRUaOAqToKrtJ",
+  "documentVersion": 6,
+  "latestDocumentVersion": 6,
+  "ownerId": "A2OaQREZJNo3lA5bjAiX7C7uSmH0T",
+  "folderId": "dfd574ca-7299-4ef7-9d75-00952009b92b",
+  "createdBy": "A2OaQREZJNo3lA5bjAiX7C7uSmH0T",
+  "updatedBy": "A2OaQREZJNo3lA5bjAiX7C7uSmH0T",
+  "createdAt": "2026-07-14T04:04:34.567Z",
+  "updatedAt": "2026-08-10T19:20:05.481Z",
+  "description": "Retail performance: KPIs, customer retention cohort, and performance detail.",
+  "schemaVersion": 1,
+  "elements": [
+    {
+      "id": "container-header",
+      "kind": "container",
+      "style": {
+        "backgroundColor": "#14432B",
+        "borderRadius": "round",
+        "borderColor": "#14432b",
+        "borderWidth": 3
+      }
+    },
+    {
+      "id": "text-title",
+      "kind": "text",
+      "body": "## <span style=\"color: #F7F3EA\">**L.L.Bean**</span><span style=\"color: #F7F3EA\">  \u00b7  Retail Performance</span>\n\n<span style=\"color: #C8A96A\">Outside Together Since 1912 \u2014 revenue, retention & profitability</span>",
+      "verticalAlign": "middle"
+    },
+    {
+      "kind": "control",
+      "controlId": "DateRangeFilter",
+      "id": "ctrl-date",
+      "name": "Date Range",
+      "filters": [
+        {
+          "source": {
+            "kind": "table",
+            "elementId": "tbl-base"
+          },
+          "columnId": "col-base-date"
+        }
+      ],
+      "style": {
+        "backgroundColor": "#F5F0E6",
+        "borderRadius": "round"
+      },
+      "controlType": "date-range",
+      "mode": "between",
+      "includeNulls": "when-no-value-is-selected"
+    },
+    {
+      "id": "container-kpis",
+      "kind": "container",
+      "style": {
+        "backgroundColor": "#F5F0E6",
+        "borderRadius": "round",
+        "borderColor": "#c8a96a",
+        "borderWidth": 2
+      }
+    },
+    {
+      "id": "kpi-revenue",
+      "kind": "kpi-chart",
+      "source": {
+        "elementId": "tbl-base",
+        "kind": "table"
+      },
+      "columns": [
+        {
+          "id": "kpi-revenue-month",
+          "formula": "DateTrunc(\"month\", [Retail Transactions/Date])",
+          "name": "Month",
+          "format": {
+            "kind": "datetime",
+            "formatString": "%b %Y"
+          }
+        },
+        {
+          "id": "kpi-revenue-val",
+          "formula": "[Metrics/Total Revenue]",
+          "name": "Revenue",
+          "format": {
+            "kind": "number",
+            "formatString": "$,.0f"
+          }
+        },
+        {
+          "id": "kpi-revenue-region",
+          "formula": "[Retail Transactions/Store Region]",
+          "name": "Store Region"
+        },
+        {
+          "id": "kpi-revenue-ptype",
+          "formula": "[Retail Transactions/Product Type]",
+          "name": "Product Type"
+        },
+        {
+          "id": "4fa7acc3742f2a376dc322e163c9576e",
+          "formula": "[Retail Transactions/Product Line (product info)]"
+        },
+        {
+          "id": "6e4e82d5591e1446670e5905a4a541c1",
+          "formula": "[Retail Transactions/Product Family (product info)]"
+        },
+        {
+          "id": "09ebec4fa1d12b06f082109793bd32fc",
+          "formula": "[Retail Transactions/Product Group (product info)]"
+        },
+        {
+          "id": "ae0c8ecc52f47576361649b57118c280",
+          "formula": "[Retail Transactions/Product Description (product info)]"
+        },
+        {
+          "id": "6990543699c07a5b8d88ea5b9ca8bd45",
+          "formula": "[Retail Transactions/Sku Number (product info)]"
+        },
+        {
+          "id": "5ba06f9febc7c890f459d44fb2fbe6a7",
+          "formula": "[Retail Transactions/Product Status (product info)]"
+        },
+        {
+          "id": "879c67a69ab33b16a78d273d156a4793",
+          "formula": "[Retail Transactions/Cust Address (customer info)]"
+        },
+        {
+          "id": "0a65b001252556f87bfe9de5c296d7a2",
+          "formula": "[Retail Transactions/Cust City (customer info)]"
+        },
+        {
+          "id": "076abf6254d1a5e6ad72d1999524e79b",
+          "formula": "[Retail Transactions/Cust State (customer info)]"
+        },
+        {
+          "id": "1cd85d040bdd1f3939bce191be1a0857",
+          "formula": "[Retail Transactions/Cust County (customer info)]"
+        },
+        {
+          "id": "3f83f0c106a4219b3923dbcbbb13b87a",
+          "formula": "[Retail Transactions/Cust Zip Code (customer info)]"
+        },
+        {
+          "id": "e0b78a221a04651d95ba9a126ab7d692",
+          "formula": "[Retail Transactions/Cust Region (customer info)]"
+        },
+        {
+          "id": "4419ae0a096354aa145ad90d0e26e208",
+          "formula": "[Retail Transactions/Store City (store info)]"
+        },
+        {
+          "id": "5f2f2343ab08e6d991b074e9fd085bd5",
+          "formula": "[Retail Transactions/Store State (store info)]"
+        },
+        {
+          "id": "ad66aa953335c8f60500c4aa4be7759d",
+          "formula": "[Retail Transactions/Store Zip Code (store info)]"
+        },
+        {
+          "id": "3cb000e3d89411d06abf74a7c874ce70",
+          "formula": "[Retail Transactions/Store County (store info)]"
+        }
+      ],
+      "value": {
+        "columnId": "kpi-revenue-val"
+      },
+      "name": {
+        "text": "Revenue",
+        "color": "#14432b",
+        "fontWeight": "bold",
+        "fontSize": 15
+      },
+      "description": {
+        "visibility": "hidden"
+      },
+      "style": {
+        "backgroundColor": "#FFFFFF",
+        "borderRadius": "round",
+        "borderColor": "#c8a96a",
+        "borderWidth": 1
+      },
+      "layout": {
+        "anchor": "middle"
+      },
+      "timeline": {
+        "columnId": "kpi-revenue-month"
+      },
+      "periodComparison": "month"
+    },
+    {
+      "id": "kpi-aov",
+      "kind": "kpi-chart",
+      "source": {
+        "elementId": "tbl-base",
+        "kind": "table"
+      },
+      "columns": [
+        {
+          "id": "kpi-aov-val",
+          "formula": "[Metrics/AOV]",
+          "name": "AOV",
+          "format": {
+            "kind": "number",
+            "formatString": "$,.2f"
+          }
+        },
+        {
+          "id": "kpi-aov-month",
+          "formula": "DateTrunc(\"month\", [Retail Transactions/Date])",
+          "name": "Month",
+          "format": {
+            "kind": "datetime",
+            "formatString": "%b %Y"
+          }
+        },
+        {
+          "id": "kpi-aov-region",
+          "formula": "[Retail Transactions/Store Region]",
+          "name": "Store Region"
+        },
+        {
+          "id": "kpi-aov-ptype",
+          "formula": "[Retail Transactions/Product Type]",
+          "name": "Product Type"
+        },
+        {
+          "id": "4fa7acc3742f2a376dc322e163c9576e",
+          "formula": "[Retail Transactions/Product Line (product info)]"
+        },
+        {
+          "id": "6e4e82d5591e1446670e5905a4a541c1",
+          "formula": "[Retail Transactions/Product Family (product info)]"
+        },
+        {
+          "id": "09ebec4fa1d12b06f082109793bd32fc",
+          "formula": "[Retail Transactions/Product Group (product info)]"
+        },
+        {
+          "id": "ae0c8ecc52f47576361649b57118c280",
+          "formula": "[Retail Transactions/Product Description (product info)]"
+        },
+        {
+          "id": "6990543699c07a5b8d88ea5b9ca8bd45",
+          "formula": "[Retail Transactions/Sku Number (product info)]"
+        },
+        {
+          "id": "5ba06f9febc7c890f459d44fb2fbe6a7",
+          "formula": "[Retail Transactions/Product Status (product info)]"
+        },
+        {
+          "id": "879c67a69ab33b16a78d273d156a4793",
+          "formula": "[Retail Transactions/Cust Address (customer info)]"
+        },
+        {
+          "id": "0a65b001252556f87bfe9de5c296d7a2",
+          "formula": "[Retail Transactions/Cust City (customer info)]"
+        },
+        {
+          "id": "076abf6254d1a5e6ad72d1999524e79b",
+          "formula": "[Retail Transactions/Cust State (customer info)]"
+        },
+        {
+          "id": "1cd85d040bdd1f3939bce191be1a0857",
+          "formula": "[Retail Transactions/Cust County (customer info)]"
+        },
+        {
+          "id": "3f83f0c106a4219b3923dbcbbb13b87a",
+          "formula": "[Retail Transactions/Cust Zip Code (customer info)]"
+        },
+        {
+          "id": "e0b78a221a04651d95ba9a126ab7d692",
+          "formula": "[Retail Transactions/Cust Region (customer info)]"
+        },
+        {
+          "id": "4419ae0a096354aa145ad90d0e26e208",
+          "formula": "[Retail Transactions/Store City (store info)]"
+        },
+        {
+          "id": "5f2f2343ab08e6d991b074e9fd085bd5",
+          "formula": "[Retail Transactions/Store State (store info)]"
+        },
+        {
+          "id": "ad66aa953335c8f60500c4aa4be7759d",
+          "formula": "[Retail Transactions/Store Zip Code (store info)]"
+        },
+        {
+          "id": "3cb000e3d89411d06abf74a7c874ce70",
+          "formula": "[Retail Transactions/Store County (store info)]"
+        }
+      ],
+      "value": {
+        "columnId": "kpi-aov-val"
+      },
+      "name": {
+        "text": "AOV",
+        "color": "#14432b",
+        "fontWeight": "bold",
+        "fontSize": 15
+      },
+      "description": {
+        "visibility": "hidden"
+      },
+      "style": {
+        "backgroundColor": "#FFFFFF",
+        "borderRadius": "round",
+        "borderColor": "#c8a96a",
+        "borderWidth": 1
+      },
+      "layout": {
+        "anchor": "middle"
+      }
+    },
+    {
+      "id": "kpi-profit",
+      "kind": "kpi-chart",
+      "source": {
+        "elementId": "tbl-base",
+        "kind": "table"
+      },
+      "columns": [
+        {
+          "id": "kpi-profit-val",
+          "formula": "[Metrics/Total Profit]",
+          "name": "Profit",
+          "format": {
+            "kind": "number",
+            "formatString": "$,.0f"
+          }
+        },
+        {
+          "id": "kpi-profit-month",
+          "formula": "DateTrunc(\"month\", [Retail Transactions/Date])",
+          "name": "Month",
+          "format": {
+            "kind": "datetime",
+            "formatString": "%b %Y"
+          }
+        },
+        {
+          "id": "kpi-profit-region",
+          "formula": "[Retail Transactions/Store Region]",
+          "name": "Store Region"
+        },
+        {
+          "id": "kpi-profit-ptype",
+          "formula": "[Retail Transactions/Product Type]",
+          "name": "Product Type"
+        },
+        {
+          "id": "4fa7acc3742f2a376dc322e163c9576e",
+          "formula": "[Retail Transactions/Product Line (product info)]"
+        },
+        {
+          "id": "6e4e82d5591e1446670e5905a4a541c1",
+          "formula": "[Retail Transactions/Product Family (product info)]"
+        },
+        {
+          "id": "09ebec4fa1d12b06f082109793bd32fc",
+          "formula": "[Retail Transactions/Product Group (product info)]"
+        },
+        {
+          "id": "ae0c8ecc52f47576361649b57118c280",
+          "formula": "[Retail Transactions/Product Description (product info)]"
+        },
+        {
+          "id": "6990543699c07a5b8d88ea5b9ca8bd45",
+          "formula": "[Retail Transactions/Sku Number (product info)]"
+        },
+        {
+          "id": "5ba06f9febc7c890f459d44fb2fbe6a7",
+          "formula": "[Retail Transactions/Product Status (product info)]"
+        },
+        {
+          "id": "879c67a69ab33b16a78d273d156a4793",
+          "formula": "[Retail Transactions/Cust Address (customer info)]"
+        },
+        {
+          "id": "0a65b001252556f87bfe9de5c296d7a2",
+          "formula": "[Retail Transactions/Cust City (customer info)]"
+        },
+        {
+          "id": "076abf6254d1a5e6ad72d1999524e79b",
+          "formula": "[Retail Transactions/Cust State (customer info)]"
+        },
+        {
+          "id": "1cd85d040bdd1f3939bce191be1a0857",
+          "formula": "[Retail Transactions/Cust County (customer info)]"
+        },
+        {
+          "id": "3f83f0c106a4219b3923dbcbbb13b87a",
+          "formula": "[Retail Transactions/Cust Zip Code (customer info)]"
+        },
+        {
+          "id": "e0b78a221a04651d95ba9a126ab7d692",
+          "formula": "[Retail Transactions/Cust Region (customer info)]"
+        },
+        {
+          "id": "4419ae0a096354aa145ad90d0e26e208",
+          "formula": "[Retail Transactions/Store City (store info)]"
+        },
+        {
+          "id": "5f2f2343ab08e6d991b074e9fd085bd5",
+          "formula": "[Retail Transactions/Store State (store info)]"
+        },
+        {
+          "id": "ad66aa953335c8f60500c4aa4be7759d",
+          "formula": "[Retail Transactions/Store Zip Code (store info)]"
+        },
+        {
+          "id": "3cb000e3d89411d06abf74a7c874ce70",
+          "formula": "[Retail Transactions/Store County (store info)]"
+        }
+      ],
+      "value": {
+        "columnId": "kpi-profit-val"
+      },
+      "name": {
+        "text": "Profit",
+        "color": "#14432b",
+        "fontWeight": "bold",
+        "fontSize": 15
+      },
+      "description": {
+        "visibility": "hidden"
+      },
+      "style": {
+        "backgroundColor": "#FFFFFF",
+        "borderRadius": "round",
+        "borderColor": "#c8a96a",
+        "borderWidth": 1
+      },
+      "layout": {
+        "anchor": "middle"
+      }
+    },
+    {
+      "id": "kpi-margin",
+      "kind": "kpi-chart",
+      "source": {
+        "elementId": "tbl-base",
+        "kind": "table"
+      },
+      "columns": [
+        {
+          "id": "kpi-margin-val",
+          "formula": "[Metrics/Total Profit] / [Metrics/Total Revenue]",
+          "name": "Profit Margin",
+          "format": {
+            "kind": "number",
+            "formatString": ".1%"
+          }
+        },
+        {
+          "id": "kpi-margin-month",
+          "formula": "DateTrunc(\"month\", [Retail Transactions/Date])",
+          "name": "Month",
+          "format": {
+            "kind": "datetime",
+            "formatString": "%b %Y"
+          }
+        },
+        {
+          "id": "kpi-margin-region",
+          "formula": "[Retail Transactions/Store Region]",
+          "name": "Store Region"
+        },
+        {
+          "id": "kpi-margin-ptype",
+          "formula": "[Retail Transactions/Product Type]",
+          "name": "Product Type"
+        },
+        {
+          "id": "4fa7acc3742f2a376dc322e163c9576e",
+          "formula": "[Retail Transactions/Product Line (product info)]"
+        },
+        {
+          "id": "6e4e82d5591e1446670e5905a4a541c1",
+          "formula": "[Retail Transactions/Product Family (product info)]"
+        },
+        {
+          "id": "09ebec4fa1d12b06f082109793bd32fc",
+          "formula": "[Retail Transactions/Product Group (product info)]"
+        },
+        {
+          "id": "ae0c8ecc52f47576361649b57118c280",
+          "formula": "[Retail Transactions/Product Description (product info)]"
+        },
+        {
+          "id": "6990543699c07a5b8d88ea5b9ca8bd45",
+          "formula": "[Retail Transactions/Sku Number (product info)]"
+        },
+        {
+          "id": "5ba06f9febc7c890f459d44fb2fbe6a7",
+          "formula": "[Retail Transactions/Product Status (product info)]"
+        },
+        {
+          "id": "879c67a69ab33b16a78d273d156a4793",
+          "formula": "[Retail Transactions/Cust Address (customer info)]"
+        },
+        {
+          "id": "0a65b001252556f87bfe9de5c296d7a2",
+          "formula": "[Retail Transactions/Cust City (customer info)]"
+        },
+        {
+          "id": "076abf6254d1a5e6ad72d1999524e79b",
+          "formula": "[Retail Transactions/Cust State (customer info)]"
+        },
+        {
+          "id": "1cd85d040bdd1f3939bce191be1a0857",
+          "formula": "[Retail Transactions/Cust County (customer info)]"
+        },
+        {
+          "id": "3f83f0c106a4219b3923dbcbbb13b87a",
+          "formula": "[Retail Transactions/Cust Zip Code (customer info)]"
+        },
+        {
+          "id": "e0b78a221a04651d95ba9a126ab7d692",
+          "formula": "[Retail Transactions/Cust Region (customer info)]"
+        },
+        {
+          "id": "4419ae0a096354aa145ad90d0e26e208",
+          "formula": "[Retail Transactions/Store City (store info)]"
+        },
+        {
+          "id": "5f2f2343ab08e6d991b074e9fd085bd5",
+          "formula": "[Retail Transactions/Store State (store info)]"
+        },
+        {
+          "id": "ad66aa953335c8f60500c4aa4be7759d",
+          "formula": "[Retail Transactions/Store Zip Code (store info)]"
+        },
+        {
+          "id": "3cb000e3d89411d06abf74a7c874ce70",
+          "formula": "[Retail Transactions/Store County (store info)]"
+        }
+      ],
+      "value": {
+        "columnId": "kpi-margin-val"
+      },
+      "name": {
+        "text": "Profit Margin",
+        "color": "#14432b",
+        "fontWeight": "bold",
+        "fontSize": 15
+      },
+      "description": {
+        "visibility": "hidden"
+      },
+      "style": {
+        "backgroundColor": "#FFFFFF",
+        "borderRadius": "round",
+        "borderColor": "#c8a96a",
+        "borderWidth": 1
+      },
+      "layout": {
+        "anchor": "middle"
+      }
+    },
+    {
+      "id": "kpi-cogs",
+      "kind": "kpi-chart",
+      "source": {
+        "elementId": "tbl-base",
+        "kind": "table"
+      },
+      "columns": [
+        {
+          "id": "kpi-cogs-val",
+          "formula": "[Metrics/Total COGS]",
+          "name": "COGS",
+          "format": {
+            "kind": "number",
+            "formatString": "$,.0f"
+          }
+        },
+        {
+          "id": "kpi-cogs-month",
+          "formula": "DateTrunc(\"month\", [Retail Transactions/Date])",
+          "name": "Month",
+          "format": {
+            "kind": "datetime",
+            "formatString": "%b %Y"
+          }
+        },
+        {
+          "id": "kpi-cogs-region",
+          "formula": "[Retail Transactions/Store Region]",
+          "name": "Store Region"
+        },
+        {
+          "id": "kpi-cogs-ptype",
+          "formula": "[Retail Transactions/Product Type]",
+          "name": "Product Type"
+        },
+        {
+          "id": "4fa7acc3742f2a376dc322e163c9576e",
+          "formula": "[Retail Transactions/Product Line (product info)]"
+        },
+        {
+          "id": "6e4e82d5591e1446670e5905a4a541c1",
+          "formula": "[Retail Transactions/Product Family (product info)]"
+        },
+        {
+          "id": "09ebec4fa1d12b06f082109793bd32fc",
+          "formula": "[Retail Transactions/Product Group (product info)]"
+        },
+        {
+          "id": "ae0c8ecc52f47576361649b57118c280",
+          "formula": "[Retail Transactions/Product Description (product info)]"
+        },
+        {
+          "id": "6990543699c07a5b8d88ea5b9ca8bd45",
+          "formula": "[Retail Transactions/Sku Number (product info)]"
+        },
+        {
+          "id": "5ba06f9febc7c890f459d44fb2fbe6a7",
+          "formula": "[Retail Transactions/Product Status (product info)]"
+        },
+        {
+          "id": "879c67a69ab33b16a78d273d156a4793",
+          "formula": "[Retail Transactions/Cust Address (customer info)]"
+        },
+        {
+          "id": "0a65b001252556f87bfe9de5c296d7a2",
+          "formula": "[Retail Transactions/Cust City (customer info)]"
+        },
+        {
+          "id": "076abf6254d1a5e6ad72d1999524e79b",
+          "formula": "[Retail Transactions/Cust State (customer info)]"
+        },
+        {
+          "id": "1cd85d040bdd1f3939bce191be1a0857",
+          "formula": "[Retail Transactions/Cust County (customer info)]"
+        },
+        {
+          "id": "3f83f0c106a4219b3923dbcbbb13b87a",
+          "formula": "[Retail Transactions/Cust Zip Code (customer info)]"
+        },
+        {
+          "id": "e0b78a221a04651d95ba9a126ab7d692",
+          "formula": "[Retail Transactions/Cust Region (customer info)]"
+        },
+        {
+          "id": "4419ae0a096354aa145ad90d0e26e208",
+          "formula": "[Retail Transactions/Store City (store info)]"
+        },
+        {
+          "id": "5f2f2343ab08e6d991b074e9fd085bd5",
+          "formula": "[Retail Transactions/Store State (store info)]"
+        },
+        {
+          "id": "ad66aa953335c8f60500c4aa4be7759d",
+          "formula": "[Retail Transactions/Store Zip Code (store info)]"
+        },
+        {
+          "id": "3cb000e3d89411d06abf74a7c874ce70",
+          "formula": "[Retail Transactions/Store County (store info)]"
+        }
+      ],
+      "value": {
+        "columnId": "kpi-cogs-val"
+      },
+      "name": {
+        "text": "COGS",
+        "color": "#14432b",
+        "fontWeight": "bold",
+        "fontSize": 15
+      },
+      "description": {
+        "visibility": "hidden"
+      },
+      "style": {
+        "backgroundColor": "#FFFFFF",
+        "borderRadius": "round",
+        "borderColor": "#c8a96a",
+        "borderWidth": 1
+      },
+      "layout": {
+        "anchor": "middle"
+      }
+    },
+    {
+      "id": "container-filters",
+      "kind": "container",
+      "style": {
+        "backgroundColor": "#FFFFFF",
+        "borderRadius": "round",
+        "borderColor": "#2d6a4f",
+        "borderWidth": 3
+      }
+    },
+    {
+      "kind": "control",
+      "controlId": "ProductTypeFilter",
+      "id": "ctrl-ptype",
+      "name": "Product Type",
+      "filters": [
+        {
+          "source": {
+            "kind": "table",
+            "elementId": "tbl-base"
+          },
+          "columnId": "col-base-product-type"
+        }
+      ],
+      "style": {
+        "backgroundColor": "#F5F0E6",
+        "borderRadius": "round"
+      },
+      "controlType": "list",
+      "mode": "include",
+      "selectionMode": "multiple",
+      "values": [],
+      "source": {
+        "kind": "source",
+        "source": {
+          "kind": "table",
+          "elementId": "tbl-base"
+        },
+        "columnId": "col-base-product-type"
+      }
+    },
+    {
+      "kind": "control",
+      "controlId": "ProductNameFilter",
+      "id": "ctrl-pname",
+      "name": "Product Name",
+      "filters": [
+        {
+          "source": {
+            "kind": "table",
+            "elementId": "tbl-base"
+          },
+          "columnId": "col-base-product-name"
+        }
+      ],
+      "style": {
+        "backgroundColor": "#F5F0E6",
+        "borderRadius": "round"
+      },
+      "controlType": "list",
+      "mode": "include",
+      "selectionMode": "multiple",
+      "values": [],
+      "source": {
+        "kind": "source",
+        "source": {
+          "kind": "table",
+          "elementId": "tbl-base"
+        },
+        "columnId": "col-base-product-name"
+      }
+    },
+    {
+      "kind": "control",
+      "controlId": "StoreRegionFilter",
+      "id": "ctrl-region",
+      "name": "Store Region",
+      "filters": [
+        {
+          "source": {
+            "kind": "table",
+            "elementId": "tbl-base"
+          },
+          "columnId": "col-base-store-region"
+        }
+      ],
+      "style": {
+        "backgroundColor": "#F5F0E6",
+        "borderRadius": "round"
+      },
+      "controlType": "list",
+      "mode": "include",
+      "selectionMode": "multiple",
+      "values": [],
+      "source": {
+        "kind": "source",
+        "source": {
+          "kind": "table",
+          "elementId": "tbl-base"
+        },
+        "columnId": "col-base-store-region"
+      }
+    },
+    {
+      "kind": "control",
+      "controlId": "StoreNameFilter",
+      "id": "ctrl-store",
+      "name": "Store Name",
+      "filters": [
+        {
+          "source": {
+            "kind": "table",
+            "elementId": "tbl-base"
+          },
+          "columnId": "col-base-store-name"
+        }
+      ],
+      "style": {
+        "backgroundColor": "#F5F0E6",
+        "borderRadius": "round"
+      },
+      "controlType": "list",
+      "mode": "include",
+      "selectionMode": "multiple",
+      "values": [],
+      "source": {
+        "kind": "source",
+        "source": {
+          "kind": "table",
+          "elementId": "tbl-base"
+        },
+        "columnId": "col-base-store-name"
+      }
+    },
+    {
+      "kind": "control",
+      "controlId": "CustomerFilter",
+      "id": "ctrl-cust",
+      "name": "Customer",
+      "filters": [
+        {
+          "source": {
+            "kind": "table",
+            "elementId": "tbl-base"
+          },
+          "columnId": "col-base-cust-name"
+        }
+      ],
+      "style": {
+        "backgroundColor": "#F5F0E6",
+        "borderRadius": "round"
+      },
+      "controlType": "list",
+      "mode": "include",
+      "selectionMode": "multiple",
+      "values": [],
+      "source": {
+        "kind": "source",
+        "source": {
+          "kind": "table",
+          "elementId": "tbl-base"
+        },
+        "columnId": "col-base-cust-name"
+      }
+    },
+    {
+      "id": "container-detail-title",
+      "kind": "container",
+      "style": {
+        "backgroundColor": "#F5F0E6",
+        "borderColor": "#1e5631",
+        "borderWidth": 3
+      }
+    },
+    {
+      "id": "text-detail-title",
+      "kind": "text",
+      "body": "### <span style=\"color: #1E5631\">\u2501\u2501</span>  <span style=\"color: #14432B\">**Performance Detail**</span>  <span style=\"color: #C8A96A\">\u2014 trends, leaders & order mix</span>",
+      "verticalAlign": "middle"
+    },
+    {
+      "id": "chart-pop-year",
+      "kind": "line-chart",
+      "source": {
+        "elementId": "tbl-base",
+        "kind": "table"
+      },
+      "columns": [
+        {
+          "id": "c1-year",
+          "formula": "Year([Retail Transactions/Date])",
+          "name": "Year"
+        },
+        {
+          "id": "c1-month",
+          "formula": "Month([Retail Transactions/Date])",
+          "name": "Month"
+        },
+        {
+          "id": "c1-rev",
+          "formula": "[Metrics/Total Revenue]",
+          "name": "Revenue",
+          "format": {
+            "kind": "number",
+            "formatString": "$,.0f"
+          }
+        },
+        {
+          "id": "c1-pt-store-region",
+          "formula": "[Retail Transactions/Store Region]",
+          "name": "Store Region"
+        },
+        {
+          "id": "c1-pt-store-name",
+          "formula": "[Retail Transactions/Store Name]",
+          "name": "Store Name"
+        },
+        {
+          "id": "c1-pt-product-type",
+          "formula": "[Retail Transactions/Product Type]",
+          "name": "Product Type"
+        },
+        {
+          "id": "c1-pt-product-name",
+          "formula": "[Retail Transactions/Product Name]",
+          "name": "Product Name"
+        },
+        {
+          "id": "c1-pt-cust-name",
+          "formula": "[Retail Transactions/Cust Name]",
+          "name": "Cust Name"
+        },
+        {
+          "id": "c1-pt-date",
+          "formula": "[Retail Transactions/Date]",
+          "name": "Date"
+        },
+        {
+          "id": "4fa7acc3742f2a376dc322e163c9576e",
+          "formula": "[Retail Transactions/Product Line (product info)]"
+        },
+        {
+          "id": "6e4e82d5591e1446670e5905a4a541c1",
+          "formula": "[Retail Transactions/Product Family (product info)]"
+        },
+        {
+          "id": "09ebec4fa1d12b06f082109793bd32fc",
+          "formula": "[Retail Transactions/Product Group (product info)]"
+        },
+        {
+          "id": "ae0c8ecc52f47576361649b57118c280",
+          "formula": "[Retail Transactions/Product Description (product info)]"
+        },
+        {
+          "id": "6990543699c07a5b8d88ea5b9ca8bd45",
+          "formula": "[Retail Transactions/Sku Number (product info)]"
+        },
+        {
+          "id": "5ba06f9febc7c890f459d44fb2fbe6a7",
+          "formula": "[Retail Transactions/Product Status (product info)]"
+        },
+        {
+          "id": "879c67a69ab33b16a78d273d156a4793",
+          "formula": "[Retail Transactions/Cust Address (customer info)]"
+        },
+        {
+          "id": "0a65b001252556f87bfe9de5c296d7a2",
+          "formula": "[Retail Transactions/Cust City (customer info)]"
+        },
+        {
+          "id": "076abf6254d1a5e6ad72d1999524e79b",
+          "formula": "[Retail Transactions/Cust State (customer info)]"
+        },
+        {
+          "id": "1cd85d040bdd1f3939bce191be1a0857",
+          "formula": "[Retail Transactions/Cust County (customer info)]"
+        },
+        {
+          "id": "3f83f0c106a4219b3923dbcbbb13b87a",
+          "formula": "[Retail Transactions/Cust Zip Code (customer info)]"
+        },
+        {
+          "id": "e0b78a221a04651d95ba9a126ab7d692",
+          "formula": "[Retail Transactions/Cust Region (customer info)]"
+        },
+        {
+          "id": "4419ae0a096354aa145ad90d0e26e208",
+          "formula": "[Retail Transactions/Store City (store info)]"
+        },
+        {
+          "id": "5f2f2343ab08e6d991b074e9fd085bd5",
+          "formula": "[Retail Transactions/Store State (store info)]"
+        },
+        {
+          "id": "ad66aa953335c8f60500c4aa4be7759d",
+          "formula": "[Retail Transactions/Store Zip Code (store info)]"
+        },
+        {
+          "id": "3cb000e3d89411d06abf74a7c874ce70",
+          "formula": "[Retail Transactions/Store County (store info)]"
+        }
+      ],
+      "yAxis": {
+        "columnIds": [
+          "c1-rev"
+        ]
+      },
+      "xAxis": {
+        "columnId": "c1-month",
+        "sort": {
+          "by": "c1-month",
+          "direction": "ascending"
+        }
+      },
+      "color": {
+        "by": "category",
+        "column": "c1-year",
+        "scheme": [
+          "#C8A96A",
+          "#2D6A4F",
+          "#14432B",
+          "#7B2D26"
+        ]
+      },
+      "name": {
+        "text": "Revenue by Month \u2014 Year over Year",
+        "color": "#14432b",
+        "fontWeight": "bold",
+        "fontSize": 15
+      },
+      "legend": {
+        "position": "bottom"
+      },
+      "style": {
+        "backgroundColor": "#FFFFFF",
+        "borderRadius": "round",
+        "borderColor": "#c8a96a",
+        "borderWidth": 1
+      }
+    },
+    {
+      "id": "chart-top-stores",
+      "kind": "bar-chart",
+      "source": {
+        "elementId": "tbl-base",
+        "kind": "table"
+      },
+      "columns": [
+        {
+          "id": "c2-store",
+          "formula": "[Retail Transactions/Store Name]",
+          "name": "Store Name"
+        },
+        {
+          "id": "c2-rev",
+          "formula": "[Metrics/Total Revenue]",
+          "name": "Revenue",
+          "format": {
+            "kind": "number",
+            "formatString": "$,.0f"
+          }
+        },
+        {
+          "id": "c2-pt-store-region",
+          "formula": "[Retail Transactions/Store Region]",
+          "name": "Store Region"
+        },
+        {
+          "id": "c2-pt-store-name",
+          "formula": "[Retail Transactions/Store Name]",
+          "name": "Store Name"
+        },
+        {
+          "id": "c2-pt-product-type",
+          "formula": "[Retail Transactions/Product Type]",
+          "name": "Product Type"
+        },
+        {
+          "id": "c2-pt-product-name",
+          "formula": "[Retail Transactions/Product Name]",
+          "name": "Product Name"
+        },
+        {
+          "id": "c2-pt-cust-name",
+          "formula": "[Retail Transactions/Cust Name]",
+          "name": "Cust Name"
+        },
+        {
+          "id": "c2-pt-date",
+          "formula": "[Retail Transactions/Date]",
+          "name": "Date"
+        },
+        {
+          "id": "Zb_VWm6TTN",
+          "formula": "[Retail Transactions/product info/Product Family]"
+        },
+        {
+          "id": "gzeBzOwpf_",
+          "formula": "[Retail Transactions/product info/Product Line]"
+        },
+        {
+          "id": "5OykiS7FMA",
+          "formula": "[Retail Transactions/product info/Product Group]"
+        },
+        {
+          "id": "6RWDaEDLiV",
+          "formula": "[Retail Transactions/customer info/Cust State]"
+        },
+        {
+          "id": "kFuKU_t4-W",
+          "formula": "[Retail Transactions/customer info/Cust Zip Code]"
+        },
+        {
+          "id": "uT9H6PiovT",
+          "formula": "[Retail Transactions/customer info/Cust County]"
+        },
+        {
+          "id": "AU45cYc29I",
+          "formula": "[Retail Transactions/customer info/Cust Region]"
+        },
+        {
+          "id": "iaC9Gt04V8",
+          "formula": "[Retail Transactions/customer info/Cust City]"
+        },
+        {
+          "id": "RX5EeXvs4H",
+          "formula": "[Retail Transactions/store info/Store City]"
+        },
+        {
+          "id": "uWel6Fr02O",
+          "formula": "[Retail Transactions/store info/Store State]"
+        },
+        {
+          "id": "ZzySURxhy-",
+          "formula": "[Retail Transactions/store info/Store Zip Code]"
+        },
+        {
+          "id": "daloQuBn2t",
+          "formula": "[Retail Transactions/store info/Store County]"
+        },
+        {
+          "id": "4fa7acc3742f2a376dc322e163c9576e",
+          "formula": "[Retail Transactions/Product Line (product info)]"
+        },
+        {
+          "id": "6e4e82d5591e1446670e5905a4a541c1",
+          "formula": "[Retail Transactions/Product Family (product info)]"
+        },
+        {
+          "id": "09ebec4fa1d12b06f082109793bd32fc",
+          "formula": "[Retail Transactions/Product Group (product info)]"
+        },
+        {
+          "id": "ae0c8ecc52f47576361649b57118c280",
+          "formula": "[Retail Transactions/Product Description (product info)]"
+        },
+        {
+          "id": "6990543699c07a5b8d88ea5b9ca8bd45",
+          "formula": "[Retail Transactions/Sku Number (product info)]"
+        },
+        {
+          "id": "5ba06f9febc7c890f459d44fb2fbe6a7",
+          "formula": "[Retail Transactions/Product Status (product info)]"
+        },
+        {
+          "id": "879c67a69ab33b16a78d273d156a4793",
+          "formula": "[Retail Transactions/Cust Address (customer info)]"
+        },
+        {
+          "id": "0a65b001252556f87bfe9de5c296d7a2",
+          "formula": "[Retail Transactions/Cust City (customer info)]"
+        },
+        {
+          "id": "076abf6254d1a5e6ad72d1999524e79b",
+          "formula": "[Retail Transactions/Cust State (customer info)]"
+        },
+        {
+          "id": "1cd85d040bdd1f3939bce191be1a0857",
+          "formula": "[Retail Transactions/Cust County (customer info)]"
+        },
+        {
+          "id": "3f83f0c106a4219b3923dbcbbb13b87a",
+          "formula": "[Retail Transactions/Cust Zip Code (customer info)]"
+        },
+        {
+          "id": "e0b78a221a04651d95ba9a126ab7d692",
+          "formula": "[Retail Transactions/Cust Region (customer info)]"
+        },
+        {
+          "id": "4419ae0a096354aa145ad90d0e26e208",
+          "formula": "[Retail Transactions/Store City (store info)]"
+        },
+        {
+          "id": "5f2f2343ab08e6d991b074e9fd085bd5",
+          "formula": "[Retail Transactions/Store State (store info)]"
+        },
+        {
+          "id": "ad66aa953335c8f60500c4aa4be7759d",
+          "formula": "[Retail Transactions/Store Zip Code (store info)]"
+        },
+        {
+          "id": "3cb000e3d89411d06abf74a7c874ce70",
+          "formula": "[Retail Transactions/Store County (store info)]"
+        }
+      ],
+      "yAxis": {
+        "columnIds": [
+          "c2-rev"
+        ]
+      },
+      "xAxis": {
+        "columnId": "c2-store",
+        "sort": {
+          "by": "c2-rev",
+          "direction": "descending"
+        }
+      },
+      "stacking": "none",
+      "orientation": "horizontal",
+      "color": {
+        "by": "single",
+        "value": "#1e5631"
+      },
+      "filters": [
+        {
+          "id": "top10",
+          "columnId": "c2-rev",
+          "kind": "top-n",
+          "rankingFunction": "rank",
+          "mode": "top-n",
+          "rowCount": 10,
+          "includeNulls": "when-no-value-is-selected"
+        }
+      ],
+      "name": {
+        "text": "Top 10 Stores by Revenue",
+        "color": "#14432b",
+        "fontWeight": "bold",
+        "fontSize": 15
+      },
+      "legend": {
+        "visibility": "hidden"
+      },
+      "style": {
+        "backgroundColor": "#FFFFFF",
+        "borderRadius": "round",
+        "borderColor": "#c8a96a",
+        "borderWidth": 1
+      },
+      "gap": {
+        "width": "medium"
+      }
+    },
+    {
+      "id": "chart-aov-seg",
+      "kind": "bar-chart",
+      "source": {
+        "elementId": "tbl-orders",
+        "kind": "table",
+        "groupingId": "base"
+      },
+      "columns": [
+        {
+          "id": "c3-bucket",
+          "formula": "[Orders/AOV Bucket]",
+          "name": "AOV Bucket"
+        },
+        {
+          "id": "c3-orders",
+          "formula": "CountDistinct([Orders/Order Number])",
+          "name": "Orders",
+          "format": {
+            "kind": "number",
+            "formatString": ",.0f"
+          }
+        },
+        {
+          "id": "c3-value",
+          "formula": "[Orders/Order Value]",
+          "name": "Order Value",
+          "format": {
+            "kind": "number",
+            "formatString": "$,.0f"
+          }
+        },
+        {
+          "id": "c291900ec0575ec18bde4b3c96276e33",
+          "formula": "[Orders/Product Line (product info)]"
+        },
+        {
+          "id": "2459a5fc8cf7be9afa944899a8a48eb2",
+          "formula": "[Orders/Product Family (product info)]"
+        },
+        {
+          "id": "05245172b856a5e437b4d413c6ed64ac",
+          "formula": "[Orders/Product Group (product info)]"
+        },
+        {
+          "id": "bdad31e522d53a926d2ceee1f3598d18",
+          "formula": "[Orders/Product Description (product info)]"
+        },
+        {
+          "id": "37b92ae961deec7f58cad234993c777b",
+          "formula": "[Orders/Sku Number (product info)]"
+        },
+        {
+          "id": "1589c96e7415e87e27480cca4ab5aac4",
+          "formula": "[Orders/Product Status (product info)]"
+        },
+        {
+          "id": "8e16ffcac0520d0c2ac1aefbe10d7fea",
+          "formula": "[Orders/Cust Address (customer info)]"
+        },
+        {
+          "id": "1161cc6d7f1b075f657366685bfab820",
+          "formula": "[Orders/Cust City (customer info)]"
+        },
+        {
+          "id": "3d808f50956c11b3a1a0c1b2ad8a037a",
+          "formula": "[Orders/Cust State (customer info)]"
+        },
+        {
+          "id": "b75c230a8aa19e6f83cf40d3e1e2a805",
+          "formula": "[Orders/Cust County (customer info)]"
+        },
+        {
+          "id": "4415a1a9b1e85bbf37ec0fee796468cb",
+          "formula": "[Orders/Cust Zip Code (customer info)]"
+        },
+        {
+          "id": "72de97910856a1460a4828d8d7c2627b",
+          "formula": "[Orders/Cust Region (customer info)]"
+        },
+        {
+          "id": "dc5b7d429564eb6c76de876bdeb4f3f4",
+          "formula": "[Orders/Store City (store info)]"
+        },
+        {
+          "id": "60d7217526f1b38e12796c4d25e5dc06",
+          "formula": "[Orders/Store State (store info)]"
+        },
+        {
+          "id": "fe067128248e7c20e59da3766573ebea",
+          "formula": "[Orders/Store Zip Code (store info)]"
+        },
+        {
+          "id": "12083f41d881b8843ac605c9922e57ed",
+          "formula": "[Orders/Store County (store info)]"
+        }
+      ],
+      "yAxis": {
+        "columnIds": [
+          "c3-orders"
+        ]
+      },
+      "xAxis": {
+        "columnId": "c3-bucket",
+        "sort": {
+          "by": "c3-bucket",
+          "direction": "ascending"
+        }
+      },
+      "stacking": "none",
+      "color": {
+        "by": "single",
+        "value": "#2d6a4f"
+      },
+      "name": {
+        "text": "Order Value Segmentation",
+        "color": "#14432b",
+        "fontWeight": "bold",
+        "fontSize": 15
+      },
+      "legend": {
+        "visibility": "hidden"
+      },
+      "style": {
+        "backgroundColor": "#FFFFFF",
+        "borderRadius": "round",
+        "borderColor": "#c8a96a",
+        "borderWidth": 1
+      },
+      "gap": {
+        "width": "medium"
+      }
+    },
+    {
+      "id": "chart-profit-region",
+      "kind": "line-chart",
+      "source": {
+        "elementId": "tbl-base",
+        "kind": "table"
+      },
+      "columns": [
+        {
+          "id": "c4-region",
+          "formula": "[Retail Transactions/Store Region]",
+          "name": "Store Region"
+        },
+        {
+          "id": "c4-month",
+          "formula": "[Retail Transactions/Purchase Month]",
+          "name": "Purchase Month",
+          "format": {
+            "kind": "datetime",
+            "formatString": "%b %Y"
+          }
+        },
+        {
+          "id": "c4-profit",
+          "formula": "[Metrics/Total Profit]",
+          "name": "Profit",
+          "format": {
+            "kind": "number",
+            "formatString": "$,.0f"
+          }
+        },
+        {
+          "id": "c4-pt-store-name",
+          "formula": "[Retail Transactions/Store Name]",
+          "name": "Store Name"
+        },
+        {
+          "id": "c4-pt-product-type",
+          "formula": "[Retail Transactions/Product Type]",
+          "name": "Product Type"
+        },
+        {
+          "id": "c4-pt-product-name",
+          "formula": "[Retail Transactions/Product Name]",
+          "name": "Product Name"
+        },
+        {
+          "id": "c4-pt-cust-name",
+          "formula": "[Retail Transactions/Cust Name]",
+          "name": "Cust Name"
+        },
+        {
+          "id": "c4-pt-date",
+          "formula": "[Retail Transactions/Date]",
+          "name": "Date"
+        },
+        {
+          "id": "4fa7acc3742f2a376dc322e163c9576e",
+          "formula": "[Retail Transactions/Product Line (product info)]"
+        },
+        {
+          "id": "6e4e82d5591e1446670e5905a4a541c1",
+          "formula": "[Retail Transactions/Product Family (product info)]"
+        },
+        {
+          "id": "09ebec4fa1d12b06f082109793bd32fc",
+          "formula": "[Retail Transactions/Product Group (product info)]"
+        },
+        {
+          "id": "ae0c8ecc52f47576361649b57118c280",
+          "formula": "[Retail Transactions/Product Description (product info)]"
+        },
+        {
+          "id": "6990543699c07a5b8d88ea5b9ca8bd45",
+          "formula": "[Retail Transactions/Sku Number (product info)]"
+        },
+        {
+          "id": "5ba06f9febc7c890f459d44fb2fbe6a7",
+          "formula": "[Retail Transactions/Product Status (product info)]"
+        },
+        {
+          "id": "879c67a69ab33b16a78d273d156a4793",
+          "formula": "[Retail Transactions/Cust Address (customer info)]"
+        },
+        {
+          "id": "0a65b001252556f87bfe9de5c296d7a2",
+          "formula": "[Retail Transactions/Cust City (customer info)]"
+        },
+        {
+          "id": "076abf6254d1a5e6ad72d1999524e79b",
+          "formula": "[Retail Transactions/Cust State (customer info)]"
+        },
+        {
+          "id": "1cd85d040bdd1f3939bce191be1a0857",
+          "formula": "[Retail Transactions/Cust County (customer info)]"
+        },
+        {
+          "id": "3f83f0c106a4219b3923dbcbbb13b87a",
+          "formula": "[Retail Transactions/Cust Zip Code (customer info)]"
+        },
+        {
+          "id": "e0b78a221a04651d95ba9a126ab7d692",
+          "formula": "[Retail Transactions/Cust Region (customer info)]"
+        },
+        {
+          "id": "4419ae0a096354aa145ad90d0e26e208",
+          "formula": "[Retail Transactions/Store City (store info)]"
+        },
+        {
+          "id": "5f2f2343ab08e6d991b074e9fd085bd5",
+          "formula": "[Retail Transactions/Store State (store info)]"
+        },
+        {
+          "id": "ad66aa953335c8f60500c4aa4be7759d",
+          "formula": "[Retail Transactions/Store Zip Code (store info)]"
+        },
+        {
+          "id": "3cb000e3d89411d06abf74a7c874ce70",
+          "formula": "[Retail Transactions/Store County (store info)]"
+        }
+      ],
+      "yAxis": {
+        "columnIds": [
+          "c4-profit"
+        ]
+      },
+      "xAxis": {
+        "columnId": "c4-month",
+        "sort": {
+          "by": "c4-month",
+          "direction": "ascending"
+        }
+      },
+      "color": {
+        "by": "category",
+        "column": "c4-region",
+        "scheme": [
+          "#14432B",
+          "#2D6A4F",
+          "#8FBF9F",
+          "#C8A96A",
+          "#7B2D26",
+          "#A6894F"
+        ]
+      },
+      "name": {
+        "text": "Profit over Time by Region",
+        "color": "#14432b",
+        "fontWeight": "bold",
+        "fontSize": 15
+      },
+      "legend": {
+        "position": "bottom"
+      },
+      "style": {
+        "backgroundColor": "#FFFFFF",
+        "borderRadius": "round",
+        "borderColor": "#c8a96a",
+        "borderWidth": 1
+      }
+    },
+    {
+      "id": "tbl-orders",
+      "kind": "table",
+      "source": {
+        "elementId": "tbl-base",
+        "kind": "table"
+      },
+      "columns": [
+        {
+          "id": "col-ord-number",
+          "formula": "[Retail Transactions/Order Number]",
+          "name": "Order Number"
+        },
+        {
+          "id": "col-ord-value",
+          "formula": "Sum([Retail Transactions/Revenue])",
+          "name": "Order Value",
+          "format": {
+            "kind": "number",
+            "formatString": "$,.0f"
+          }
+        },
+        {
+          "id": "col-ord-bucket",
+          "formula": "If([Order Value] < 1000, \"1. Under $1K\", If([Order Value] < 2000, \"2. $1K-$2K\", If([Order Value] < 3000, \"3. $2K-$3K\", If([Order Value] < 5000, \"4. $3K-$5K\", \"5. $5K+\"))))",
+          "name": "AOV Bucket"
+        },
+        {
+          "id": "4fa7acc3742f2a376dc322e163c9576e",
+          "formula": "[Retail Transactions/Product Line (product info)]"
+        },
+        {
+          "id": "6e4e82d5591e1446670e5905a4a541c1",
+          "formula": "[Retail Transactions/Product Family (product info)]"
+        },
+        {
+          "id": "09ebec4fa1d12b06f082109793bd32fc",
+          "formula": "[Retail Transactions/Product Group (product info)]"
+        },
+        {
+          "id": "ae0c8ecc52f47576361649b57118c280",
+          "formula": "[Retail Transactions/Product Description (product info)]"
+        },
+        {
+          "id": "6990543699c07a5b8d88ea5b9ca8bd45",
+          "formula": "[Retail Transactions/Sku Number (product info)]"
+        },
+        {
+          "id": "5ba06f9febc7c890f459d44fb2fbe6a7",
+          "formula": "[Retail Transactions/Product Status (product info)]"
+        },
+        {
+          "id": "879c67a69ab33b16a78d273d156a4793",
+          "formula": "[Retail Transactions/Cust Address (customer info)]"
+        },
+        {
+          "id": "0a65b001252556f87bfe9de5c296d7a2",
+          "formula": "[Retail Transactions/Cust City (customer info)]"
+        },
+        {
+          "id": "076abf6254d1a5e6ad72d1999524e79b",
+          "formula": "[Retail Transactions/Cust State (customer info)]"
+        },
+        {
+          "id": "1cd85d040bdd1f3939bce191be1a0857",
+          "formula": "[Retail Transactions/Cust County (customer info)]"
+        },
+        {
+          "id": "3f83f0c106a4219b3923dbcbbb13b87a",
+          "formula": "[Retail Transactions/Cust Zip Code (customer info)]"
+        },
+        {
+          "id": "e0b78a221a04651d95ba9a126ab7d692",
+          "formula": "[Retail Transactions/Cust Region (customer info)]"
+        },
+        {
+          "id": "4419ae0a096354aa145ad90d0e26e208",
+          "formula": "[Retail Transactions/Store City (store info)]"
+        },
+        {
+          "id": "5f2f2343ab08e6d991b074e9fd085bd5",
+          "formula": "[Retail Transactions/Store State (store info)]"
+        },
+        {
+          "id": "ad66aa953335c8f60500c4aa4be7759d",
+          "formula": "[Retail Transactions/Store Zip Code (store info)]"
+        },
+        {
+          "id": "3cb000e3d89411d06abf74a7c874ce70",
+          "formula": "[Retail Transactions/Store County (store info)]"
+        }
+      ],
+      "name": "Orders",
+      "groupings": [
+        {
+          "id": "g-by-order",
+          "groupBy": [
+            "col-ord-number"
+          ],
+          "calculations": [
+            "col-ord-value",
+            "col-ord-bucket"
+          ]
+        }
+      ],
+      "order": [
+        "4fa7acc3742f2a376dc322e163c9576e",
+        "6e4e82d5591e1446670e5905a4a541c1",
+        "09ebec4fa1d12b06f082109793bd32fc",
+        "ae0c8ecc52f47576361649b57118c280",
+        "6990543699c07a5b8d88ea5b9ca8bd45",
+        "5ba06f9febc7c890f459d44fb2fbe6a7",
+        "879c67a69ab33b16a78d273d156a4793",
+        "0a65b001252556f87bfe9de5c296d7a2",
+        "076abf6254d1a5e6ad72d1999524e79b",
+        "1cd85d040bdd1f3939bce191be1a0857",
+        "3f83f0c106a4219b3923dbcbbb13b87a",
+        "e0b78a221a04651d95ba9a126ab7d692",
+        "4419ae0a096354aa145ad90d0e26e208",
+        "5f2f2343ab08e6d991b074e9fd085bd5",
+        "ad66aa953335c8f60500c4aa4be7759d",
+        "3cb000e3d89411d06abf74a7c874ce70"
+      ]
+    },
+    {
+      "id": "tbl-base",
+      "kind": "table",
+      "source": {
+        "elementId": "tbl-raw",
+        "kind": "table"
+      },
+      "columns": [
+        {
+          "id": "col-base-order-number",
+          "formula": "[Retail Transactions Raw/Order Number]",
+          "name": "Order Number"
+        },
+        {
+          "id": "col-base-date",
+          "formula": "[Retail Transactions Raw/Date]",
+          "name": "Date"
+        },
+        {
+          "id": "col-base-quantity",
+          "formula": "[Retail Transactions Raw/Quantity]",
+          "name": "Quantity"
+        },
+        {
+          "id": "col-base-price",
+          "formula": "[Retail Transactions Raw/Price]",
+          "name": "Price"
+        },
+        {
+          "id": "col-base-unit-cost",
+          "formula": "[Retail Transactions Raw/Unit Cost]",
+          "name": "Unit Cost"
+        },
+        {
+          "id": "col-base-store-key",
+          "formula": "[Retail Transactions Raw/Store Key]",
+          "name": "Store Key"
+        },
+        {
+          "id": "col-base-store-name",
+          "formula": "[Retail Transactions Raw/Store Name]",
+          "name": "Store Name"
+        },
+        {
+          "id": "col-base-store-region",
+          "formula": "[Retail Transactions Raw/Store Region]",
+          "name": "Store Region"
+        },
+        {
+          "id": "col-base-cust-key",
+          "formula": "[Retail Transactions Raw/Cust Key]",
+          "name": "Cust Key"
+        },
+        {
+          "id": "col-base-cust-name",
+          "formula": "[Retail Transactions Raw/Cust Name]",
+          "name": "Cust Name"
+        },
+        {
+          "id": "col-base-product-name",
+          "formula": "[Retail Transactions Raw/Product Name]",
+          "name": "Product Name"
+        },
+        {
+          "id": "col-base-product-type",
+          "formula": "[Retail Transactions Raw/Product Type]",
+          "name": "Product Type"
+        },
+        {
+          "id": "col-base-product-key",
+          "formula": "[Retail Transactions Raw/Product Key]",
+          "name": "Product Key"
+        },
+        {
+          "id": "col-base-sales-amount",
+          "formula": "[Retail Transactions Raw/Sales Amount]",
+          "name": "Sales Amount"
+        },
+        {
+          "id": "col-base-revenue",
+          "formula": "[Quantity] * [Price]",
+          "name": "Revenue",
+          "format": {
+            "kind": "number",
+            "formatString": "$,.0f"
+          }
+        },
+        {
+          "id": "col-base-line-cogs",
+          "formula": "[Quantity] * [Unit Cost]",
+          "name": "Line COGS",
+          "format": {
+            "kind": "number",
+            "formatString": "$,.0f"
+          }
+        },
+        {
+          "id": "col-base-first-purchase-date",
+          "formula": "Rollup(Min([Retail Transactions Raw/Date]), [Cust Key], [Retail Transactions Raw/Cust Key])",
+          "name": "First Purchase Date",
+          "format": {
+            "kind": "datetime",
+            "formatString": "%b %Y"
+          }
+        },
+        {
+          "id": "col-base-cohort-month",
+          "formula": "DateTrunc(\"month\", [First Purchase Date])",
+          "name": "Cohort Month",
+          "format": {
+            "kind": "datetime",
+            "formatString": "%b %Y"
+          }
+        },
+        {
+          "id": "col-base-months-since-first-purchase",
+          "formula": "Greatest(DateDiff(\"month\", [First Purchase Date], [Date]), 0)",
+          "name": "Months Since First Purchase"
+        },
+        {
+          "id": "col-base-purchase-month",
+          "formula": "DateTrunc(\"month\", [Date])",
+          "name": "Purchase Month",
+          "format": {
+            "kind": "datetime",
+            "formatString": "%b %Y"
+          }
+        },
+        {
+          "id": "50dd220bcc00c56d94b3b3484ed24981",
+          "formula": "[Retail Transactions Raw/Product Line (product info)]"
+        },
+        {
+          "id": "d8a25eb527f4d887ff6980ace6e89566",
+          "formula": "[Retail Transactions Raw/Product Family (product info)]"
+        },
+        {
+          "id": "ec161e0ec61eeaf9042ddec78a9b0190",
+          "formula": "[Retail Transactions Raw/Product Group (product info)]"
+        },
+        {
+          "id": "d460ee6e65ed9b52a0c49aad77aa9afa",
+          "formula": "[Retail Transactions Raw/Product Description (product info)]"
+        },
+        {
+          "id": "c70c63c4b16626abf448c00e88bb5353",
+          "formula": "[Retail Transactions Raw/Sku Number (product info)]"
+        },
+        {
+          "id": "49b9e09068a09b60a0f35d68f52bb9c3",
+          "formula": "[Retail Transactions Raw/Product Status (product info)]"
+        },
+        {
+          "id": "8f31e1fd64582bd7e2b1a93dd4073d0a",
+          "formula": "[Retail Transactions Raw/Cust Address (customer info)]"
+        },
+        {
+          "id": "171ba668ccc34594b26a2db0ebd7a69f",
+          "formula": "[Retail Transactions Raw/Cust City (customer info)]"
+        },
+        {
+          "id": "56f45f46f5dd0bc12d6f5aa67bb434be",
+          "formula": "[Retail Transactions Raw/Cust State (customer info)]"
+        },
+        {
+          "id": "9537a0c300b43e8a931957d2e14d23a2",
+          "formula": "[Retail Transactions Raw/Cust County (customer info)]"
+        },
+        {
+          "id": "6db1bab0384a1f9ce336c79159b810e5",
+          "formula": "[Retail Transactions Raw/Cust Zip Code (customer info)]"
+        },
+        {
+          "id": "dda54e6a308a60fd1a298f20779acc63",
+          "formula": "[Retail Transactions Raw/Cust Region (customer info)]"
+        },
+        {
+          "id": "3fe8391fbf769c4beb0753158b4987be",
+          "formula": "[Retail Transactions Raw/Store City (store info)]"
+        },
+        {
+          "id": "a6688ab6330b39284854026a37bd6ca8",
+          "formula": "[Retail Transactions Raw/Store State (store info)]"
+        },
+        {
+          "id": "f92368ac304c8cc506f7bb720130a58d",
+          "formula": "[Retail Transactions Raw/Store Zip Code (store info)]"
+        },
+        {
+          "id": "7dbcb94ecd6ced4fe8f58d8a5a84f8b9",
+          "formula": "[Retail Transactions Raw/Store County (store info)]"
+        }
+      ],
+      "name": "Retail Transactions",
+      "order": [
+        "col-base-order-number",
+        "col-base-date",
+        "col-base-quantity",
+        "col-base-price",
+        "col-base-unit-cost",
+        "col-base-store-key",
+        "col-base-store-name",
+        "col-base-store-region",
+        "col-base-cust-key",
+        "col-base-cust-name",
+        "col-base-product-name",
+        "col-base-product-type",
+        "col-base-product-key",
+        "col-base-sales-amount",
+        "col-base-revenue",
+        "col-base-line-cogs",
+        "col-base-first-purchase-date",
+        "col-base-cohort-month",
+        "col-base-months-since-first-purchase",
+        "col-base-purchase-month",
+        "50dd220bcc00c56d94b3b3484ed24981",
+        "d8a25eb527f4d887ff6980ace6e89566",
+        "ec161e0ec61eeaf9042ddec78a9b0190",
+        "d460ee6e65ed9b52a0c49aad77aa9afa",
+        "c70c63c4b16626abf448c00e88bb5353",
+        "49b9e09068a09b60a0f35d68f52bb9c3",
+        "8f31e1fd64582bd7e2b1a93dd4073d0a",
+        "171ba668ccc34594b26a2db0ebd7a69f",
+        "56f45f46f5dd0bc12d6f5aa67bb434be",
+        "9537a0c300b43e8a931957d2e14d23a2",
+        "6db1bab0384a1f9ce336c79159b810e5",
+        "dda54e6a308a60fd1a298f20779acc63",
+        "3fe8391fbf769c4beb0753158b4987be",
+        "a6688ab6330b39284854026a37bd6ca8",
+        "f92368ac304c8cc506f7bb720130a58d",
+        "7dbcb94ecd6ced4fe8f58d8a5a84f8b9"
+      ]
+    },
+    {
+      "id": "tbl-raw",
+      "kind": "table",
+      "source": {
+        "dataModelId": "3889b3c3-4657-4d9e-b568-5d2388cf4b4c",
+        "elementId": "GwiskXBx0S",
+        "kind": "data-model"
+      },
+      "columns": [
+        {
+          "id": "col-raw-order-number",
+          "formula": "[Transactions with Details & Relationships (5M)/Order Number]",
+          "name": "Order Number"
+        },
+        {
+          "id": "col-raw-date",
+          "formula": "[Transactions with Details & Relationships (5M)/Date]",
+          "name": "Date"
+        },
+        {
+          "id": "col-raw-quantity",
+          "formula": "[Transactions with Details & Relationships (5M)/Quantity]",
+          "name": "Quantity"
+        },
+        {
+          "id": "col-raw-price",
+          "formula": "[Transactions with Details & Relationships (5M)/Price]",
+          "name": "Price"
+        },
+        {
+          "id": "col-raw-unit-cost",
+          "formula": "[Transactions with Details & Relationships (5M)/Unit Cost]",
+          "name": "Unit Cost"
+        },
+        {
+          "id": "col-raw-store-key",
+          "formula": "[Transactions with Details & Relationships (5M)/Store Key]",
+          "name": "Store Key"
+        },
+        {
+          "id": "col-raw-store-name",
+          "formula": "[Transactions with Details & Relationships (5M)/Store Name]",
+          "name": "Store Name"
+        },
+        {
+          "id": "col-raw-store-region",
+          "formula": "[Transactions with Details & Relationships (5M)/Store Region]",
+          "name": "Store Region"
+        },
+        {
+          "id": "col-raw-cust-key",
+          "formula": "[Transactions with Details & Relationships (5M)/Cust Key]",
+          "name": "Cust Key"
+        },
+        {
+          "id": "col-raw-cust-name",
+          "formula": "[Transactions with Details & Relationships (5M)/Cust Name]",
+          "name": "Cust Name"
+        },
+        {
+          "id": "col-raw-product-name",
+          "formula": "[Transactions with Details & Relationships (5M)/Product Name]",
+          "name": "Product Name"
+        },
+        {
+          "id": "col-raw-product-type",
+          "formula": "[Transactions with Details & Relationships (5M)/Product Type]",
+          "name": "Product Type"
+        },
+        {
+          "id": "col-raw-product-key",
+          "formula": "[Transactions with Details & Relationships (5M)/Product Key]",
+          "name": "Product Key"
+        },
+        {
+          "id": "col-raw-sales-amount",
+          "formula": "[Transactions with Details & Relationships (5M)/Sales Amount]",
+          "name": "Sales Amount"
+        },
+        {
+          "id": "7CuoK4ftoK",
+          "formula": "[Transactions with Details & Relationships (5M)/product info/Product Line]"
+        },
+        {
+          "id": "RW8hfQ0ng8",
+          "formula": "[Transactions with Details & Relationships (5M)/product info/Product Family]"
+        },
+        {
+          "id": "WixBFhzjaj",
+          "formula": "[Transactions with Details & Relationships (5M)/product info/Product Group]"
+        },
+        {
+          "id": "-C8JjKstBg",
+          "formula": "[Transactions with Details & Relationships (5M)/product info/Product Description]"
+        },
+        {
+          "id": "nQB232WmPH",
+          "formula": "[Transactions with Details & Relationships (5M)/product info/Sku Number]"
+        },
+        {
+          "id": "EvsPiI_VZs",
+          "formula": "[Transactions with Details & Relationships (5M)/product info/Product Status]"
+        },
+        {
+          "id": "5nARqWrdkE",
+          "formula": "[Transactions with Details & Relationships (5M)/customer info/Cust Address]"
+        },
+        {
+          "id": "T3pA1N2eV7",
+          "formula": "[Transactions with Details & Relationships (5M)/customer info/Cust City]"
+        },
+        {
+          "id": "Jjr7M3ETfN",
+          "formula": "[Transactions with Details & Relationships (5M)/customer info/Cust State]"
+        },
+        {
+          "id": "hNccKSb2vj",
+          "formula": "[Transactions with Details & Relationships (5M)/customer info/Cust County]"
+        },
+        {
+          "id": "01WGnXXoHb",
+          "formula": "[Transactions with Details & Relationships (5M)/customer info/Cust Zip Code]"
+        },
+        {
+          "id": "nBIF7SvK9x",
+          "formula": "[Transactions with Details & Relationships (5M)/customer info/Cust Region]"
+        },
+        {
+          "id": "viULklHPCM",
+          "formula": "[Transactions with Details & Relationships (5M)/store info/Store City]"
+        },
+        {
+          "id": "ml5KPoe8km",
+          "formula": "[Transactions with Details & Relationships (5M)/store info/Store State]"
+        },
+        {
+          "id": "xxBQF6saHr",
+          "formula": "[Transactions with Details & Relationships (5M)/store info/Store Zip Code]"
+        },
+        {
+          "id": "HkmQlh5Z_s",
+          "formula": "[Transactions with Details & Relationships (5M)/store info/Store County]"
+        }
+      ],
+      "name": "Retail Transactions Raw",
+      "order": [
+        "col-raw-order-number",
+        "col-raw-date",
+        "col-raw-quantity",
+        "col-raw-price",
+        "col-raw-unit-cost",
+        "col-raw-store-key",
+        "col-raw-store-name",
+        "col-raw-store-region",
+        "col-raw-cust-key",
+        "col-raw-cust-name",
+        "col-raw-product-name",
+        "col-raw-product-type",
+        "col-raw-product-key",
+        "col-raw-sales-amount",
+        "7CuoK4ftoK",
+        "RW8hfQ0ng8",
+        "WixBFhzjaj",
+        "-C8JjKstBg",
+        "nQB232WmPH",
+        "EvsPiI_VZs",
+        "5nARqWrdkE",
+        "T3pA1N2eV7",
+        "Jjr7M3ETfN",
+        "hNccKSb2vj",
+        "01WGnXXoHb",
+        "nBIF7SvK9x",
+        "viULklHPCM",
+        "ml5KPoe8km",
+        "xxBQF6saHr",
+        "HkmQlh5Z_s"
+      ]
+    }
+  ],
+  "pages": [
+    {
+      "id": "page-1",
+      "name": "LL Bean Performance"
+    }
+  ],
+  "settings": {
+    "theme": {
+      "overrides": {
+        "pageWidth": "large",
+        "space": {
+          "unit": "small"
+        }
+      }
+    }
+  },
+  "kind": "workbook",
+  "layout": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<Page type=\"grid\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\" id=\"page-1\">\n  <Container elementId=\"container-header\" type=\"grid\" gridColumn=\"1 / 25\" gridRow=\"1 / 4\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n    <Element elementId=\"text-title\" gridColumn=\"1 / 18\" gridRow=\"1 / 4\"/>\n    <Element elementId=\"ctrl-date\" gridColumn=\"18 / 25\" gridRow=\"1 / 4\"/>\n  </Container>\n  <Container elementId=\"container-kpis\" type=\"grid\" gridColumn=\"1 / 25\" gridRow=\"4 / 10\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n    <Element elementId=\"kpi-revenue\" gridColumn=\"1 / 6\" gridRow=\"1 / 7\"/>\n    <Element elementId=\"kpi-aov\" gridColumn=\"6 / 11\" gridRow=\"1 / 7\"/>\n    <Element elementId=\"kpi-profit\" gridColumn=\"11 / 16\" gridRow=\"1 / 7\"/>\n    <Element elementId=\"kpi-margin\" gridColumn=\"16 / 20\" gridRow=\"1 / 7\"/>\n    <Element elementId=\"kpi-cogs\" gridColumn=\"20 / 25\" gridRow=\"1 / 7\"/>\n  </Container>\n  <Container elementId=\"container-filters\" type=\"grid\" gridColumn=\"1 / 25\" gridRow=\"10 / 12\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n    <Element elementId=\"ctrl-ptype\" gridColumn=\"1 / 6\" gridRow=\"1 / 3\"/>\n    <Element elementId=\"ctrl-pname\" gridColumn=\"6 / 11\" gridRow=\"1 / 3\"/>\n    <Element elementId=\"ctrl-region\" gridColumn=\"11 / 16\" gridRow=\"1 / 3\"/>\n    <Element elementId=\"ctrl-store\" gridColumn=\"16 / 20\" gridRow=\"1 / 3\"/>\n    <Element elementId=\"ctrl-cust\" gridColumn=\"20 / 25\" gridRow=\"1 / 3\"/>\n  </Container>\n  <Container elementId=\"container-detail-title\" type=\"grid\" gridColumn=\"1 / 25\" gridRow=\"12 / 14\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n    <Element elementId=\"text-detail-title\" gridColumn=\"1 / 25\" gridRow=\"1 / 2\"/>\n  </Container>\n  <Element elementId=\"chart-pop-year\" gridColumn=\"1 / 13\" gridRow=\"14 / 28\"/>\n  <Element elementId=\"chart-top-stores\" gridColumn=\"13 / 25\" gridRow=\"14 / 28\"/>\n  <Element elementId=\"chart-aov-seg\" gridColumn=\"1 / 13\" gridRow=\"28 / 42\"/>\n  <Element elementId=\"chart-profit-region\" gridColumn=\"13 / 25\" gridRow=\"28 / 42\"/>\n  <Element elementId=\"tbl-orders\" gridColumn=\"1 / 25\" gridRow=\"42 / 50\"/>\n  <Element elementId=\"tbl-base\" gridColumn=\"1 / 25\" gridRow=\"50 / 58\"/>\n  <Element elementId=\"tbl-raw\" gridColumn=\"1 / 25\" gridRow=\"58 / 66\"/>\n</Page>\n"
+}
