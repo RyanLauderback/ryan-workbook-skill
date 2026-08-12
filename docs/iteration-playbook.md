@@ -73,15 +73,15 @@ prompt file so future iterations don't re-discover them.
 # Folder — resolve url-id slug to the internal UUID.
 scripts/api/find-file-by-urlid.sh <folder-urlId>
 
-# Data model — GET the full spec: columns, types, descriptions, formulas,
-# and the metrics catalog, all in one call.
+# Data model — mcp-describe.sh returns columns, types, descriptions,
+# formulas, and the metrics catalog as SQL DDL, all in one call. Default
+# discovery path under this skill's browser-login.sh auth — see
+# reference/workflows/discover.md → "MCP status".
+scripts/api/mcp-describe.sh datamodel-element <dataModelId> <elementId>
+
+# REST fallback (if mcp-describe.sh exits 3):
 source scripts/api/_env.sh
 sigma_curl "$SIGMA_BASE_URL/v2/dataModels/<dataModelId>/spec" | jq .
-
-# scripts/api/mcp-describe.sh returns the same info as SQL DDL, but is
-# blocked under this skill's client_credentials auth model (see
-# reference/workflows/discover.md → "MCP status") — try it
-# opportunistically if you like, expect exit 3.
 ```
 
 If the data model has `metrics`, plan to use `[Metrics/<Name>]` rather than

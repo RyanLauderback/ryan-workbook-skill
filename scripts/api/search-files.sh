@@ -36,7 +36,7 @@
 #   - Substring match, not semantic — "sales" won't surface a workbook
 #     named "Q3 Revenue" the way MCP's fuzzy search might.
 #
-# Env:    self-bootstrapped via _env.sh (loads .env, caches OAuth token)
+# Env:    self-bootstrapped via _env.sh (uses already-exported creds, caches OAuth token)
 set -euo pipefail
 source "$(dirname "$0")/_env.sh"
 
