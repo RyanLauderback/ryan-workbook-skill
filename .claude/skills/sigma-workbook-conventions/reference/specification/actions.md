@@ -198,6 +198,9 @@ object (see `dynamic-values.md`) — do not pass values for system
 columns (`ID`, `CREATED_AT`, `CREATED_BY`, `UPDATED_AT`, `UPDATED_BY`),
 they're protocol-managed. `delete-rows.whichRows` is a formula
 evaluated against each existing row; matching rows are removed.
+**`delete-rows` is rejected outright on `linked`-source input tables**
+(confirmed 2026-08-11, specific server error) — see `input-tables.md`
+→ "Writeback restriction — `linked` sources reject `delete-rows`".
 `update-rows.whichRows` uses a **different, non-formula shape**:
 `{type:"single-row", primaryKeys:{<columnId>: <dynamic-value>}}` —
 keyed by column `id` (not name), identifying the one row to mutate;

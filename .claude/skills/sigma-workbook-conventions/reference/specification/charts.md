@@ -124,6 +124,17 @@ Same axis shape as line-chart. Adds `stacking` and the
 variant — confirmed 2026-08-04 against the live OpenAPI schema; an
 earlier version of this doc incorrectly named it `"100"`).
 
+> ⚠️ **Not independently verified — a 2026-08-11 build session reported
+> `orientation: "horizontal"` + `color: {by: "single"}"` rejecting
+> (`Invalid kind: "bar-chart"`) when `stacking` was omitted**, even
+> though the prose above frames `stacking` as an independent "adds"
+> feature rather than load-bearing. The canonical example above already
+> includes `stacking: "none"`, so copying it as-is is unaffected — this
+> only bites if you omit `stacking` while combining `orientation` with a
+> `color` channel. Logged in `reference/capability-ledger.md` →
+> "Unverified — probe pending"; needs a bisection retest before treating
+> `stacking` as required.
+
 ### Orientation + categorical-axis sort rule
 
 Bar charts accept `orientation: "horizontal"` OR omit-for-default.
@@ -423,6 +434,16 @@ those constraints by submitting and reading the error.
 
 `labels` values: `shown` | `hidden`. `labelDisplay` values:
 `all-points` | `maximum` | `min-max` | etc.
+
+> ⚠️ **Not independently verified — a 2026-08-11 build session reported
+> a `dataLabel: {labels, labelDisplay}` subset (omitting `valueFormat`
+> and `totals`) breaking the whole `bar-chart` element** with `Invalid
+> kind: "bar-chart"` — bisection pinned it to this field, and removing
+> `dataLabel` entirely fixed the element. Possibly `valueFormat`/`totals`
+> are required siblings on `bar-chart` specifically, not the optional
+> fields implied above; the full 4-field example is the safer bet until
+> retested. Logged in `reference/capability-ledger.md` → "Unverified —
+> probe pending."
 
 For `combo-chart`, optional `seriesDataLabel` is a map keyed by
 layer shape (`bar`, `line`, `area`, `scatter`) with per-shape

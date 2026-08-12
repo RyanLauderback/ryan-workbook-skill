@@ -52,6 +52,14 @@ The wrapper:
 it triggers the `ask` pattern in `.claude/settings.json`. See
 `reference/workflows/plan.md` → "Approval model" for the rationale.
 
+**POST has no idempotency key and no dry-run — don't re-run `post` "just
+to look."** Confirmed 2026-08-11: re-running `publish-workbook.sh post`
+a second time to see output that got truncated in the terminal created a
+second, fully-duplicate workbook (cleanup required an explicit user
+confirmation plus the correct DELETE endpoint above). Capture the first
+call's output — redirect to a file if the terminal might truncate —
+instead of re-running the command to "see it again."
+
 ## PUT — use the wrapper
 
 ```bash
@@ -65,10 +73,20 @@ strip on PUT" below.
 
 ## DELETE — direct curl (intentional)
 
+**Corrected 2026-08-11** (health-plan-enterprise-stars-portfolio build
+session, live-tested): DELETE goes through `/v2/files/{id}`, **not**
+`/v2/workbooks/{id}` — the latter 404s. A workbook's file `id` is the
+same `id` `publish-workbook.sh get-meta`/`post` returns; there's no
+separate "workbook id" vs. "file id" to resolve.
+
 ```bash
 curl -sS -X DELETE -H "Authorization: Bearer $SIGMA_API_TOKEN" \
-  "$SIGMA_BASE_URL/v2/workbooks/<workbook-id>"
+  "$SIGMA_BASE_URL/v2/files/<workbook-id>"
 ```
+
+> This correction is from a single build session; spot-check against a
+> live org before treating it as fully settled if you're touching this
+> path for the first time since.
 
 DELETE stays on the direct-curl path so it hits the `ask` pattern in
 `.claude/settings.json` (`Bash(curl * -X DELETE *)`). Any deletion wrapper

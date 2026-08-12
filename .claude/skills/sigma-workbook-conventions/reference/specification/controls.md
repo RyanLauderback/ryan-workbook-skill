@@ -320,6 +320,19 @@ and `range-slider` as first-class control types.
 
 ## `toggle` / `checkbox` — boolean switch
 
+> ⚠️ **Not independently verified — a 2026-08-11 build session reported
+> both `toggle` and `checkbox` rejecting at POST** with the generic
+> `Invalid kind: "control"` error (confirmed via bisection: swapping
+> `toggle`→`checkbox` changed nothing). The example below has no
+> verification citation of its own (unlike confirmed entries elsewhere
+> in this file), and a generic `Invalid kind` error usually points at a
+> shape problem elsewhere, not a rejected `controlType` — see
+> `reference/capability-ledger.md` → "The retest protocol." Logged as
+> unverified — probe pending, not flipped to "not supported." If you hit
+> the same rejection, the workaround used that session was a `top-n`
+> element-level filter ranked on an `If(flag, 1, 0)` helper column
+> instead of a boolean control.
+
 Both share the shape; the type picks the widget:
 
 ```json

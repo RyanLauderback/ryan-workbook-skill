@@ -368,6 +368,18 @@ Style block supports `backgroundColor`, `color`, `bold`, `italic`,
 > official); on `pivot-table` may still trigger the
 > `service_error` 500 on GET-spec — apply LAST after all spec
 > round-tripping is done.
+>
+> ⚠️ **2026-08-11 update — do not lean on "assume it works" without a
+> retest.** A build session reported `backgroundScale` rejected at
+> POST/PUT (not GET-spec 500 — a different failure mode than the
+> pivot caveat above) on **every** element kind tried: plain `table`,
+> `table` with `groupings`, `pivot-table`, and `input-table` — 4 for
+> 4. This is a single session's evidence, logged (not yet promoted to
+> a hard "broken" claim) in `reference/capability-ledger.md` →
+> "Unverified — probe pending" pending a live retest. Given this,
+> budget a real POST attempt with `conditionalFormats` before
+> committing a design to it — don't take the "assume it works" line
+> above as settled.
 
 ---
 
