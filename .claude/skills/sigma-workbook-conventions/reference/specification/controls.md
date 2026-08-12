@@ -547,8 +547,8 @@ any other control; the inheritance is in the DM, not in the
 workbook spec.
 
 Inspect a DM's controls via `GET /v2/dataModels/{dm-id}/spec` and look
-at the `controls` array (opportunistically `mcp-describe.sh datamodel
-<dm-id>`, expect exit 3).
+at the `controls` array (or `mcp-describe.sh datamodel <dm-id>` — see
+`reference/workflows/discover.md` → "MCP status").
 
 ---
 

@@ -32,13 +32,18 @@
 #   2 — setup / input error
 #   3 — INCOMPLETE: one or more elements could not be checked because
 #       mcp-describe.sh failed at the transport level (its own exit 3 —
-#       e.g. an OAuth client without MCP scope, a 403/5xx/connection
-#       failure). This is deliberately NOT folded into exit 0 — a total
-#       MCP outage must not read as "audit passed clean." Found via a
-#       live build-mode test 2026-08-03: this exact case previously
-#       printed "0 queryable element(s) checked, no error-typed columns,"
+#       e.g. a stale/wrong-scope token, a 403/5xx/connection failure).
+#       This is deliberately NOT folded into exit 0 — a total MCP
+#       outage must not read as "audit passed clean." Found via a live
+#       build-mode test 2026-08-03: this exact case previously printed
+#       "0 queryable element(s) checked, no error-typed columns,"
 #       indistinguishable from a real clean audit of a workbook with no
-#       queryable elements.
+#       queryable elements. Under this skill's current browser-login.sh
+#       auth path, mcp-describe is expected to succeed, so hitting exit
+#       3 here now is unexpected — a signal something's actually wrong
+#       (stale token, real outage), not a routine/permanent condition —
+#       but it's still handled the same defensive way: never folded
+#       into exit 0.
 #
 # publish-workbook.sh invokes this automatically after POST and PUT.
 # Call directly to re-audit a workbook without republishing.
@@ -86,12 +91,15 @@ while IFS=$'\t' read -r EID NAME; do
   # mcp-describe.sh exit 1 means "MCP responded but this element isn't
   # describable" — the normal case for controls/containers/text, skipped
   # silently. Exit 3 means the MCP call itself failed at the HTTP/transport
-  # level (e.g. 403 from an OAuth client without MCP scope) — that is NOT
-  # the same as "nothing to check" and must not be swallowed the same way,
-  # or a total MCP outage reads as a clean audit. (Bug found 2026-08-03 via
-  # a live build-mode test: this org's OAuth client hits exactly this case,
-  # and the audit previously reported "0 queryable element(s) checked, no
-  # error-typed columns" — indistinguishable from a real clean pass.)
+  # level (e.g. a stale/wrong-scope token) — that is NOT the same as
+  # "nothing to check" and must not be swallowed the same way, or a total
+  # MCP outage reads as a clean audit. (Bug found 2026-08-03 via a live
+  # build-mode test predating this skill's browser-login.sh auth path,
+  # when every mcp-describe call hit this case; the audit previously
+  # reported "0 queryable element(s) checked, no error-typed columns" —
+  # indistinguishable from a real clean pass. Under the current auth path
+  # this is unexpected rather than routine, but still handled the same
+  # defensive way.)
   set +e
   DDL=$("$script_dir/mcp-describe.sh" workbook-element "$WB_ID" "$EID" 2>"$describe_err_file")
   desc_exit=$?
@@ -171,13 +179,14 @@ if [ "$DESCRIBE_FAILURES" -gt 0 ]; then
   echo "  checked (mcp-describe failed at the transport level, not \"not describable\")." >&2
   echo "  $CHECKED_ELEMENTS element(s) that WERE reachable show no error-typed columns, but" >&2
   echo "  this is NOT a clean audit — the gate could not inspect everything it should have." >&2
-  echo "  A 403 here commonly means this org's OAuth client lacks MCP scope; see" >&2
-  echo "  reference/workflows/discover.md for the REST fallback, though that fallback" >&2
-  echo "  does not cover this script's own DDL-based error-column detection." >&2
+  echo "  Under this skill's current browser-login.sh auth path mcp-describe is expected" >&2
+  echo "  to succeed, so this is unexpected — most likely a stale/wrong-scope token; re-run" >&2
+  echo "  scripts/api/browser-login.sh. See reference/workflows/discover.md for the REST" >&2
+  echo "  fallback, though that fallback does not cover this script's own DDL-based" >&2
+  echo "  error-column detection." >&2
   echo "  Do not report this workbook as built-and-verified on this signal alone —" >&2
-  echo "  fall back to a manual UI check of the elements above, or re-run once MCP" >&2
-  echo "  scope is enabled. Suppress this exit with SIGMA_SKIP_AUDIT=1 only if you" >&2
-  echo "  understand the gate did not actually run." >&2
+  echo "  fall back to a manual UI check of the elements above. Suppress this exit with" >&2
+  echo "  SIGMA_SKIP_AUDIT=1 only if you understand the gate did not actually run." >&2
   exit 3
 fi
 

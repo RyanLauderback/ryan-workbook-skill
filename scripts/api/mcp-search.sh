@@ -15,18 +15,20 @@
 #             Default: all four.
 #   --limit   Max results (1-20). Default: 10.
 #
-# Env:    self-bootstrapped via _env.sh (loads .env, caches OAuth token)
+# Env:    self-bootstrapped via _env.sh
 #
 # Exit codes:
 #   0 — success (including "no matches", which prints `[]`)
 #   1 — MCP responded but reported an error
 #   2 — usage error (bad args)
-#   3 — MCP endpoint itself failed at the HTTP/transport level. As of
-#       2026-07-30, this fires on every call when auth is a client_credentials
-#       API token: Sigma's /mcp/v2 now only accepts interactive user OAuth
-#       (confirmed by Sigma's MCP engineering team — see reference/history.md
-#       → "2026-08-07"). Use scripts/api/search-files.sh instead — same
-#       "find by name" job via REST, substring not semantic match.
+#   3 — MCP endpoint itself failed at the HTTP/transport level. Most
+#       likely cause now: a stale or wrong-scope token (e.g. minted
+#       before mcp:access was added, or a client_credentials token —
+#       Sigma's /mcp/v2 only accepts interactive user OAuth, confirmed
+#       by Sigma's MCP engineering team — see reference/history.md →
+#       "2026-08-07"). Re-run scripts/api/browser-login.sh first; fall
+#       back to scripts/api/search-files.sh (REST, substring not
+#       semantic match) if MCP still isn't available.
 set -euo pipefail
 source "$(dirname "$0")/_env.sh"
 
@@ -102,13 +104,14 @@ except urllib.error.HTTPError as e:
     err_body = e.read().decode(errors="replace")[:500]
     sys.stderr.write(
         f"mcp-search: MCP endpoint returned HTTP {e.code} for query '{query}'.\n"
-        f"  This is a transport-level failure, not \"no matches\" — a 403 here\n"
-        f"  commonly means this org's OAuth client lacks MCP scope. As of\n"
-        f"  2026-07-30, Sigma's /mcp/v2 only accepts interactive user OAuth,\n"
-        f"  not client_credentials API tokens (confirmed by Sigma's MCP\n"
-        f"  engineering team — see reference/history.md). Use\n"
-        f"  scripts/api/search-files.sh \"{query}\" instead — REST-based,\n"
-        f"  substring match rather than semantic search.\n"
+        f"  This is a transport-level failure, not \"no matches\" — most likely\n"
+        f"  a stale or wrong-scope token. Re-run scripts/api/browser-login.sh\n"
+        f"  first (this skill's /mcp/v2 access requires an interactive-OAuth\n"
+        f"  token with mcp:access scope, not a client_credentials one —\n"
+        f"  confirmed by Sigma's MCP engineering team, see reference/history.md).\n"
+        f"  If MCP still isn't available after that, fall back to\n"
+        f"  scripts/api/search-files.sh \"{query}\" — REST-based, substring\n"
+        f"  match rather than semantic search.\n"
         f"  Response body: {err_body}\n"
     )
     sys.exit(3)

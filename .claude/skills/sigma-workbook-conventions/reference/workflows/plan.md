@@ -76,9 +76,10 @@ What table(s) and which columns are actually available — pulled via
 descriptions, formulas, and the metrics catalog in one call) or
 `scripts/api/list-table-columns.sh` (raw table: raw warehouse names
 only), NOT assumed. `scripts/api/mcp-describe.sh datamodel-element
-<dm-id> <el-id>` returns the same info as SQL DDL when it works, but
-expect exit 3 under this skill's `client_credentials` auth model — see
-`reference/workflows/discover.md` → "MCP status."
+<dm-id> <el-id>` returns the same info as SQL DDL and is expected to
+work under this skill's current `browser-login.sh` auth path — see
+`reference/workflows/discover.md` → "MCP status" — with the REST
+`GET` above as the fallback if it doesn't.
 
 Name any column that's missing from your assumed schema (e.g. there
 *is* a customer dimension; there *isn't* a margin field) so the user
@@ -249,11 +250,14 @@ That contract puts the burden on the agent:
    `audit-workbook-schema.sh`. Exit 1 means the audit found errored
    columns; fix and PUT before proceeding. **Exit 3 means the audit
    couldn't run at all** (its `mcp-describe` dependency failed at the
-   transport level — always, under this skill's `client_credentials`
-   auth model; see `reference/workflows/discover.md` → "MCP status") —
-   this is not a pass either; fall back to a manual UI check. **Do not
-   report the workbook as built until audit returns clean (exit 0),
-   and do not treat exit 3 as equivalent to exit 0.**
+   transport level; see `reference/workflows/discover.md` → "MCP
+   status" — under this skill's current `browser-login.sh` auth path
+   this is unexpected rather than a routine/permanent condition, so
+   treat it as a signal something's actually wrong, e.g. a
+   stale/wrong-scope token) — this is not a pass either; fall back to
+   a manual UI check. **Do not report the workbook as built until
+   audit returns clean (exit 0), and do not treat exit 3 as
+   equivalent to exit 0.**
 4. **GET-back** via `scripts/api/publish-workbook.sh get-spec <wb-id>`.
    Save to `workbooks/<name>/spec.json` (overwriting the authored
    version) so subsequent PUTs start from the server's source of

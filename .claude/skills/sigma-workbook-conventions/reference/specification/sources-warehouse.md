@@ -14,7 +14,7 @@ conventions, and the special-character / friendly-name pitfalls.
 
 See `reference/workflows/discover.md` for how to find the
 `connectionId` and `path` via the REST API (this skill's MCP wrappers
-are blocked under its `client_credentials` auth model — see discover.md
+work under its current `browser-login.sh` auth path — see discover.md
 → "MCP status").
 
 ## Shape

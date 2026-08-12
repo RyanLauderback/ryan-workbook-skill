@@ -20,8 +20,9 @@ POST). A claim with no entry here is not yet load-bearing — treat it as
 
 1. **Find a reference workbook that appears to use the feature.**
    `scripts/api/search-files.sh "<name>"` / browsing the org, or ask
-   the user for one (opportunistically `mcp-search.sh`, expect exit 3
-   — see `reference/workflows/discover.md` → "MCP status").
+   the user for one (or `mcp-search.sh` — see
+   `reference/workflows/discover.md` → "MCP status" for current
+   guidance on MCP vs. REST discovery).
 2. **Pull its live shape via the `kind`-discriminator `jq` recipe** against
    a cached OpenAPI spec, or just `GET /v2/workbooks/<id>/spec` and
    inspect the element directly. Do not infer "unsupported" from a single

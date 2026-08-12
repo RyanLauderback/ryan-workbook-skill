@@ -88,7 +88,8 @@ For each column's `formula`:
      matches a `name` in THIS element's `columns[]` array.
    - A **data-model metric** — `[Metrics/<X>]` where `<X>` is in the
      source element's metric catalog (from `GET /v2/dataModels/{id}/spec`,
-     or opportunistically `mcp-describe`, expect exit 3).
+     or `mcp-describe.sh datamodel-element <dm> <el>` — see
+     `reference/workflows/discover.md` → "MCP status").
    - A **qualified ref** — contains `/`, and the prefix matches one of:
      - The last segment of the `path` array (if source is
        `warehouse-table`)
@@ -176,17 +177,23 @@ downstream clears. Suppress with `SIGMA_SKIP_AUDIT=1`; standalone
 re-audit via `scripts/api/audit-workbook-schema.sh <wb-id>`.
 
 **Exit 3 means the gate didn't actually run — treat it as a hard
-blocker, not a pass.** Found via a live build-mode test 2026-08-03: when
-this org's OAuth client lacks MCP scope, every `mcp-describe` call 403s,
-and the script previously bucketed that the same way as a genuinely
-non-queryable element (control/text/container) — reporting "0 queryable
-element(s) checked, no error-typed columns" with exit 0, indistinguishable
-from a real clean audit. Fixed so `mcp-describe.sh` exits 3 specifically
-for transport-level failures (distinct from its exit 1 for "responded but
-not describable"), and `audit-workbook-schema.sh` now exits 3 and prints
-a loud `INCOMPLETE` warning instead of silently reporting clean. **Do not
-report a workbook as built-and-verified on an exit-3 audit** — fall back
-to a manual UI check, or fix the underlying MCP-scope grant and re-run.
+blocker, not a pass.** Originally found via a live build-mode test
+2026-08-03, back when every `mcp-describe` call reliably 403'd under
+this skill's then-only `client_credentials` auth model: the script
+bucketed that the same way as a genuinely non-queryable element
+(control/text/container) — reporting "0 queryable element(s) checked,
+no error-typed columns" with exit 0, indistinguishable from a real
+clean audit. Fixed so `mcp-describe.sh` exits 3 specifically for
+transport-level failures (distinct from its exit 1 for "responded but
+not describable"), and `audit-workbook-schema.sh` now exits 3 and
+prints a loud `INCOMPLETE` warning instead of silently reporting
+clean. **Under this skill's current `browser-login.sh` auth path,
+`mcp-describe` is expected to succeed — an exit-3 audit now means
+something's actually wrong (a stale/wrong-scope token, or a real MCP
+outage), not a routine/permanent condition to route around.** Do not
+report a workbook as built-and-verified on an exit-3 audit — fall
+back to a manual UI check, or re-run `scripts/api/browser-login.sh` if
+auth looks stale.
 
 ## 5. Visual verify in the UI
 
