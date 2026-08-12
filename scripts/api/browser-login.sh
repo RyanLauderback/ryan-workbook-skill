@@ -106,6 +106,31 @@ AUTH_SERVER=$(curl -sS "$RESOURCE_META" | jq -r '.authorization_servers[0] // em
 AUTH_SERVER=${AUTH_SERVER%/}
 assert_sigma_host "$AUTH_SERVER"
 
+# --- A2. Also discover /mcp/v2's scope requirement and union it in. ---
+# /v2/whoami and /mcp/v2 are DISTINCT OAuth-protected resources with
+# DISTINCT scopes (confirmed live 2026-08-12: the REST API's protected-
+# resource metadata advertises only scope="api:access"; /mcp/v2 has its
+# own metadata document advertising scope="mcp:access" and is not listed
+# anywhere under the REST resource's document). A token minted with only
+# the REST scope is exactly the token /mcp/v2 rejects with `Missing
+# required scopes: mcp:access` -- silently defeating the whole reason
+# this script exists (unblocking /mcp/v2). /mcp/v2 only challenges on
+# POST (GET returns a plain 405 with no WWW-Authenticate), so probe it
+# that way. Non-fatal if this probe fails -- fall back to the REST-only
+# scope and let mcp-search.sh/mcp-describe.sh surface the 403 as before.
+MCP_WWW_AUTH=$(curl -sS -D - -o /dev/null -X POST "$SIGMA_BASE_URL/mcp/v2" -H 'Content-Type: application/json' -d '{}' | tr -d '\r' | grep -i '^www-authenticate:' || true)
+if [ -n "$MCP_WWW_AUTH" ]; then
+  MCP_SCOPE=$(printf '%s' "$MCP_WWW_AUTH" | grep -oE 'scope="[^"]+"' | cut -d'"' -f2 || true)
+  if [ -n "$MCP_SCOPE" ]; then
+    # Union + de-dupe (space-separated OAuth scope string), preserving order.
+    SCOPE=$(printf '%s %s' "$SCOPE" "$MCP_SCOPE" | tr ' ' '\n' | awk '!seen[$0]++' | paste -sd' ' -)
+  else
+    log "Warning: $SIGMA_BASE_URL/mcp/v2 challenged but no scope= found; requesting REST scope only -- MCP calls may still 403."
+  fi
+else
+  log "Warning: could not probe $SIGMA_BASE_URL/mcp/v2 for its scope requirement; requesting REST scope only -- MCP calls may still 403."
+fi
+
 META=$(curl -sS "$AUTH_SERVER/.well-known/oauth-authorization-server")
 AUTHORIZE_URL=$(printf '%s' "$META" | jq -r '.authorization_endpoint // empty')
 TOKEN_URL=$(printf '%s' "$META" | jq -r '.token_endpoint // empty')
