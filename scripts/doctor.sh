@@ -46,11 +46,15 @@ done
 
 echo ""
 echo "== Recommended binaries (checks degrade without these) =="
-for b in jq yq; do
+for b in jq yq openssl; do
   if command -v "$b" >/dev/null 2>&1; then
     ok "$b -> $(command -v "$b")"
   else
-    warn "$b not found — jq is required for publish-workbook.sh/verify-workbook.sh/audit-workbook-schema.sh; yq is only needed for YAML spec input to validate-spec.py (PyYAML also works)"
+    case "$b" in
+      jq) warn "jq not found — required for publish-workbook.sh/verify-workbook.sh/audit-workbook-schema.sh" ;;
+      yq) warn "yq not found — only needed for YAML spec input to validate-spec.py (PyYAML also works)" ;;
+      openssl) warn "openssl not found — only needed for scripts/api/browser-login.sh's PKCE step; not required for the .env/client_credentials path" ;;
+    esac
   fi
 done
 
@@ -69,12 +73,14 @@ fi
 
 echo ""
 echo "== Repo-relative paths (should not depend on cwd) =="
-if [ -f "$repo_root/.env" ]; then
+if [ -n "${SIGMA_API_TOKEN:-}" ] && [ -n "${SIGMA_BASE_URL:-}" ]; then
+  ok "SIGMA_BASE_URL/SIGMA_API_TOKEN already exported (browser-login.sh, refresh-token.sh, or web/CI mode)"
+elif [ -f "$repo_root/.env" ]; then
   ok ".env found at $repo_root/.env"
-elif [ -n "${SIGMA_BASE_URL:-}" ] && [ -n "${SIGMA_API_TOKEN:-}" ]; then
-  ok "no .env, but SIGMA_BASE_URL/SIGMA_API_TOKEN already exported (web/CI mode)"
+elif [ -n "${SIGMA_BASE_URL:-}" ]; then
+  ok "no .env, but SIGMA_BASE_URL exported — run scripts/api/browser-login.sh, or export SIGMA_CLIENT_ID/SECRET for the client_credentials path"
 else
-  warn "no .env at $repo_root/.env and SIGMA_* not exported — copy .env.example to .env and fill in credentials"
+  warn "no .env at $repo_root/.env and SIGMA_* not exported — either 'eval \"\$(scripts/api/browser-login.sh)\"' (no admin credential needed) or copy .env.example to .env and fill in credentials"
 fi
 
 if [ "$fail" -eq 0 ]; then

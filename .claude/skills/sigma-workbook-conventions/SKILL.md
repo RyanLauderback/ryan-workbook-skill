@@ -43,15 +43,36 @@ authorizes any state-changing API call.
 The very first action of a build-mode session is `AskUserQuestion` with three
 questions. Each question has a defined branch behavior:
 
-**Q1: Is your `.env` set up?**
+**Q1: How should Claude authenticate to Sigma?**
 
-- **Yes** — Claude runs two actions in sequence to verify auth end-to-end:
+- **Sign in via browser (recommended for interactive CLI use)** — no
+  admin-provisioned credential needed, and it's the only auth path
+  `/mcp/v2` accepts (see `reference/workflows/discover.md` → "MCP
+  status"). Claude runs:
+  1. `eval "$(scripts/api/browser-login.sh)"` — discovers the OAuth
+     endpoints, opens the system browser, and on success stores a
+     refresh token in the OS keychain for future sessions.
+  2. `scripts/api/whoami.sh` — actively probes `/v2/files?limit=5` to
+     confirm the token works against the live API and surfaces 5
+     recent files the user can confirm visually.
+
+  A returning user who already completed a browser login once can
+  skip re-opening a browser: `export SIGMA_TOKEN_FETCHER=$PWD/scripts/api/refresh-token.sh`
+  before step 1, and `_env.sh`'s cache-miss path redeems the stored
+  refresh token instead.
+
+- **`.env` with a client ID/secret (headless/CI, or Claude Code web)** —
+  Claude runs two actions in sequence to verify auth end-to-end:
   1. `bash scripts/api/_env.sh` — warms the token cache at a per-user `$SIGMA_TOKEN_CACHE` path (55-min TTL).
   2. `scripts/api/whoami.sh` — actively probes `/v2/files?limit=5` to confirm the token works against the live API and surfaces 5 recent files the user can confirm visually.
 
-  Why both: passive bootstrap (`_env.sh`) succeeds even when credentials are wrong as long as `.env` has the variables filled in. The active `whoami` probe catches expired clients, wrong region URLs, and revoked tokens *before* recon starts — not mid-build.
+  Why both: passive bootstrap (`_env.sh`) succeeds even when credentials are wrong as long as `.env` has the variables filled in. The active `whoami` probe catches expired clients, wrong region URLs, and revoked tokens *before* recon starts — not mid-build. This path is required for Claude Code web and any headless/CI use, since there's no human present to complete a browser redirect.
 
-- **No** — Claude shares `.env.example` contents + a link to Sigma's "Administration → Developer Access" docs for OAuth client creation, then re-prompts Q1 once the user confirms setup.
+- **Neither set up yet** — Claude shares `.env.example` contents + a
+  link to Sigma's "Administration → Developer Access" docs for OAuth
+  client creation as the fallback path, and mentions browser sign-in
+  as the no-credential alternative, then re-prompts Q1 once the user
+  confirms setup.
 
 **Q2: What data source will you build against?**
 - **Data model** (recommended) — URL/slug (`Customer-Financials-461QUZu2VPny8KxImgSmfF`)

@@ -69,17 +69,28 @@ SIGMA_TOKEN_CACHE="${SIGMA_TOKEN_CACHE:-${XDG_RUNTIME_DIR:-${TMPDIR:-/tmp}}/.sig
 export SIGMA_TOKEN_CACHE
 _sigma_token_ttl=$((55 * 60))   # refresh 5 min before the 60-min OAuth expiry
 
-# 1. Load .env if the relevant vars aren't already exported.
-if [ -z "${SIGMA_BASE_URL:-}" ] || [ -z "${SIGMA_CLIENT_ID:-}" ] || [ -z "${SIGMA_CLIENT_SECRET:-}" ]; then
-  # Capture load-env.sh's own stdout+exit code rather than `eval`-ing it
-  # directly — `eval ""` on a failed/empty run returns 0, so a missing or
-  # misplaced .env used to proceed silently with every SIGMA_* var empty,
-  # surfacing far later as an opaque empty-token failure.
-  if ! _sigma_envout="$("${_sigma_repo_root}/scripts/load-env.sh")"; then
-    echo "_env.sh: could not load .env (see load-env.sh output above)." >&2
-    return 1 2>/dev/null || exit 1
+# 1. Load .env if we don't already have a usable token AND the client-
+# credentials vars aren't already exported. A caller that already ran
+# `eval "$(scripts/api/browser-login.sh)"` (or refresh-token.sh) has a
+# SIGMA_API_TOKEN but no SIGMA_CLIENT_ID/SECRET and typically no .env file at
+# all — forcing a .env load in that case used to fail loudly ("could not load
+# .env") before step 2 below ever got a chance to see the already-good token.
+if [ -z "${SIGMA_API_TOKEN:-}" ]; then
+  if [ -z "${SIGMA_BASE_URL:-}" ] || [ -z "${SIGMA_CLIENT_ID:-}" ] || [ -z "${SIGMA_CLIENT_SECRET:-}" ]; then
+    # Capture load-env.sh's own stdout+exit code rather than `eval`-ing it
+    # directly — `eval ""` on a failed/empty run returns 0, so a missing or
+    # misplaced .env used to proceed silently with every SIGMA_* var empty,
+    # surfacing far later as an opaque empty-token failure.
+    if ! _sigma_envout="$("${_sigma_repo_root}/scripts/load-env.sh")"; then
+      echo "_env.sh: could not load .env (see load-env.sh output above)." >&2
+      return 1 2>/dev/null || exit 1
+    fi
+    eval "$_sigma_envout"
   fi
-  eval "$_sigma_envout"
+else
+  # SIGMA_BASE_URL is still required either way — every scripts/api/*.sh call
+  # builds its request URL from it, token source notwithstanding.
+  : "${SIGMA_BASE_URL:?SIGMA_BASE_URL not set (required even with a pre-exported SIGMA_API_TOKEN)}"
 fi
 
 # 2. Resolve SIGMA_API_TOKEN via cache → fresh fetch.

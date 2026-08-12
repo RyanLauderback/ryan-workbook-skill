@@ -3,18 +3,28 @@
 Finding connections, tables, columns, data models, metrics, and existing
 workbooks via the Sigma REST API. Load before composing any new spec.
 
-**MCP status (2026-08-07): not usable with this skill's auth model.**
-This skill authenticates with a `client_credentials` API token (see
-CLAUDE.md → "Authentication"). As of 2026-07-30, Sigma's `/mcp/v2`
-endpoint only accepts interactive user OAuth — confirmed directly by
-Sigma's MCP engineering team (see `reference/history.md` →
-"2026-08-07"). `mcp-search.sh`/`mcp-describe.sh` will reliably exit 3 on
-every call under this auth model; they are not flaky or occasionally
-missing a scope, they are categorically blocked until Sigma ships
+**MCP status (2026-08-12): blocked under `client_credentials`; available
+under browser-login OAuth.** As of 2026-07-30, Sigma's `/mcp/v2` endpoint
+only accepts interactive user OAuth — confirmed directly by Sigma's MCP
+engineering team (see `reference/history.md` → "2026-08-07"). A session
+authenticated via `scripts/api/get-token.sh`'s `client_credentials`
+exchange (the `.env` / headless / Claude-Code-web path — see CLAUDE.md
+→ "Authentication") will reliably exit 3 on every `mcp-search.sh`/
+`mcp-describe.sh` call; this is not flaky or an occasionally-missing
+scope, it's categorically blocked for that token type until Sigma ships
 dedicated client-credentials MCP support (stated as "intended/in
-progress," no ETA). **Use the REST tools below as the default, not a
-fallback.** The MCP sections further down are kept for when that
-changes, not for today's builds.
+progress," no ETA).
+
+A session authenticated via `scripts/api/browser-login.sh` (interactive
+OAuth 2.1 + PKCE — see CLAUDE.md → "Authentication") mints exactly the
+user-delegated token type `/mcp/v2` requires, so `mcp-search.sh`/
+`mcp-describe.sh` should work there. **Not yet independently re-verified
+against a live org since this path was added — treat as expected-to-work,
+confirm with one real call before relying on it for a build.** Until
+that confirmation lands, **default to the REST tools below regardless of
+auth method** — they work under both token types, so they stay the safe
+default; reach for MCP opportunistically when you know the session used
+browser login.
 
 ## Table of contents
 
@@ -47,6 +57,21 @@ rule in `reference/specification/sources.md`: "If no data model fits,
 fall back to `warehouse-table` — don't manufacture a model." Raise this
 at kickoff (`SKILL.md` → Q2) rather than defaulting straight to
 table-level discovery when a data model might fit.
+
+> ⚠️ **Not independently verified — a 2026-08-11 build session reported
+> `GET /v2/dataModels/{id}/spec` 500ing** (`service_error: Data model
+> spec contains unsupported dataset source: <name>.csv`) **on a data
+> model with a CSV-uploaded dataset source.** One data source type, one
+> session — logged in `reference/capability-ledger.md` → "Unverified —
+> probe pending," not asserted as a general recon-path failure. If you
+> hit the same 500: `GET /v2/dataModels/{id}/elements` +
+> `GET /v2/dataModels/{id}/columns` return full column/type schema
+> without hitting the broken serialization path — just not the
+> `metrics` catalog, which only lives in `/spec`. That gap matters for
+> the "Inference anchor" rule (`reference/conventions.md`) — a formula
+> that would normally trace to a confirmed `[Metrics/<Name>]` has no
+> `metrics` array to check against on this fallback, so treat any metric
+> the user implies as an Open Decision instead of assuming it exists.
 
 ## The routing decision
 
@@ -94,10 +119,12 @@ automatically cheaper than schema-level probing — it's only cheaper when
 the schema is also right. Guessing the schema on top of guessing the
 table compounds badly (worse than schema-only probing, not a shortcut).
 
-## Discovery via MCP (blocked under client_credentials auth — kept for reference)
+## Discovery via MCP (blocked under client_credentials auth — works under browser-login OAuth)
 
 `scripts/api/mcp-search.sh` and `mcp-describe.sh` call Sigma's MCP
-server (`/mcp/v2`) using the same OAuth token as the REST API.
+server (`/mcp/v2`) using the same OAuth token as the REST API — so
+whether these calls succeed depends entirely on how the session
+authenticated. See "MCP status" above.
 
 ### Searching the workspace
 
@@ -292,9 +319,12 @@ for the full rules.
 ## When discovery fails
 
 - **`mcp-search.sh`/`mcp-describe.sh` exit 3 with `Missing required
-  scopes: mcp:access`**: expected, not a bug — see the MCP status note
-  at the top of this file. Don't retry the MCP call; switch to
-  `search-files.sh` / the REST describe recipes above.
+  scopes: mcp:access`**: expected under `client_credentials` auth, not a
+  bug — see the MCP status note at the top of this file. Don't retry the
+  MCP call under that auth method; switch to `search-files.sh` / the REST
+  describe recipes above. If the session authenticated via
+  `browser-login.sh` and still hits this, that's a real finding worth
+  reporting — the whole point of that auth path is to avoid this error.
 - **`search-files.sh` returns nothing**: try a broader/shorter
   substring (it's exact substring match, not fuzzy), or switch to
   `find-file-by-urlid.sh` if you have a URL slug.

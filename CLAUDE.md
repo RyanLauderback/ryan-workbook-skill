@@ -76,19 +76,42 @@ for the workflow.
 
 ## Authentication
 
-1. Provide credentials. **CLI/local**: `cp .env.example .env` and fill in
-   `SIGMA_BASE_URL`, `SIGMA_CLIENT_ID`, `SIGMA_CLIENT_SECRET`. **Claude Code
-   web**: the same `SIGMA_*` variables are already injected as env vars — no
-   `.env` needed.
+**Primary path — browser sign-in, no admin-provisioned credential needed:**
+
+1. `eval "$(scripts/api/browser-login.sh)"` — discovery-driven OAuth 2.1
+   authorization-code + PKCE flow. Opens the system browser, captures the
+   redirect automatically (falls back to a manual paste-back if `python3`
+   isn't available), and stores a refresh token in the OS keychain
+   (`security` on macOS, `secret-tool`/libsecret on Linux) so future
+   sessions don't need a second browser round-trip.
+2. `scripts/api/whoami.sh` — confirms the token against the live API.
+3. Repeat sessions: `export SIGMA_TOKEN_FETCHER=$PWD/scripts/api/refresh-token.sh`
+   before calling any `scripts/api/*.sh` — `_env.sh`'s cache-miss path then
+   redeems the stored refresh token instead of prompting a new browser login.
+
+This is also the path that unblocks Sigma's `/mcp/v2` endpoint — see
+`reference/workflows/discover.md` → "MCP status": `/mcp/v2` categorically
+rejects `client_credentials` tokens (confirmed by Sigma's MCP engineering
+team), but accepts a browser-login token.
+
+**Secondary path — `.env` + `client_credentials` (headless/CI, or Claude
+Code web):**
+
+1. **CLI/local**: `cp .env.example .env` and fill in `SIGMA_BASE_URL`,
+   `SIGMA_CLIENT_ID`, `SIGMA_CLIENT_SECRET`. **Claude Code web**: the same
+   `SIGMA_*` variables are already injected as env vars — no `.env` needed.
 2. Done — scripts in `scripts/api/*.sh` self-bootstrap on first call (load
-   `.env` if the vars aren't already exported, mint an OAuth token via the
-   repo-local `scripts/api/get-token.sh`, cache at a per-user
-   `$SIGMA_TOKEN_CACHE` path with a 55-min TTL). No env-prelude or token
-   chaining needed from the caller.
-   The skill owns auth end-to-end so the same code path runs in CLI and web.
+   `.env` if the vars aren't already exported and no token is already set,
+   mint an OAuth token via the repo-local `scripts/api/get-token.sh`, cache
+   at a per-user `$SIGMA_TOKEN_CACHE` path with a 55-min TTL). No
+   env-prelude or token chaining needed from the caller.
+   Required for Claude Code web and any headless/CI use — there's no human
+   present there to complete a browser redirect.
 3. To use the upstream `sigma-api` plugin's `get-token.sh` (or any custom
-   fetcher) instead, set `SIGMA_TOKEN_FETCHER` to its absolute path.
-4. **Never echo `$SIGMA_API_TOKEN`, `$SIGMA_CLIENT_SECRET`, or any other secret.** Don't write secrets to files inside the workspace. Pass tokens only via `Authorization` headers.
+   fetcher, including `refresh-token.sh` above) instead, set
+   `SIGMA_TOKEN_FETCHER` to its absolute path.
+
+**Either path:** **Never echo `$SIGMA_API_TOKEN`, `$SIGMA_CLIENT_SECRET`, or any other secret.** Don't write secrets to files inside the workspace. Pass tokens only via `Authorization` headers.
 
 ## Layout
 

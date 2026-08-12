@@ -24,13 +24,19 @@ Before the per-attempt protocol runs, a build-mode session opens with a
 3-question `AskUserQuestion` gate (full spec in
 `.claude/skills/sigma-workbook-conventions/SKILL.md` → "Session kickoff"):
 
-- **Q1: Is your `.env` set up?**
-  - Yes → run `bash scripts/api/_env.sh` to warm the token cache, then
-    `scripts/api/whoami.sh` to actively validate the token against
-    `/v2/files`. If `whoami` fails, surface the Sigma error and abort —
-    don't continue into Recon with broken auth.
-  - No → walk the user through `.env.example` + Sigma's "Administration →
-    Developer Access" OAuth client setup, then re-prompt.
+- **Q1: How should Claude authenticate to Sigma?**
+  - Browser sign-in (recommended) → run `eval "$(scripts/api/browser-login.sh)"`,
+    then `scripts/api/whoami.sh` to actively validate the token against
+    `/v2/files`. No admin-provisioned credential needed, and the only path
+    that unblocks `/mcp/v2` (see `reference/workflows/discover.md` → "MCP
+    status"). If `whoami` fails, surface the Sigma error and abort — don't
+    continue into Recon with broken auth.
+  - `.env` with a client ID/secret (headless/CI, or Claude Code web) → run
+    `bash scripts/api/_env.sh` to warm the token cache, then
+    `scripts/api/whoami.sh` as above.
+  - Neither set up → walk the user through `.env.example` + Sigma's
+    "Administration → Developer Access" OAuth client setup as the fallback,
+    mention browser sign-in as the no-credential alternative, then re-prompt.
 - **Q2: What data source?** (data model URL/slug / warehouse path / mixed)
 - **Q3: What would you like to build, and where in Sigma?** (verbatim
   prompt + destination folder — written to the timestamped prompt file)
