@@ -64,7 +64,17 @@ python3 - "$SIGMA_BASE_URL" "$SIGMA_API_TOKEN" "$QUERY" "$TYPES" "$LIMIT" <<'PY'
 import json, re, sys, urllib.error, urllib.request
 
 base, tok, query, types_csv, limit_s = sys.argv[1:]
-types = [t.strip() for t in types_csv.split(",") if t.strip()]
+
+def to_kebab(t):
+    # The MCP `search` tool's entityTypes enum is kebab-case (data-model,
+    # data-model-element) -- confirmed live 2026-08-12 against a real org,
+    # which rejects the camelCase forms this script's own --help text and
+    # default previously used (dataModel, dataModelElement). Translate so
+    # both spellings work rather than silently 400ing on the documented
+    # camelCase usage.
+    return re.sub(r"(?<!^)(?=[A-Z])", "-", t).lower()
+
+types = [to_kebab(t.strip()) for t in types_csv.split(",") if t.strip()]
 limit = int(limit_s)
 
 body = {
@@ -141,25 +151,44 @@ for c in result.get("content", []):
     # Normalize to a flat {type, id, name, url, description} shape so callers
     # don't have to know that workbook IDs come from `inodeId` while
     # data-model elements expose both `dataModelId` + `elementId`.
+    #
+    # `data-model-element` results (confirmed live 2026-08-12) have a
+    # genuinely different shape from every other type: no `name` key (the
+    # element's own display name is `elementTitle`; `dataModelName` names
+    # the parent for context) and no `dataModelId` key (the parent data
+    # model's id -- same id space as GET /v2/dataModels/{id} -- rides on
+    # `inodeId` instead). A previous version of this normalizer assumed
+    # `name`/`dataModelId` keys that don't exist on this result type, which
+    # silently produced `"name": null` and a missing `dataModelId` on every
+    # data-model-element match -- not the occasional server omission
+    # discover.md's "known gap" note described, but this bug, every time.
     out = []
     for r in results:
-        rid = (
-            r.get("inodeId")
-            or r.get("workbookId")
-            or r.get("dataModelId")
-            or r.get("elementId")
-        )
-        item = {
-            "type": r.get("type"),
-            "id": rid,
-            "name": r.get("name"),
-            "url": r.get("url"),
-            "description": r.get("description"),
-        }
-        # Data-model elements need both IDs to be addressable downstream.
-        if r.get("type") == "dataModelElement":
-            item["dataModelId"] = r.get("dataModelId")
-            item["elementId"] = r.get("elementId")
+        rtype = r.get("type")
+        if rtype == "data-model-element":
+            item = {
+                "type": rtype,
+                "id": r.get("elementId"),
+                "name": r.get("elementTitle") or r.get("name"),
+                "url": r.get("url"),
+                "description": r.get("description"),
+                "dataModelId": r.get("inodeId"),
+                "elementId": r.get("elementId"),
+            }
+        else:
+            rid = (
+                r.get("inodeId")
+                or r.get("workbookId")
+                or r.get("dataModelId")
+                or r.get("elementId")
+            )
+            item = {
+                "type": rtype,
+                "id": rid,
+                "name": r.get("name"),
+                "url": r.get("url"),
+                "description": r.get("description"),
+            }
         out.append(item)
     print(json.dumps(out, indent=2))
     sys.stderr.write(
