@@ -50,6 +50,7 @@ to flag "this rule was once unverified and bit us — treat it as load-bearing."
 - [2026-08-04 — Wave 4 / C8: scenario modeling pattern, 2 structural gotchas checked](#2026-08-04--wave-4--c8-scenario-modeling-pattern-2-structural-gotchas-checked)
 - [2026-08-07 — MCP access confirmed blocked for client_credentials tokens; not a per-org scope gap](#2026-08-07--mcp-access-confirmed-blocked-for-clientcredentials-tokens-not-a-per-org-scope-gap)
 - [2026-08-07 (continued) — data-model-first discovery framing + raw-table routing cost data](#2026-08-07-continued--data-model-first-discovery-framing--raw-table-routing-cost-data)
+- [2026-08-12 — Browser-OAuth `/mcp/v2` unblock confirmed live; two real bugs fixed on first real contact](#2026-08-12--browser-oauth-mcpv2-unblock-confirmed-live-two-real-bugs-fixed-on-first-real-contact)
 
 ## 2026-05-11 — Per-page `layout` field silently discarded
 
@@ -2152,3 +2153,62 @@ mechanically unbypassable. A future session with time to invest could
 look at whether any tool-level primitive in this environment can
 force a real pause independent of `AskUserQuestion` availability;
 none was identified during this fix.
+
+## 2026-08-12 — Browser-OAuth `/mcp/v2` unblock confirmed live; two real bugs fixed on first real contact
+
+The `oauth-token-exchange` branch added `scripts/api/browser-login.sh`
+(interactive OAuth 2.1 + PKCE) specifically because `/mcp/v2` rejects
+`client_credentials` tokens outright (see "2026-08-07" above) — the
+hypothesis was that a user-delegated browser-login token would be
+accepted instead. `reference/workflows/discover.md` carried this as
+"expected-to-work, confirm with one real call before relying on it."
+A live test session against a real org (`Healthcare Claims
+Transactions` data model) confirmed the hypothesis, but only after
+finding and fixing two real bugs on first actual contact with the live
+endpoints — exactly the kind of gap a design review can't catch.
+
+**Bug 1 (`67090eb`) — `browser-login.sh` requested the wrong OAuth
+scope.** It discovered its scope solely from `GET /v2/whoami`'s
+`WWW-Authenticate` challenge, which only ever advertises
+`scope="api:access"` — the REST API's own protected-resource metadata.
+`/mcp/v2` is a *separate* protected resource requiring
+`scope="mcp:access"`, which was never requested. The resulting token
+403'd on every MCP call regardless of grant type, silently defeating
+the entire reason the script exists — a browser-login session looked
+identical to a `client_credentials` one from MCP's point of view. Fixed
+by also probing `/mcp/v2` with a POST (it only challenges that way —
+`GET` just 405s with no `WWW-Authenticate`) and unioning its scope into
+the authorize/registration request.
+
+**Bug 2 (`555e945`) — `mcp-search.sh` broke on first real contact with
+the now-reachable `search` tool.** Two independent issues surfaced in
+one probe: (a) the live `search` tool's `entityTypes` enum is
+kebab-case (`data-model`, `data-model-element`); this script's
+`--help` text, default, and every documented usage passed camelCase
+(`dataModel`, `dataModelElement`), which the live server rejects with a
+validation error — fixed by translating camelCase to kebab-case so
+both spellings work. (b) `data-model-element` results carry no `name`
+or `dataModelId` key at all — the display name is `elementTitle`, and
+the parent data model's id rides on `inodeId` instead. The existing
+result normalizer assumed the missing keys, silently producing
+`"name": null` and no `dataModelId` on every match. **This is what
+`discover.md`'s prior "Known gap: dataModelElement results don't always
+carry the parent dataModelId" note was actually describing** — not an
+occasional server omission as that phrasing implied, but this bug,
+every time. Fixed to read the real keys; the note in `discover.md` has
+been corrected to say so.
+
+**Net result, live-verified:** `mcp-search.sh` and `mcp-describe.sh`
+both now succeed end-to-end under a browser-login token, returning
+richer output (DDL + metrics catalog in one call) than the REST
+fallback — see `discover.md` → "MCP status" for the updated guidance.
+`client_credentials` tokens remain categorically blocked, unchanged
+from the 2026-08-07 finding.
+
+A "Healthcare Claims Overview" dashboard build served as a further
+end-to-end exercise of the fixed path (POSTed, audited, verified
+clean) — see `workbooks/healthcare-claims-overview/notes.md` for one
+more single-occurrence finding from that build (a data-model metric
+whose formula crosses a relationship to a different element failed to
+resolve when its owning element was isolated into a narrow workbook
+table), not promoted to the skill pending a second occurrence.

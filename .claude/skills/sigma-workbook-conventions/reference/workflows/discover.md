@@ -15,16 +15,38 @@ scope, it's categorically blocked for that token type until Sigma ships
 dedicated client-credentials MCP support (stated as "intended/in
 progress," no ETA).
 
-A session authenticated via `scripts/api/browser-login.sh` (interactive
-OAuth 2.1 + PKCE — see CLAUDE.md → "Authentication") mints exactly the
-user-delegated token type `/mcp/v2` requires, so `mcp-search.sh`/
-`mcp-describe.sh` should work there. **Not yet independently re-verified
-against a live org since this path was added — treat as expected-to-work,
-confirm with one real call before relying on it for a build.** Until
-that confirmation lands, **default to the REST tools below regardless of
-auth method** — they work under both token types, so they stay the safe
-default; reach for MCP opportunistically when you know the session used
-browser login.
+**Confirmed live 2026-08-12** (real org, `Healthcare Claims Transactions`
+data model): a session authenticated via `scripts/api/browser-login.sh`
+(interactive OAuth 2.1 + PKCE — see CLAUDE.md → "Authentication") does
+mint the user-delegated token type `/mcp/v2` requires, and
+`mcp-search.sh`/`mcp-describe.sh` both succeeded end-to-end, returning
+richer output than the REST fallback (DDL + metrics catalog in one
+call). Getting there took two real bug fixes, both on `oauth-token-exchange`:
+
+- `67090eb` — `browser-login.sh` was discovering its OAuth scope solely
+  from `GET /v2/whoami`'s challenge, which only advertises
+  `scope="api:access"` — the REST API's own protected-resource metadata,
+  not `/mcp/v2`'s. `/mcp/v2` is a *separate* protected resource requiring
+  `scope="mcp:access"`, never requested, so the resulting token 403'd on
+  every MCP call regardless of grant type — silently defeating the whole
+  reason the script exists. Fixed by also probing `/mcp/v2` (POST, since
+  it only challenges that way — GET just 405s) and unioning its scope
+  into the authorize/registration request.
+- `555e945` — once the token actually carried `mcp:access`, first real
+  contact with the live `search` tool surfaced two more bugs in
+  `mcp-search.sh`: it sent camelCase `entityTypes` (`dataModel`,
+  `dataModelElement`) matching its own docs/defaults, but the live
+  enum is kebab-case (`data-model`, `data-model-element`) — rejected
+  with a validation error. And `data-model-element` results have no
+  `name`/`dataModelId` keys (real keys are `elementTitle`/`inodeId`) —
+  the existing normalizer assumed keys that don't exist on that result
+  type. See "Known gap" below — this is what that note was actually
+  describing, not an occasional server omission.
+
+**Practical guidance now that this is confirmed:** reach for MCP first
+when the session authenticated via `browser-login.sh`; keep defaulting
+to the REST tools below under `client_credentials`, where MCP remains
+categorically blocked as described above.
 
 ## Table of contents
 
@@ -146,10 +168,20 @@ Rules:
   stated name/intent before building on it.
 - Surface ambiguous matches: "I found two named 'Sales Performance'
   — A in `My Documents/Demo`, B in `Org Shared/Q4`. Which?"
-- **Known gap:** `mcp-search.sh` results of type `dataModelElement`
-  don't always carry the parent `dataModelId`. If you need to chain
-  into `mcp-describe.sh datamodel-element`, resolve the data model
-  first via search or `find-file-by-urlid.sh`.
+- **Fixed 2026-08-12 (commit `555e945`), not a lingering gap:** results
+  of type `data-model-element` were previously missing `name`/
+  `dataModelId` on every match — not an occasional server omission as
+  earlier phrasing here implied, but this script's normalizer assuming
+  keys (`name`, `dataModelId`) that this result type never carries (the
+  real keys are `elementTitle` and `inodeId`). `mcp-search.sh` now reads
+  the correct keys, so `dataModelId` is populated on every
+  `data-model-element` match — no separate resolve-the-data-model-first
+  step needed to chain into `mcp-describe.sh datamodel-element`.
+- **Entity-type casing:** the live `search` tool's enum is kebab-case
+  (`data-model`, `data-model-element`), confirmed 2026-08-12. `--types`
+  accepts either casing — camelCase (`dataModel`, `dataModelElement`,
+  shown in the examples above) is translated automatically — but kebab-
+  case is what the server actually speaks.
 
 ### Describing a resolved object
 
