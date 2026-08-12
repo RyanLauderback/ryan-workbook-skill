@@ -88,6 +88,15 @@ if [ -n "${SIGMA_API_TOKEN:-}" ]; then
 elif [ -n "${SIGMA_CLIENT_ID:-}" ] && [ -n "${SIGMA_CLIENT_SECRET:-}" ] && [ -n "${SIGMA_BASE_URL:-}" ]; then
   : # Claude Code web (or any shell with client_credentials vars already
     # exported) — step 2 below mints a token via get-token.sh.
+elif [ -n "${SIGMA_TOKEN_FETCHER:-}" ] && [ -n "${SIGMA_BASE_URL:-}" ]; then
+  : # A returning browser-login session in a fresh shell: SIGMA_API_TOKEN
+    # isn't exported here (each new shell starts empty), but a fetcher is
+    # configured (e.g. refresh-token.sh, which redeems the OS-keychain
+    # refresh token with no browser round-trip) — step 2 below will call
+    # it. Without this branch, this documented "returning user" path
+    # (SKILL.md / CLAUDE.md → "Authentication") fell through to the error
+    # below every time, since neither of the first two conditions ever
+    # became true in a shell that only exports SIGMA_TOKEN_FETCHER.
 else
   echo "_env.sh: no usable auth found." >&2
   echo "  Run: eval \"\$(scripts/api/browser-login.sh)\" to sign in via browser" >&2
