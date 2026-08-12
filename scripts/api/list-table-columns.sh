@@ -2,7 +2,7 @@
 # List columns of a warehouse table by its inodeId.
 # Usage:  scripts/api/list-table-columns.sh <inodeId>
 # Output: JSON array [{name, type}]
-# Env:    self-bootstrapped via _env.sh (loads .env, caches OAuth token)
+# Env:    self-bootstrapped via _env.sh (uses already-exported creds, caches OAuth token)
 set -euo pipefail
 source "$(dirname "$0")/_env.sh"
 

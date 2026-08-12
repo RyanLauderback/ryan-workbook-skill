@@ -1,4 +1,8 @@
-# Secrets
+# Nothing in this repo reads a .env file — browser sign-in
+# (scripts/api/browser-login.sh) and Claude Code web's injected env vars
+# cover every auth path (see CLAUDE.md -> "Authentication"). Ignored purely
+# as a safety net in case one gets created out of old habit; it should
+# never get committed.
 .env
 .env.*.local
 

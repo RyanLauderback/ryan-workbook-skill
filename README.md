@@ -10,11 +10,8 @@ git clone https://github.com/RyanLauderback/ryan-workbook-skill.git
 cd ryan-workbook-skill
 
 # 2. Authenticate — sign in via browser, no admin-provisioned credential needed
-export SIGMA_BASE_URL=https://aws-api.sigmacomputing.com  # pick your region, see .env.example
+export SIGMA_BASE_URL=https://aws-api.sigmacomputing.com  # pick your region — see help.sigmacomputing.com/docs/region-warehouse-and-feature-support
 eval "$(scripts/api/browser-login.sh)"
-# Alternative for headless/CI use (no human to complete a browser login):
-#   cp .env.example .env
-#   # edit .env — fill in SIGMA_BASE_URL, SIGMA_CLIENT_ID, SIGMA_CLIENT_SECRET
 
 # 3. Open the folder in Claude Code (CLI, desktop app, or IDE extension)
 ```
@@ -25,7 +22,7 @@ You don't need to run `/plugin marketplace add` or `/plugin install` manually �
 
 ## Starting a session
 
-Once Claude Code is open, describe what you want to build. Explicit trigger: **`start build mode`** — Claude opens with a 3-question gate (auth method / data source / what to build + where in Sigma), warms the OAuth token, and runs `whoami` to confirm auth before recon. Then: Recon → Plan → Approval → Build → Verify.
+Once Claude Code is open, describe what you want to build. Explicit trigger: **`start build mode`** — Claude resolves auth automatically (browser sign-in, or reusing already-exported credentials), warms the OAuth token, and runs `whoami` to confirm auth before recon, then opens a 2-question gate (data source / what to build + where in Sigma). Then: Recon → Plan → Approval → Build → Verify.
 
 Opt-in session-local enrichment (Tableau migration notes, account-specific patterns) uses a **`local-`** filename prefix on skill files to stay visually separable from canonical content — see the skill's SKILL.md for the convention.
 
@@ -54,12 +51,11 @@ You shouldn't have to look up internal UUIDs, schema paths, or connection IDs by
 | `scripts/api/find-file-by-urlid.sh` | Resolve any URL slug (`/b/<id>`, `…-<urlId>`) to its file metadata via `/v2/files`. The URL-slug path of the discovery router. |
 | `scripts/api/browser-login.sh` | Interactive OAuth 2.1 authorization-code + PKCE sign-in — no admin-provisioned client ID/secret needed, and the only auth path Sigma's `/mcp/v2` accepts (see `reference/workflows/discover.md` → "MCP status"). Opens the system browser, captures the redirect automatically, stores a refresh token in the OS keychain. `eval "$(scripts/api/browser-login.sh)"`. |
 | `scripts/api/refresh-token.sh` | Headless follow-up to `browser-login.sh` — redeems the keychain-stored refresh token for a new access token with no browser round-trip. Point `_env.sh` at it via `SIGMA_TOKEN_FETCHER` for repeat sessions. |
-| `scripts/api/_env.sh` | Sourced internally by every `scripts/api/*.sh`. If `SIGMA_API_TOKEN` isn't already exported (e.g. from `browser-login.sh`), loads `.env` (or reads exported `SIGMA_*` env vars in web sessions), mints an OAuth token via the repo-local `scripts/api/get-token.sh`, and caches it at a per-user path under `$SIGMA_TOKEN_CACHE` (mode 0600, 55-min TTL). Self-bootstrap — callers do not set env vars. Same code path in CLI and Claude Code web. |
-| `scripts/api/get-token.sh` | Repo-local OAuth `client_credentials` exchange against `/v2/auth/token` — the headless/CI/Claude-Code-web path. Prints `export SIGMA_API_TOKEN=...` on stdout for `_env.sh` to eval. Skill owns auth so a downloaded-zip / web-session install doesn't depend on the upstream `sigma-api` plugin being present. Override with `SIGMA_TOKEN_FETCHER` to use a different fetcher (e.g. `refresh-token.sh`). |
+| `scripts/api/_env.sh` | Sourced internally by every `scripts/api/*.sh`. Uses an already-exported `SIGMA_API_TOKEN` if present (from `browser-login.sh`/`refresh-token.sh`); otherwise, if `SIGMA_CLIENT_ID`/`SIGMA_CLIENT_SECRET`/`SIGMA_BASE_URL` are already exported (Claude Code web injects these automatically), mints an OAuth token via the repo-local `scripts/api/get-token.sh` and caches it at a per-user path under `$SIGMA_TOKEN_CACHE` (mode 0600, 55-min TTL). No file is ever read from disk. Self-bootstrap — callers do not set env vars by hand. |
+| `scripts/api/get-token.sh` | Repo-local OAuth `client_credentials` exchange against `/v2/auth/token` — used when `SIGMA_CLIENT_ID`/`SIGMA_CLIENT_SECRET`/`SIGMA_BASE_URL` are already exported (Claude Code web injects these automatically; no `.env` file, no user setup). Prints `export SIGMA_API_TOKEN=...` on stdout for `_env.sh` to eval. Skill owns auth so a downloaded-zip / web-session install doesn't depend on the upstream `sigma-api` plugin being present. Override with `SIGMA_TOKEN_FETCHER` to use a different fetcher (e.g. `refresh-token.sh`). |
 | `scripts/api/` (rest) | Thin REST wrappers used as MCP fallbacks: `list-connections.sh`, `list-folders.sh`, `lookup-path.sh`, `list-table-columns.sh`, `probe-schema-tables.sh`. Reach for these when MCP doesn't cover the case (raw connection enumeration, folder browsing by name pattern, warehouse-schema probing). |
 | `scripts/sigma-resolve.py` | Handles the messy-input case — prose mixed with URL slugs and warehouse paths (`<DB>.<SCHEMA>.<table>`). Returns structured `{sources, folder, candidates, unresolved}` JSON. Use when the simpler MCP/URL-slug paths don't fit. |
 | `scripts/validate-spec.py` | Pre-POST static checks (16 total, full catalog in `reference/workflows/validate.md`): includes passthrough collapse, controlId/column collision, bare-reference resolution, control-filter columnId existence, KPI value formula referencing sibling aggregation, `summary` × `calculations` collision, `description` object-on-KPI-and-table, pivot missing rows and columns, schemaVersion, and 6 more. Auto-runs via `publish-workbook.sh post`. |
-| `scripts/load-env.sh` | `eval "$(scripts/load-env.sh)"` to load `.env` into the shell. Used internally by `_env.sh`; callers rarely invoke it directly. |
 | `scripts/refresh-vendor.sh` | Optional: clone a read-only mirror of upstream skills into `vendor/` for inspection while authoring new project skills. |
 | `workbooks/_template/` | Starter folder — `cp -R` to seed a new dashboard. |
 | `workbooks/_exemplars/` | Golden specs harvested from Sigma. Read-only references. |
@@ -71,7 +67,7 @@ Per-user workbook iterations (`workbooks/<name>/`) are gitignored; only `workboo
 
 ## The build loop, end to end
 
-1. **Authenticate.** Interactive CLI: `eval "$(scripts/api/browser-login.sh)"` — no admin-provisioned credential needed, and the path that unblocks `/mcp/v2`. Headless/CI or Claude Code web: `cp .env.example .env` and fill in credentials (web injects `SIGMA_*` as env vars directly — no `.env` needed there). `scripts/api/*.sh` scripts self-bootstrap on first call (use an already-exported `SIGMA_API_TOKEN`, or load creds and mint one via the repo-local `scripts/api/get-token.sh`, caching at a per-user `$SIGMA_TOKEN_CACHE` path). No env-prelude needed from the caller and the same code path runs in CLI and web.
+1. **Authenticate.** Interactive CLI: `eval "$(scripts/api/browser-login.sh)"` — no admin-provisioned credential needed, and the path that unblocks `/mcp/v2`. Claude Code web: nothing to do — the platform injects `SIGMA_CLIENT_ID`/`SIGMA_CLIENT_SECRET`/`SIGMA_BASE_URL` as env vars automatically. `scripts/api/*.sh` scripts self-bootstrap on first call (use an already-exported `SIGMA_API_TOKEN`, or, if the client-credentials vars are already exported, mint one via the repo-local `scripts/api/get-token.sh`, caching at a per-user `$SIGMA_TOKEN_CACHE` path). No env-prelude needed from the caller and the same code path runs in CLI and web.
 2. **Discover & inspect.** Claude routes by prompt shape: name/topic → `scripts/api/mcp-search.sh`; URL slug → `scripts/api/find-file-by-urlid.sh`; messy prose → `scripts/sigma-resolve.py`. Then `scripts/api/mcp-describe.sh datamodel-element <dm> <el>` pulls the column types, descriptions, and metrics catalog for the data inventory. Ambiguity surfaces as named candidates to disambiguate, not endpoint errors.
 3. **Plan.** Claude drafts the data inventory, chart inference, controls, and layout sketch (per the plan-first workflow in the conventions skill) and waits for explicit approval.
 4. **Author.** `workbooks/<name>/spec.json` with two-tier sourcing (raw → derived → viz), `name`-on-every-cross-referenced-column, the documented control shapes, and one **top-level** `layout` XML with all `<Page>` siblings nested under it.

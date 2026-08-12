@@ -3,12 +3,9 @@
 # Without this, a Windows checkout with core.autocrlf=true rewrites every
 # .sh file's line endings to CRLF, turning `#!/usr/bin/env bash` into
 # `#!/usr/bin/env bash\r` — a "bad interpreter" failure under WSL/Git Bash
-# for all scripts/ scripts. A CRLF .env is worse and quieter: load-env.sh
-# would emit `export SIGMA_BASE_URL='https://...\r'`, producing a malformed
-# URL and an Authorization header with an embedded CR.
+# for all scripts/ scripts.
 * text=auto eol=lf
 *.sh text eol=lf
 *.py text eol=lf
 *.json text eol=lf
 *.md text eol=lf
-.env.example text eol=lf

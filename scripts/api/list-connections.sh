@@ -2,7 +2,7 @@
 # List warehouse connections in the org.
 # Usage:  scripts/api/list-connections.sh
 # Output: JSON array [{connectionId, name, type}]
-# Env:    self-bootstrapped via _env.sh (loads .env, caches OAuth token)
+# Env:    self-bootstrapped via _env.sh (uses already-exported creds, caches OAuth token)
 set -euo pipefail
 source "$(dirname "$0")/_env.sh"
 

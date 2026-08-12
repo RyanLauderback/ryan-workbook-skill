@@ -43,7 +43,6 @@
       "Bash(python3 scripts/validate-spec.py:*)",
       "Bash(bash scripts/refresh-vendor.sh:*)",
       "Bash(bash scripts/doctor.sh:*)",
-      "Bash(eval \"$(scripts/load-env.sh)\")",
       "Bash(curl * $SIGMA_BASE_URL/v2/dataModels/*)",
       "Bash(curl * $SIGMA_BASE_URL/v2/workbooks/*)",
       "Bash(curl * $SIGMA_BASE_URL/v2/files*)",

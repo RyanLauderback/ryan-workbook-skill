@@ -19,8 +19,7 @@
 #
 # Reads (env):
 #   SIGMA_BASE_URL   e.g. https://aws-api.sigmacomputing.com (required) --
-#                    falls back to loading <repo-root>/.env if unset (same
-#                    convention as get-token.sh), then errors if still unset.
+#                    errors with a clear message if unset.
 #
 # Prints (stdout, meant to be eval'd):
 #   export SIGMA_API_TOKEN=<token>
@@ -36,18 +35,7 @@
 
 set -euo pipefail
 
-# Fall back to <repo-root>/.env for SIGMA_BASE_URL only -- mirrors get-token.sh's
-# convention for users who've filled in just the base URL and want to skip
-# provisioning a client_id/secret.
-if [ -z "${SIGMA_BASE_URL:-}" ]; then
-  _repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-  if [ -f "$_repo_root/.env" ]; then
-    eval "$("$_repo_root/scripts/load-env.sh")"
-  fi
-  unset _repo_root
-fi
-
-: "${SIGMA_BASE_URL:?SIGMA_BASE_URL is not set. Export it (see .env.example for common regional base URLs, or https://help.sigmacomputing.com/docs/region-warehouse-and-feature-support) then re-run.}"
+: "${SIGMA_BASE_URL:?SIGMA_BASE_URL is not set. Export it (see https://help.sigmacomputing.com/docs/region-warehouse-and-feature-support for common regional base URLs) then re-run.}"
 
 for bin in curl jq openssl; do
   command -v "$bin" >/dev/null 2>&1 || { echo "Error: $bin is required" >&2; exit 1; }
@@ -71,7 +59,7 @@ case "$SIGMA_BASE_URL" in
   https://api.au.azure.sigmacomputing.com|\
   https://api.sigmacomputing.com|\
   https://api.sa.gcp.sigmacomputing.com) ;;
-  *) echo "Error: SIGMA_BASE_URL must be one of the published Sigma API hosts (see .env.example)." >&2; exit 1 ;;
+  *) echo "Error: SIGMA_BASE_URL must be one of the published Sigma API hosts (see https://help.sigmacomputing.com/docs/region-warehouse-and-feature-support)." >&2; exit 1 ;;
 esac
 
 # Every endpoint we discover must live on a Sigma host -- never open a browser at,

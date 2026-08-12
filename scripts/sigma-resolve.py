@@ -20,8 +20,9 @@ Output (stdout, JSON):
     "input":     "<echo of the original prompt>"
   }
 
-Env: SIGMA_BASE_URL, SIGMA_API_TOKEN required (run scripts/load-env.sh and
-fetch a token via the sigma-api skill first).
+Env: SIGMA_BASE_URL, SIGMA_API_TOKEN required. Auto-bootstrapped via
+scripts/api/_env.sh (see _bootstrap_env() below) — sign in first with
+`eval "$(scripts/api/browser-login.sh)"` if nothing is exported yet.
 """
 from __future__ import annotations
 
@@ -46,10 +47,10 @@ def _bootstrap_env() -> None:
 
     Why this exists: bash scripts under scripts/api/ already self-bootstrap by
     sourcing _env.sh. Python scripts (this one) historically required the user
-    to run `eval "$(scripts/load-env.sh)"` first, which is easy to forget.
-    Forgetting it produces a cryptic "missing env SIGMA_API_TOKEN" error mid-
-    session. This helper closes that gap so the failure mode disappears: if
-    the env vars aren't already set, source _env.sh once and pick them up.
+    to manually source env vars first, which was easy to forget. Forgetting
+    it produces a cryptic "missing env SIGMA_API_TOKEN" error mid-session.
+    This helper closes that gap so the failure mode disappears: if the env
+    vars aren't already set, source _env.sh once and pick them up.
 
     No-op if both vars are already exported (env var still wins — backward-
     compatible). Silent fallback if _env.sh isn't found (rare in this repo);
@@ -87,7 +88,9 @@ def _env(k: str) -> str:
     if not v:
         sys.stderr.write(
             f"sigma-resolve: missing env {k}. "
-            "Run `eval \"$(scripts/load-env.sh)\"` and fetch a token first.\n"
+            "Run `eval \"$(scripts/api/browser-login.sh)\"` to sign in, or "
+            "export SIGMA_CLIENT_ID/SIGMA_CLIENT_SECRET/SIGMA_BASE_URL "
+            "first.\n"
         )
         sys.exit(2)
     return v

@@ -4,11 +4,14 @@ This workspace builds Sigma Computing dashboards/workbooks via Claude Code using
 
 ## Session kickoff
 
-The skill opens with a 3-question `AskUserQuestion` gate on the user's first
-build-related message (explicit trigger: `start build mode`). Questions cover
-`.env` state, data source, and what/where to build. On `.env`-yes, `bash
-scripts/api/_env.sh` warms the token cache and `scripts/api/whoami.sh`
-actively validates auth against the live API before recon starts. Then Recon
+The skill opens on the user's first build-related message (explicit trigger:
+`start build mode`) by resolving auth automatically — `eval
+"$(scripts/api/browser-login.sh)"`, or skipping straight past that if a
+token or client-credentials vars are already exported (a returning
+browser-login session, or Claude Code web's injected vars) — then
+`scripts/api/whoami.sh` actively validates auth against the live API before
+recon starts. A 2-question `AskUserQuestion` gate (data source, what/where
+to build) follows, capturing the raw inputs the planner needs. Then Recon
 → Plan → User approval → POST → GET → Visual verify. **Plan approval is the
 only authorization for state-changing API calls.**
 
@@ -76,7 +79,7 @@ for the workflow.
 
 ## Authentication
 
-**Primary path — browser sign-in, no admin-provisioned credential needed:**
+Browser sign-in is the only auth step a CLI user takes:
 
 1. `eval "$(scripts/api/browser-login.sh)"` — discovery-driven OAuth 2.1
    authorization-code + PKCE flow. Opens the system browser, captures the
@@ -94,31 +97,23 @@ This is also the path that unblocks Sigma's `/mcp/v2` endpoint — see
 rejects `client_credentials` tokens (confirmed by Sigma's MCP engineering
 team), but accepts a browser-login token.
 
-**Secondary path — `.env` + `client_credentials` (headless/CI, or Claude
-Code web):**
+**Claude Code web authenticates automatically — no user action.** The
+platform injects `SIGMA_CLIENT_ID`/`SIGMA_CLIENT_SECRET`/`SIGMA_BASE_URL`
+directly as already-exported env vars before the session starts. There's no
+file to create and no interactive browser to redirect to in that execution
+context, so `_env.sh` detects the exported vars and falls through silently to
+the repo-local `scripts/api/get-token.sh` `client_credentials` exchange.
 
-1. **CLI/local**: `cp .env.example .env` and fill in `SIGMA_BASE_URL`,
-   `SIGMA_CLIENT_ID`, `SIGMA_CLIENT_SECRET`. **Claude Code web**: the same
-   `SIGMA_*` variables are already injected as env vars — no `.env` needed.
-2. Done — scripts in `scripts/api/*.sh` self-bootstrap on first call (load
-   `.env` if the vars aren't already exported and no token is already set,
-   mint an OAuth token via the repo-local `scripts/api/get-token.sh`, cache
-   at a per-user `$SIGMA_TOKEN_CACHE` path with a 55-min TTL). No
-   env-prelude or token chaining needed from the caller.
-   Required for Claude Code web and any headless/CI use — there's no human
-   present there to complete a browser redirect.
-3. To use the upstream `sigma-api` plugin's `get-token.sh` (or any custom
-   fetcher, including `refresh-token.sh` above) instead, set
-   `SIGMA_TOKEN_FETCHER` to its absolute path.
-
-**Either path:** **Never echo `$SIGMA_API_TOKEN`, `$SIGMA_CLIENT_SECRET`, or any other secret.** Don't write secrets to files inside the workspace. Pass tokens only via `Authorization` headers.
+**In all cases: never echo `$SIGMA_API_TOKEN`, `$SIGMA_CLIENT_SECRET`, or any
+other secret.** Don't write secrets to files inside the workspace. Pass
+tokens only via `Authorization` headers.
 
 ## Layout
 
 - `workbooks/<name>/` — one folder per dashboard. Each contains `spec.json`, `prompts/<timestamp>.md`, `iterations/<timestamp>.json`, `notes.md`. Start a new dashboard by copying `workbooks/_template/`.
 - `workbooks/_exemplars/` — golden specs harvested from Sigma. Read-only references; never edit.
-- `scripts/api/` — auth-bootstrapped wrappers around Sigma REST endpoints (`search-files.sh`, `find-file-by-urlid.sh`, `list-folders.sh`, etc.) and Sigma's MCP server (`mcp-search.sh`, `mcp-describe.sh` — **blocked as of 2026-07-30** under this skill's `client_credentials` auth model; see `reference/workflows/discover.md` → "MCP status"). Each sources `_env.sh` on first call to load `.env` and cache an OAuth token. Workbook CRUD (POST/PUT to `/v2/workbooks/*`) still goes through direct `curl` — no helper script yet.
-- `scripts/load-env.sh` — used internally by `_env.sh`. Direct callers rarely need it. `scripts/refresh-vendor.sh` clones the upstream skill repo into `vendor/` for inspection only.
+- `scripts/api/` — auth-bootstrapped wrappers around Sigma's MCP server (`mcp-search.sh`, `mcp-describe.sh` — the default discovery path under this skill's `browser-login.sh` auth; see `reference/workflows/discover.md` → "MCP status") and REST endpoints (`search-files.sh`, `find-file-by-urlid.sh`, `list-folders.sh`, etc. — the documented fallback). Each sources `_env.sh` on first call, which uses an already-exported token or client-credentials vars to mint/cache one — no file is ever read. Workbook CRUD (POST/PUT to `/v2/workbooks/*`) still goes through direct `curl` — no helper script yet.
+- `scripts/refresh-vendor.sh` clones the upstream skill repo into `vendor/` for inspection only.
 - `prompts/library/` — reusable prompt fragments (guardrails, framing, etc.).
 - `docs/` — `conventions.md`, `iteration-playbook.md`, `skill-authoring.md`.
 - `evals/` — regression test cases for the skill (real session prompts + expected behavior); see `evals/README.md`.

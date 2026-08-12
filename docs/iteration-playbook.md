@@ -20,25 +20,25 @@ silently fail to render. Trusting HTTP 200 alone produces broken dashboards.
 
 ## Session start (build mode)
 
-Before the per-attempt protocol runs, a build-mode session opens with a
-3-question `AskUserQuestion` gate (full spec in
+Before the per-attempt protocol runs, a build-mode session resolves auth
+automatically, then opens a 2-question `AskUserQuestion` gate for the data
+source and what/where to build (full spec in
 `.claude/skills/sigma-workbook-conventions/SKILL.md` → "Session kickoff"):
 
-- **Q1: How should Claude authenticate to Sigma?**
-  - Browser sign-in (recommended) → run `eval "$(scripts/api/browser-login.sh)"`,
-    then `scripts/api/whoami.sh` to actively validate the token against
-    `/v2/files`. No admin-provisioned credential needed, and the only path
-    that unblocks `/mcp/v2` (see `reference/workflows/discover.md` → "MCP
-    status"). If `whoami` fails, surface the Sigma error and abort — don't
-    continue into Recon with broken auth.
-  - `.env` with a client ID/secret (headless/CI, or Claude Code web) → run
-    `bash scripts/api/_env.sh` to warm the token cache, then
-    `scripts/api/whoami.sh` as above.
-  - Neither set up → walk the user through `.env.example` + Sigma's
-    "Administration → Developer Access" OAuth client setup as the fallback,
-    mention browser sign-in as the no-credential alternative, then re-prompt.
-- **Q2: What data source?** (data model URL/slug / warehouse path / mixed)
-- **Q3: What would you like to build, and where in Sigma?** (verbatim
+- **Auth (resolved automatically — not a question).** Claude confirms
+  `SIGMA_BASE_URL` is resolvable (asking the user only if it's genuinely
+  unknown), then runs `eval "$(scripts/api/browser-login.sh)"` followed by
+  `scripts/api/whoami.sh` to actively validate the token against
+  `/v2/files`. No admin-provisioned credential needed, and the only path
+  that unblocks `/mcp/v2` (see `reference/workflows/discover.md` → "MCP
+  status"). If `SIGMA_API_TOKEN` or `SIGMA_CLIENT_ID`/`SIGMA_CLIENT_SECRET`
+  are already exported at session start (a returning `browser-login.sh`
+  session, `refresh-token.sh`, or Claude Code web injecting credentials
+  automatically), Claude skips straight to `scripts/api/whoami.sh`. If
+  `whoami` fails, surface the Sigma error and abort — don't continue into
+  Recon with broken auth.
+- **Q1: What data source?** (data model URL/slug / warehouse path / mixed)
+- **Q2: What would you like to build, and where in Sigma?** (verbatim
   prompt + destination folder — written to the timestamped prompt file)
 
 The gate captures raw inputs; the per-attempt protocol below picks up at
