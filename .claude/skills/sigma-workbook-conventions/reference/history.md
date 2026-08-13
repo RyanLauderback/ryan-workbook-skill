@@ -52,6 +52,7 @@ to flag "this rule was once unverified and bit us — treat it as load-bearing."
 - [2026-08-07 (continued) — data-model-first discovery framing + raw-table routing cost data](#2026-08-07-continued--data-model-first-discovery-framing--raw-table-routing-cost-data)
 - [2026-08-12 — Browser-OAuth `/mcp/v2` unblock confirmed live; two real bugs fixed on first real contact](#2026-08-12--browser-oauth-mcpv2-unblock-confirmed-live-two-real-bugs-fixed-on-first-real-contact)
 - [2026-08-12 (continued) — MCP flipped from opportunistic to default; `.env` retired as a CLI auth path](#2026-08-12-continued--mcp-flipped-from-opportunistic-to-default-env-retired-as-a-cli-auth-path)
+- [2026-08-13 — Container span should match children's local total](#2026-08-13--container-span-should-match-childrens-local-total)
 
 ## 2026-05-11 — Per-page `layout` field silently discarded
 
@@ -2298,3 +2299,35 @@ exit their own plan-mode gate, holding at exactly the boundary their
 own operating rules describe — genuine user confirmation, not a
 relayed claim, is required to authorize a write action. That is the
 correct behavior, not friction to route around.
+
+## 2026-08-13 — Container span should match children's local total
+
+A real build-mode session (`Claims Exploration COE`, workbook
+`8c20bdc0-be96-4809-bc52-54f3edc42009`, "Healthcare" folder) surfaced a
+layout rule this skill hadn't written down: a `<Container>`'s own
+page-absolute `gridRow` span should equal the sum of the local row range
+its children occupy — not padded larger "to be safe."
+
+The agent's first layout pass allocated generous row-track spans by guess
+(no visual feedback available in that session), producing a workbook with
+large visible dead space below each control row and below the pivot table,
+confirmed via a user screenshot. The agent's own fix — uniformly shrinking
+every row-track allocation — was directionally right but incomplete: it
+missed that some elements needed *more* local span, not less.
+
+The user then made further edits directly in Sigma's UI and asked the
+agent to pull the spec back down. Diffing the GET-back against the agent's
+last-authored version isolated the actual, precise mechanism: the
+filter-bar container's outer span was tightened from `5 / 12` (7 tracks) to
+`5 / 10` (5 tracks) to match its content's real local total (a header row
+plus two rows of filters = 5), while the pivot and line-chart containers'
+outer spans *grew* (`12 / 24` → `10 / 25`) because their viz elements' own
+local row span grew from `4 / 12` (8 tracks) to `4 / 16` (12 tracks) — they
+needed more room to render without feeling cramped.
+
+**Fix:** `reference/specification/layout.md` → "Size a container's own span
+to match its children's local total," a new subsection alongside the
+existing "Container children use LOCAL row coordinates" rule. Framed as
+additive to that existing section, not a correction — the existing rule
+about *local coordinates* was already correct; this is the corollary about
+*how much span to declare* that nobody had written down yet.

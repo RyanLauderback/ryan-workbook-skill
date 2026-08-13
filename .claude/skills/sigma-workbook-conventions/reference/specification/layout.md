@@ -22,6 +22,7 @@ that pair with `<Container>` in this XML), see `containers.md`.
   - [Side-by-side](#side-by-side)
   - [Stacked rows inside a container](#stacked-rows-inside-a-container)
   - [Container children use LOCAL row coordinates — not the page's absolute numbering](#container-children-use-local-row-coordinates--not-the-pages-absolute-numbering)
+  - [Size a container's own span to match its children's local total](#size-a-containers-own-span-to-match-its-childrens-local-total)
 - [After CREATE: IDs are preserved](#after-create-ids-are-preserved)
 - [Page-structure pattern (apply by default)](#page-structure-pattern-apply-by-default)
 - [Cross-cutting rules](#cross-cutting-rules)
@@ -336,6 +337,41 @@ siblings. `<Tab>` children already worked this way correctly (tab content
 uses local coordinates starting at 1, as documented in "Five-tag grammar"
 above) — this rule generalizes that same local-coordinate model to every
 `<Container>`, not just `<Tab>`.
+
+### Size a container's own span to match its children's local total
+
+**New 2026-08-13**, from a real build-mode session (`Claims Exploration
+COE`, workbook `8c20bdc0-be96-4809-bc52-54f3edc42009`). Once children use
+local coordinates (above), the practical corollary: a container's own
+page-absolute `gridRow` span should equal the sum of the local row range
+its children actually occupy — no more, no less.
+
+**The dead-space failure mode.** A container declared with more
+page-absolute span than its children's local rows use renders extra blank
+space at the bottom of the container. `gridTemplateRows="auto"` sizes each
+individual row *track* to its own content — it does not shrink the
+*container's own declared span* down to however many tracks the content
+actually needed. Confirmed via a live UI edit: a filter-bar container
+declared at `gridRow="5 / 12"` (7 tracks) whose children's local rows only
+used 5 (a header row, then two rows of filters) rendered 2 tracks of dead
+space at the card's bottom. Tightening the outer span to `5 / 10` — matching
+the content — removed it with no other change.
+
+**The inverse failure mode — under-allocating a child.** The same edit also
+*grew* a pivot table's own local row span from `4 / 12` (8 tracks) to
+`4 / 16` (12 tracks), because 8 tracks wasn't enough room for it to render
+without feeling cramped — and grew the parent container's own span to match
+(`12 / 24` → `10 / 25`). Tightening a layout isn't a blanket "shrink
+everything" pass; some children need *more* local span, and the container
+around them grows to match.
+
+**The rule:** after declaring a container's children with their local
+`gridRow`/`gridColumn` spans, set the container's own `gridRow` span (on
+the `<Container>` tag itself) to exactly the local row range those children
+occupy end-to-end. Don't pad it "to be safe," and don't under-size it to
+save space — both produce a visibly wrong result, just in opposite
+directions. See `reference/history.md` → "2026-08-13 — Container span
+should match children's local total" for the full incident.
 
 ## After CREATE: IDs are preserved
 
