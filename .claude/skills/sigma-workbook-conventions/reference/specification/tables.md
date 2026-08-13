@@ -455,9 +455,19 @@ uses this exact shape plus `conditionalFormats` with the
 
 Pivot `conditionalFormats` historically broke GET-spec (returns
 `service_error` 500). Per the 2026-05-21 official-skill merger, the
-upstream skill claims this is fixed. **Retest before relying.**
-Apply pivot conditional formatting LAST in the iteration cycle so
-that if GET-spec breaks, you don't lose the rest of your work.
+upstream skill claims this is fixed.
+
+**Retested 2026-08-13 — confirmed fixed for `backgroundScale`.** A
+from-scratch POST of a pivot-table with `backgroundScale` conditional
+formatting on its value column succeeded (200), and an immediate
+`GET /v2/workbooks/{id}/spec` read it back cleanly (200, no
+`service_error`) — see `reference/capability-ledger.md`'s `pivot-table`
+row for the full evidence. The historical GET-spec-500 risk does not
+apply to this shape on this org as of that retest. Still apply pivot
+conditional formatting LAST in the iteration cycle as a general habit —
+the other three `conditionalFormats` variants (`single`, `fontScale`,
+`dataBars`) on a pivot were not part of this retest and remain
+unconfirmed.
 
 ## Cohort pivot pattern
 

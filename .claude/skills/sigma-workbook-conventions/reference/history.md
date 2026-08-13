@@ -53,6 +53,7 @@ to flag "this rule was once unverified and bit us — treat it as load-bearing."
 - [2026-08-12 — Browser-OAuth `/mcp/v2` unblock confirmed live; two real bugs fixed on first real contact](#2026-08-12--browser-oauth-mcpv2-unblock-confirmed-live-two-real-bugs-fixed-on-first-real-contact)
 - [2026-08-12 (continued) — MCP flipped from opportunistic to default; `.env` retired as a CLI auth path](#2026-08-12-continued--mcp-flipped-from-opportunistic-to-default-env-retired-as-a-cli-auth-path)
 - [2026-08-13 — Container span should match children's local total](#2026-08-13--container-span-should-match-childrens-local-total)
+- [2026-08-13 (continued) — `backgroundScale` on `pivot-table` retested live: POST-verified, GET-spec no longer 500s](#2026-08-13-continued--backgroundscale-on-pivot-table-retested-live-post-verified-get-spec-no-longer-500s)
 
 ## 2026-05-11 — Per-page `layout` field silently discarded
 
@@ -2331,3 +2332,38 @@ existing "Container children use LOCAL row coordinates" rule. Framed as
 additive to that existing section, not a correction — the existing rule
 about *local coordinates* was already correct; this is the corollary about
 *how much span to declare* that nobody had written down yet.
+
+## 2026-08-13 (continued) — `backgroundScale` on `pivot-table` retested live: POST-verified, GET-spec no longer 500s
+
+The same `Claims Exploration COE` session surfaced a second finding: the
+user had applied a `backgroundScale` heatmap to the pivot's value column
+directly in Sigma's UI, and the agent's routine `GET /v2/workbooks/{id}/spec`
+pull-down read it back cleanly — no `service_error`. That's meaningful but
+narrower evidence than it first looks: it shows the *platform* renders and
+serializes the feature, not that *this skill's own hand-authored POST/PUT
+spec shape* for it would be accepted — a separate, still-open question per
+`reference/capability-ledger.md`'s existing "Unverified — probe pending" row
+(a different session, 2026-08-11, reported `backgroundScale` rejected 4-for-4
+across `table`, `table`+`groupings`, `pivot-table`, and `input-table`).
+
+The user asked for the obvious next step instead of leaving it hedged: POST
+a minimal test workbook with `backgroundScale` on a pivot to the same folder
+and see if it's accepted. It was. A 3-column pivot-table (`Plan Type` ×
+`Member Region` × `Sum(Total Claim Cost)`) with `backgroundScale` on the
+value column, posted from scratch to workbook `bfd62356-fde3-4fcb-968a-a562bc7d3d30`
+("Healthcare" folder):
+
+- POST → `{"success":true,...}`, `audit-workbook-schema.sh` found 0 errored columns.
+- `GET /v2/workbooks/{id}/spec` → 200, format present, no `service_error`.
+- `verify-workbook.sh` → compiled clean.
+
+**Fix:** promoted `backgroundScale` on `pivot-table` from "unverified" to
+`reference/capability-ledger.md`'s "Verified supported" table, with a
+narrowing addendum on the original 2026-08-11 row making clear only
+`pivot-table` was retested — `table`, `table`+`groupings`, and `input-table`
+remain open, not assumed fixed by association. Matching updates to
+`reference/specification/tables.md` ("Pivot conditional formatting —
+status") and `reference/scope-and-edge-cases.md` ("GET-spec 500" —
+resolving that section's own long-standing "retest required" note for this
+specific case) — both narrowly scoped to `backgroundScale` on `pivot-table`,
+not conditional formatting in general.

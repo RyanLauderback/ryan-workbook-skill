@@ -100,6 +100,18 @@ workbook that's otherwise healthy — open-able in the UI, listed in
 > Retest required before relying on either claim. Stage 7 of the
 > migration will probe these workbooks again.
 
+> **Retested 2026-08-13 — confirmed stale for `backgroundScale`.** A
+> from-scratch POST of a pivot-table with `backgroundScale` conditional
+> formatting, followed immediately by `GET /v2/workbooks/{id}/spec`,
+> returned 200 with the format present — no `service_error`. See
+> `reference/capability-ledger.md`'s `pivot-table` row for the full
+> evidence. The "Confirmed trigger" table above no longer reflects
+> current behavior for `backgroundScale` on `pivot-table` on this org —
+> treat it as historical, not current guidance, for that specific
+> combination. Other conditional-format variants (`single`, `fontScale`,
+> `dataBars`) and other element kinds (plain `table`) were not part of
+> this retest and remain unconfirmed.
+
 Suspected triggers (untested):
 
 - Buttons / modal pages / tabbed containers (per Sigma's documented
