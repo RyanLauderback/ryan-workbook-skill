@@ -82,17 +82,21 @@ returns the same tree, just more verbose. Confirmed live via REST
 Transactions` data model, see "MCP status" above) — both return that
 full element/column/metric tree in a single call.
 
-A raw warehouse table has no equivalent enrichment either way: even
-resolved via `mcp-search.sh --types table` → `mcp-describe.sh table
-<inode-id>` (see "Routing: raw warehouse tables" below), what comes back
-is DDL-level — real warehouse column names/types, no friendly-name
-mapping, no metrics (metrics only exist on data models). The REST
-fallback for the same table, `list-table-columns.sh`, returns **only
-raw warehouse column names** (`STORE_KEY`, not `Store Key`) — no
-descriptions, no metrics either. This mirrors the existing rule in
+A raw warehouse table still has no metrics catalog (metrics only exist
+on data models), but it's not as bare as the REST path suggests.
+**Corrected 2026-08-12 — a prior version of this note claimed no
+friendly-name mapping; live testing contradicts that.** Resolved via
+`mcp-search.sh --types table` → `mcp-describe.sh table <inode-id>` (see
+"Routing: raw warehouse tables" below), the DDL that comes back
+**does** carry friendly column names and rich per-column business
+descriptions — confirmed live against two real warehouse tables. The
+REST fallback for the same table, `list-table-columns.sh`, is the one
+that returns **only raw warehouse column names** (`STORE_KEY`, not
+`Store Key`) — no descriptions, no metrics either; that gap is real for
+REST, just not for MCP. This mirrors the existing rule in
 `reference/specification/sources.md`: "If no data model fits, fall back
 to `warehouse-table` — don't manufacture a model." Raise this at kickoff
-(`SKILL.md` → Q2) rather than defaulting straight to table-level
+(`SKILL.md` → Q1) rather than defaulting straight to table-level
 discovery when a data model might fit.
 
 > ⚠️ **Not independently verified — a 2026-08-11 build session reported
