@@ -32,28 +32,48 @@ This skill is reference-only — no scripts. It assumes:
 
 ## Session kickoff
 
-Sessions start with a 3-question `AskUserQuestion` gate. The user can trigger
-it explicitly with `start build mode`, or it fires implicitly on any prompt
+Sessions start with an automatic auth-resolution step followed by a
+2-question `AskUserQuestion` gate. The user can trigger the kickoff
+explicitly with `start build mode`, or it fires implicitly on any prompt
 that asks to build/edit/POST a Sigma workbook. The gate captures the raw
 inputs the planner needs; the plan-first workflow (below) is what
 authorizes any state-changing API call.
 
-### The 3-question kickoff
+### Auth resolution (automatic — not a question)
 
-The very first action of a build-mode session is `AskUserQuestion` with three
-questions. Each question has a defined branch behavior:
+Before asking anything, Claude resolves auth:
 
-**Q1: Is your `.env` set up?**
+1. Confirm `SIGMA_BASE_URL` is resolvable — it's usually already exported
+   (a prior session, or Claude Code web injecting it). Ask the user for it
+   only if it's genuinely unknown.
+2. Check whether auth is already usable: `SIGMA_API_TOKEN` already exported
+   (a returning `browser-login.sh`/`refresh-token.sh` session), or
+   `SIGMA_CLIENT_ID`/`SIGMA_CLIENT_SECRET` already exported (Claude Code web
+   injects these automatically — no human sets them up). If either is true,
+   skip straight to `scripts/api/whoami.sh`.
+3. Otherwise, run `eval "$(scripts/api/browser-login.sh)"` — no
+   admin-provisioned credential needed, and the only auth path `/mcp/v2`
+   accepts (see `reference/workflows/discover.md` → "MCP status") — then
+   `scripts/api/whoami.sh`.
 
-- **Yes** — Claude runs two actions in sequence to verify auth end-to-end:
-  1. `bash scripts/api/_env.sh` — warms the token cache at a per-user `$SIGMA_TOKEN_CACHE` path (55-min TTL).
-  2. `scripts/api/whoami.sh` — actively probes `/v2/files?limit=5` to confirm the token works against the live API and surfaces 5 recent files the user can confirm visually.
+Why both `_env.sh`/`browser-login.sh` and `whoami.sh`: passive bootstrap
+succeeds even when credentials are wrong, as long as the variables are
+non-empty. The active `whoami` probe catches expired clients, wrong region
+URLs, and revoked tokens *before* recon starts — not mid-build.
 
-  Why both: passive bootstrap (`_env.sh`) succeeds even when credentials are wrong as long as `.env` has the variables filled in. The active `whoami` probe catches expired clients, wrong region URLs, and revoked tokens *before* recon starts — not mid-build.
+If `whoami.sh` returns non-zero, the agent surfaces the Sigma error verbatim
+and stops — does NOT continue into Recon with broken auth.
 
-- **No** — Claude shares `.env.example` contents + a link to Sigma's "Administration → Developer Access" docs for OAuth client creation, then re-prompts Q1 once the user confirms setup.
+A returning user who already completed a browser login once can skip
+re-opening a browser: `export SIGMA_TOKEN_FETCHER=$PWD/scripts/api/refresh-token.sh`
+before step 3 above, and `_env.sh`'s cache-miss path redeems the stored
+refresh token instead.
 
-**Q2: What data source will you build against?**
+### The 2-question kickoff
+
+Once auth is resolved, `AskUserQuestion` asks two questions:
+
+**Q1: What data source will you build against?**
 - **Data model** (recommended) — URL/slug (`Customer-Financials-461QUZu2VPny8KxImgSmfF`)
   or name. Prefer this when one plausibly covers the request: confirmed
   live (2026-08-07, `reference/history.md`) that a data model's full
@@ -71,7 +91,7 @@ questions. Each question has a defined branch behavior:
   → "Routing: raw warehouse tables."
 - Mixed prose (the resolver handles it)
 
-**Q3: What would you like to build, and where would you like the workbook placed in Sigma?**
+**Q2: What would you like to build, and where would you like the workbook placed in Sigma?**
 
 Free-text. Captured verbatim as the prompt-of-record and written to
 `workbooks/<name>/prompts/<timestamp>.md`. The "where" portion captures the
@@ -85,15 +105,15 @@ defaulted.
 ```
 User: start build mode
 
-Claude: [calls AskUserQuestion with Q1, Q2, Q3 above]
-
-  Q1 → Yes
-Claude: [bash scripts/api/_env.sh]
+Claude: [confirms SIGMA_BASE_URL is set]
+        [SIGMA_API_TOKEN already exported from a prior browser-login.sh
+         session, so auth resolution skips straight to whoami.sh]
         [scripts/api/whoami.sh]
         → "Authenticated to api.sigmacomputing.com. Recent files: ..."
+        [calls AskUserQuestion with Q1, Q2 above]
 
-  Q2 → "Customer-Financials-461QUZu2VPny8KxImgSmfF data model"
-  Q3 → "customer profitability + attrition workbook in
+  Q1 → "Customer-Financials-461QUZu2VPny8KxImgSmfF data model"
+  Q2 → "customer profitability + attrition workbook in
         Claude-Testing-3Kzaga67BMlB7vVJQksjlX folder"
 
 Claude: [writes the verbatim prompt to workbooks/<name>/prompts/<ts>.md]
@@ -102,14 +122,11 @@ Claude: [writes the verbatim prompt to workbooks/<name>/prompts/<ts>.md]
         [drafts the Plan, surfaces for user approval]
 ```
 
-If `whoami.sh` returns non-zero, the agent surfaces the Sigma error verbatim
-and stops — does NOT continue into Recon with broken auth.
-
 ### Plan-first reaffirmation
 
 The kickoff captures **raw inputs**. It does NOT replace the plan-first workflow.
 
-After the kickoff, the agent proceeds through Recon → Plan proposal → User approval → Build → GET-back → Visual verify, per `docs/iteration-playbook.md`. **Plan approval is the only authorization for state-changing API calls** (POST/PUT to `/v2/workbooks/spec`, `/v2/dataModels/*/spec`). The 3-gate does not pre-authorize anything except the auth warm-up itself.
+After the kickoff, the agent proceeds through Recon → Plan proposal → User approval → Build → GET-back → Visual verify, per `docs/iteration-playbook.md`. **Plan approval is the only authorization for state-changing API calls** (POST/PUT to `/v2/workbooks/spec`, `/v2/dataModels/*/spec`). The kickoff does not pre-authorize anything except the auth warm-up itself.
 
 **Recon is bounded to what the user named** — the source data model, the destination folder, anything they specifically referenced. Searching the broader workspace for a reference implementation (e.g., hunting for an existing workbook to reverse-engineer an unsupported chart kind) is a distinct, riskier action that needs an explicit check-in first, even though it's read-only. And that check-in — like plan approval — only counts if the agent actually stops: if there's no way to mechanically block for a response, end the turn immediately after asking; don't treat silence as approval. See `reference/conventions.md` → "Recon scope boundary + hard stop on permission questions" for the full rule and the incident that surfaced it.
 
@@ -128,7 +145,7 @@ readers know it's opt-in, not canonical.
 
 Read-only discovery against the Sigma workspace routes through the bash
 helpers in `scripts/api/`. Full protocol — routing table
-(name/URL/messy-prose), REST-first / MCP-blocked status, `mcp-describe`
+(name/URL/messy-prose), MCP-first / REST-fallback status, `mcp-describe`
 batching rules, resolver JSON shape, friendly-vs-raw column-name
 normalization, troubleshooting — lives in `reference/workflows/discover.md`.
 Load it before any recon step.
@@ -140,17 +157,20 @@ Sigma functions."
 
 ### Auth is auto-bootstrapped
 
-Each `scripts/api/*.sh` sources `_env.sh` on first call — loads `.env`
-(or reads already-exported `SIGMA_*` env vars, e.g. in Claude Code web
-sessions), mints an OAuth token via the repo-local
+Each `scripts/api/*.sh` sources `_env.sh` on first call. No file is ever
+read: it uses an already-exported `SIGMA_API_TOKEN` if present (from
+`browser-login.sh`/`refresh-token.sh`), or, if `SIGMA_CLIENT_ID`/
+`SIGMA_CLIENT_SECRET`/`SIGMA_BASE_URL` are already exported (Claude Code
+web injects these automatically), mints an OAuth token via the repo-local
 `scripts/api/get-token.sh` (a self-contained `client_credentials`
-exchange against `/v2/auth/token`), and caches it at a per-user path
+exchange against `/v2/auth/token`) and caches it at a per-user path
 under `$SIGMA_TOKEN_CACHE` (mode 0600, 55-min TTL). Callers pass no env vars,
 no tokens. **CLI and web run identical code** — the skill owns auth
 end-to-end rather than delegating to the upstream `sigma-api` plugin
 (which isn't installed in web sessions opened from a downloaded zip).
 Override the fetcher via `SIGMA_TOKEN_FETCHER=/abs/path/to/get-token.sh`
-if you want to point at the plugin's fetcher or a custom one.
+if you want to point at the plugin's fetcher, `refresh-token.sh`, or a
+custom one.
 
 ### Installing this skill in a new project
 

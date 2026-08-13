@@ -46,11 +46,15 @@ done
 
 echo ""
 echo "== Recommended binaries (checks degrade without these) =="
-for b in jq yq; do
+for b in jq yq openssl; do
   if command -v "$b" >/dev/null 2>&1; then
     ok "$b -> $(command -v "$b")"
   else
-    warn "$b not found — jq is required for publish-workbook.sh/verify-workbook.sh/audit-workbook-schema.sh; yq is only needed for YAML spec input to validate-spec.py (PyYAML also works)"
+    case "$b" in
+      jq) warn "jq not found — required for publish-workbook.sh/verify-workbook.sh/audit-workbook-schema.sh" ;;
+      yq) warn "yq not found — only needed for YAML spec input to validate-spec.py (PyYAML also works)" ;;
+      openssl) warn "openssl not found — only needed for scripts/api/browser-login.sh's PKCE step; not required for the client_credentials path (e.g. Claude Code web)" ;;
+    esac
   fi
 done
 
@@ -69,12 +73,12 @@ fi
 
 echo ""
 echo "== Repo-relative paths (should not depend on cwd) =="
-if [ -f "$repo_root/.env" ]; then
-  ok ".env found at $repo_root/.env"
-elif [ -n "${SIGMA_BASE_URL:-}" ] && [ -n "${SIGMA_API_TOKEN:-}" ]; then
-  ok "no .env, but SIGMA_BASE_URL/SIGMA_API_TOKEN already exported (web/CI mode)"
+if [ -n "${SIGMA_API_TOKEN:-}" ] && [ -n "${SIGMA_BASE_URL:-}" ]; then
+  ok "SIGMA_BASE_URL/SIGMA_API_TOKEN already exported (browser-login.sh, refresh-token.sh, or Claude Code web)"
+elif [ -n "${SIGMA_BASE_URL:-}" ]; then
+  ok "SIGMA_BASE_URL exported, no token yet — run 'eval \"\$(scripts/api/browser-login.sh)\"' to sign in"
 else
-  warn "no .env at $repo_root/.env and SIGMA_* not exported — copy .env.example to .env and fill in credentials"
+  warn "SIGMA_* not exported — run 'eval \"\$(scripts/api/browser-login.sh)\"' to sign in (no admin-provisioned credential needed; Claude Code web sets SIGMA_CLIENT_ID/SIGMA_CLIENT_SECRET/SIGMA_BASE_URL automatically — nothing to configure there)"
 fi
 
 if [ "$fail" -eq 0 ]; then

@@ -50,6 +50,8 @@ to flag "this rule was once unverified and bit us — treat it as load-bearing."
 - [2026-08-04 — Wave 4 / C8: scenario modeling pattern, 2 structural gotchas checked](#2026-08-04--wave-4--c8-scenario-modeling-pattern-2-structural-gotchas-checked)
 - [2026-08-07 — MCP access confirmed blocked for client_credentials tokens; not a per-org scope gap](#2026-08-07--mcp-access-confirmed-blocked-for-clientcredentials-tokens-not-a-per-org-scope-gap)
 - [2026-08-07 (continued) — data-model-first discovery framing + raw-table routing cost data](#2026-08-07-continued--data-model-first-discovery-framing--raw-table-routing-cost-data)
+- [2026-08-12 — Browser-OAuth `/mcp/v2` unblock confirmed live; two real bugs fixed on first real contact](#2026-08-12--browser-oauth-mcpv2-unblock-confirmed-live-two-real-bugs-fixed-on-first-real-contact)
+- [2026-08-12 (continued) — MCP flipped from opportunistic to default; `.env` retired as a CLI auth path](#2026-08-12-continued--mcp-flipped-from-opportunistic-to-default-env-retired-as-a-cli-auth-path)
 
 ## 2026-05-11 — Per-page `layout` field silently discarded
 
@@ -2152,3 +2154,147 @@ mechanically unbypassable. A future session with time to invest could
 look at whether any tool-level primitive in this environment can
 force a real pause independent of `AskUserQuestion` availability;
 none was identified during this fix.
+
+## 2026-08-12 — Browser-OAuth `/mcp/v2` unblock confirmed live; two real bugs fixed on first real contact
+
+The `oauth-token-exchange` branch added `scripts/api/browser-login.sh`
+(interactive OAuth 2.1 + PKCE) specifically because `/mcp/v2` rejects
+`client_credentials` tokens outright (see "2026-08-07" above) — the
+hypothesis was that a user-delegated browser-login token would be
+accepted instead. `reference/workflows/discover.md` carried this as
+"expected-to-work, confirm with one real call before relying on it."
+A live test session against a real org (`Healthcare Claims
+Transactions` data model) confirmed the hypothesis, but only after
+finding and fixing two real bugs on first actual contact with the live
+endpoints — exactly the kind of gap a design review can't catch.
+
+**Bug 1 (`67090eb`) — `browser-login.sh` requested the wrong OAuth
+scope.** It discovered its scope solely from `GET /v2/whoami`'s
+`WWW-Authenticate` challenge, which only ever advertises
+`scope="api:access"` — the REST API's own protected-resource metadata.
+`/mcp/v2` is a *separate* protected resource requiring
+`scope="mcp:access"`, which was never requested. The resulting token
+403'd on every MCP call regardless of grant type, silently defeating
+the entire reason the script exists — a browser-login session looked
+identical to a `client_credentials` one from MCP's point of view. Fixed
+by also probing `/mcp/v2` with a POST (it only challenges that way —
+`GET` just 405s with no `WWW-Authenticate`) and unioning its scope into
+the authorize/registration request.
+
+**Bug 2 (`555e945`) — `mcp-search.sh` broke on first real contact with
+the now-reachable `search` tool.** Two independent issues surfaced in
+one probe: (a) the live `search` tool's `entityTypes` enum is
+kebab-case (`data-model`, `data-model-element`); this script's
+`--help` text, default, and every documented usage passed camelCase
+(`dataModel`, `dataModelElement`), which the live server rejects with a
+validation error — fixed by translating camelCase to kebab-case so
+both spellings work. (b) `data-model-element` results carry no `name`
+or `dataModelId` key at all — the display name is `elementTitle`, and
+the parent data model's id rides on `inodeId` instead. The existing
+result normalizer assumed the missing keys, silently producing
+`"name": null` and no `dataModelId` on every match. **This is what
+`discover.md`'s prior "Known gap: dataModelElement results don't always
+carry the parent dataModelId" note was actually describing** — not an
+occasional server omission as that phrasing implied, but this bug,
+every time. Fixed to read the real keys; the note in `discover.md` has
+been corrected to say so.
+
+**Net result, live-verified:** `mcp-search.sh` and `mcp-describe.sh`
+both now succeed end-to-end under a browser-login token, returning
+richer output (DDL + metrics catalog in one call) than the REST
+fallback — see `discover.md` → "MCP status" for the updated guidance.
+`client_credentials` tokens remain categorically blocked, unchanged
+from the 2026-08-07 finding.
+
+A "Healthcare Claims Overview" dashboard build served as a further
+end-to-end exercise of the fixed path (POSTed, audited, verified
+clean) — see `workbooks/healthcare-claims-overview/notes.md` for one
+more single-occurrence finding from that build (a data-model metric
+whose formula crosses a relationship to a different element failed to
+resolve when its owning element was isolated into a narrow workbook
+table), not promoted to the skill pending a second occurrence.
+
+## 2026-08-12 (continued) — MCP flipped from opportunistic to default; `.env` retired as a CLI auth path
+
+The prior entry above confirmed the hypothesis; this entry is the
+cleanup that followed once it was confirmed. Two contradictions were
+still live in the skill immediately after that confirmation, both
+flagged directly by the project owner:
+
+**Contradiction 1 — the skill still routed through REST first and
+treated MCP as a lucky opportunistic bonus.** The 2026-08-07 entry
+above (and the PR merged as `15a1cac`) rearchitected large parts of
+this skill around "MCP is categorically blocked, don't rely on it" —
+`search-files.sh` was "promoted to the default discovery-by-name
+tool," `discover.md` documented REST primitives as "the default, not a
+fallback," and roughly a dozen other files (`conventions.md`,
+`capability-ledger.md`, `validate.md`, `plan.md`, five
+`specification/*.md` files, plus `mcp-search.sh`/`mcp-describe.sh`/
+`audit-workbook-schema.sh` themselves) picked up a matching
+"opportunistically try mcp-X, expect exit 3" footnote. That was the
+correct call at the time. With MCP now confirmed working under
+`browser-login.sh` — and, per this session's live testing, actually
+*more* capable than the REST workaround for raw warehouse tables
+specifically (`mcp-search.sh --types table` resolves a bare table name
+via semantic search with no schema/DB confirmation needed first,
+directly replacing the costly guess-the-schema cascade that
+`discover.md`'s "Routing: raw warehouse tables" section exists to
+avoid) — every one of those footnotes had become a stale contradiction
+rather than a hedge.
+
+**Fix:** `discover.md` rewritten (`fe11d91`) so MCP is the default
+discovery tool for workbooks, data models, *and* raw warehouse tables;
+REST primitives (`search-files.sh`, `lookup-path.sh`,
+`list-table-columns.sh`, `probe-schema-tables.sh`) reframed as the
+documented fallback — kept fully working, not deleted, along with the
+existing 29-call/11-call cost data as evidence for *why* the fallback
+is worse. The repeating footnote pattern fixed identically across the
+other 13 files (`e996c79`), plus 3 more instances a follow-up grep
+sweep caught that fell between two parallel tasks' file lists
+(`a94be38`: `docs/iteration-playbook.md`, an examples/ prompt file,
+and `search-files.sh`'s own header comment). `audit-workbook-schema.sh`'s
+exit-3 handling kept its mechanics exactly as-is (exit 3 still means
+"couldn't check," never a pass) — only the framing changed, from "an
+expected, permanent condition under `client_credentials`" to "unexpected
+now, and worth surfacing as a real problem" (stale token, genuine
+outage).
+
+**Contradiction 2 — `.env` was still documented as a coequal, hand-set-up
+CLI path, alongside browser sign-in.** Per explicit project-owner
+direction: since browser login covers the interactive-CLI case with no
+admin-provisioned credential, there was no more reason to keep asking a
+human to `cp .env.example .env` and fill in a `client_credentials` pair
+by hand.
+
+**Fix (`c90dc70`):** deleted `.env.example` and `scripts/load-env.sh`
+entirely; simplified `_env.sh`'s bootstrap to two cases — an
+already-exported `SIGMA_API_TOKEN` (`browser-login.sh`/
+`refresh-token.sh`), or already-exported `SIGMA_CLIENT_ID`/`SECRET`/
+`BASE_URL` (Claude Code web, which injects these directly with no file
+and no human setup, falling through to `get-token.sh` exactly as
+before). No file is ever read from disk anymore. Collapsed the
+3-question build-mode kickoff (auth / data source / build target) to a
+2-question one across `SKILL.md`, `CLAUDE.md`, and
+`docs/iteration-playbook.md` — auth resolves automatically now, only
+falling to an actual browser login when nothing usable is already
+exported. `scripts/api/get-token.sh` was left deliberately untouched
+(still the exchange Claude Code web relies on); its own now-unreachable
+`.env`-fallback branch (only reachable via a direct, standalone
+invocation with no env vars set and a stray leftover `.env` file
+present) was a known, accepted edge case, not fixed.
+
+**A real bug caught mid-execution, not just docs:** `browser-login.sh`
+had its own dead `.env`-fallback branch (added when it was first
+written, mirroring `get-token.sh`'s convention) that called
+`scripts/load-env.sh` if `SIGMA_BASE_URL` was unset — which would have
+thrown a file-not-found error the moment `load-env.sh` was deleted.
+Caught and removed in the same commit.
+
+**Process note.** This work was delegated to three parallel subagents
+(one per: `.env` retirement, `discover.md` rewrite, the 13-file
+footnote fix). All three correctly refused to treat a coordinating
+agent's "the user approved this" message as sufficient authorization to
+exit their own plan-mode gate, holding at exactly the boundary their
+own operating rules describe — genuine user confirmation, not a
+relayed claim, is required to authorize a write action. That is the
+correct behavior, not friction to route around.

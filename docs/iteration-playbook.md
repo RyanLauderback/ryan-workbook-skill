@@ -20,19 +20,25 @@ silently fail to render. Trusting HTTP 200 alone produces broken dashboards.
 
 ## Session start (build mode)
 
-Before the per-attempt protocol runs, a build-mode session opens with a
-3-question `AskUserQuestion` gate (full spec in
+Before the per-attempt protocol runs, a build-mode session resolves auth
+automatically, then opens a 2-question `AskUserQuestion` gate for the data
+source and what/where to build (full spec in
 `.claude/skills/sigma-workbook-conventions/SKILL.md` → "Session kickoff"):
 
-- **Q1: Is your `.env` set up?**
-  - Yes → run `bash scripts/api/_env.sh` to warm the token cache, then
-    `scripts/api/whoami.sh` to actively validate the token against
-    `/v2/files`. If `whoami` fails, surface the Sigma error and abort —
-    don't continue into Recon with broken auth.
-  - No → walk the user through `.env.example` + Sigma's "Administration →
-    Developer Access" OAuth client setup, then re-prompt.
-- **Q2: What data source?** (data model URL/slug / warehouse path / mixed)
-- **Q3: What would you like to build, and where in Sigma?** (verbatim
+- **Auth (resolved automatically — not a question).** Claude confirms
+  `SIGMA_BASE_URL` is resolvable (asking the user only if it's genuinely
+  unknown), then runs `eval "$(scripts/api/browser-login.sh)"` followed by
+  `scripts/api/whoami.sh` to actively validate the token against
+  `/v2/files`. No admin-provisioned credential needed, and the only path
+  that unblocks `/mcp/v2` (see `reference/workflows/discover.md` → "MCP
+  status"). If `SIGMA_API_TOKEN` or `SIGMA_CLIENT_ID`/`SIGMA_CLIENT_SECRET`
+  are already exported at session start (a returning `browser-login.sh`
+  session, `refresh-token.sh`, or Claude Code web injecting credentials
+  automatically), Claude skips straight to `scripts/api/whoami.sh`. If
+  `whoami` fails, surface the Sigma error and abort — don't continue into
+  Recon with broken auth.
+- **Q1: What data source?** (data model URL/slug / warehouse path / mixed)
+- **Q2: What would you like to build, and where in Sigma?** (verbatim
   prompt + destination folder — written to the timestamped prompt file)
 
 The gate captures raw inputs; the per-attempt protocol below picks up at
@@ -67,15 +73,15 @@ prompt file so future iterations don't re-discover them.
 # Folder — resolve url-id slug to the internal UUID.
 scripts/api/find-file-by-urlid.sh <folder-urlId>
 
-# Data model — GET the full spec: columns, types, descriptions, formulas,
-# and the metrics catalog, all in one call.
+# Data model — mcp-describe.sh returns columns, types, descriptions,
+# formulas, and the metrics catalog as SQL DDL, all in one call. Default
+# discovery path under this skill's browser-login.sh auth — see
+# reference/workflows/discover.md → "MCP status".
+scripts/api/mcp-describe.sh datamodel-element <dataModelId> <elementId>
+
+# REST fallback (if mcp-describe.sh exits 3):
 source scripts/api/_env.sh
 sigma_curl "$SIGMA_BASE_URL/v2/dataModels/<dataModelId>/spec" | jq .
-
-# scripts/api/mcp-describe.sh returns the same info as SQL DDL, but is
-# blocked under this skill's client_credentials auth model (see
-# reference/workflows/discover.md → "MCP status") — try it
-# opportunistically if you like, expect exit 3.
 ```
 
 If the data model has `metrics`, plan to use `[Metrics/<Name>]` rather than

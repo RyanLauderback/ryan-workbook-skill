@@ -182,7 +182,8 @@ The prefix depends on the source type:
 
 - **Data-model element:** `SourceName` = the DM element's `name`
   field (returned by `GET /v2/dataModels/{id}/spec`, or
-  opportunistically `mcp-describe.sh datamodel-element`, expect exit 3).
+  `mcp-describe.sh datamodel-element` — see
+  `reference/workflows/discover.md` → "MCP status").
   - DM element named "Transactions with Details" →
     `[Transactions with Details/Date]`.
   - **Special characters in the name are safe.** `&`, `(`, `)`, and
@@ -241,8 +242,8 @@ The workbook references the metric by name; resolution happens at
 render against the DM's metric catalog.
 
 **Discover available metrics** via `GET /v2/dataModels/{dm}/spec` — the
-`metrics` array (opportunistically `mcp-describe.sh
-datamodel-element <dm> <el>`, expect exit 3).
+`metrics` array (or `mcp-describe.sh datamodel-element <dm> <el>` —
+see `reference/workflows/discover.md` → "MCP status").
 
 **The slash-in-name caveat:** metric names containing `/` (e.g.,
 `Cost/Member/Month`) are not safely addressable as

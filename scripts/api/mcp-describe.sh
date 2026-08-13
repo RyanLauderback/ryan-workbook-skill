@@ -12,7 +12,7 @@
 #   scripts/api/mcp-describe.sh workbook          <workbookId>
 #   scripts/api/mcp-describe.sh workbook-element  <workbookId>     <elementId>
 #
-# Env:    self-bootstrapped via _env.sh (loads .env, caches OAuth token)
+# Env:    self-bootstrapped via _env.sh
 # Output: The DDL text (stdout). The MCP `url` field is appended as a comment.
 #
 # Exit codes:
@@ -25,9 +25,10 @@
 #       "could not check," not "checked and it's not describable."
 #       Callers (e.g. audit-workbook-schema.sh) must not treat this the
 #       same as exit 1, or a total MCP outage reads as "nothing to check"
-#       instead of "the check itself failed." See discover.md for the
-#       documented REST fallback (GET /v2/dataModels/{id}/spec) when this
-#       fires — commonly an OAuth client without MCP scope enabled.
+#       instead of "the check itself failed." Most likely cause now: a
+#       stale or wrong-scope token — re-run scripts/api/browser-login.sh
+#       first. See discover.md for the documented REST fallback
+#       (GET /v2/dataModels/{id}/spec) if MCP still isn't available.
 set -euo pipefail
 source "$(dirname "$0")/_env.sh"
 
@@ -89,9 +90,11 @@ except urllib.error.HTTPError as e:
         f"mcp-describe: MCP endpoint returned HTTP {e.code} for '{kind}' "
         f"({', '.join(f'{k}={v}' for k, v in zip(fields, ids))}).\n"
         f"  This is a transport-level failure, not \"not describable\" —\n"
-        f"  a 403 here commonly means this org's OAuth client doesn't have\n"
-        f"  MCP scope enabled. See reference/workflows/discover.md for the\n"
-        f"  documented REST fallback: GET /v2/dataModels/{{id}}/spec.\n"
+        f"  most likely a stale or wrong-scope token. Re-run\n"
+        f"  scripts/api/browser-login.sh first. See\n"
+        f"  reference/workflows/discover.md for the documented REST\n"
+        f"  fallback (GET /v2/dataModels/{{id}}/spec) if MCP still isn't\n"
+        f"  available.\n"
         f"  Response body: {body}\n"
     )
     sys.exit(3)

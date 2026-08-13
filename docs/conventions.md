@@ -18,16 +18,27 @@ conventions, see `.claude/skills/sigma-workbook-conventions/`.
 
 ## Secrets
 
-- All secrets live in `.env` (gitignored). `.env.example` documents the contract.
-  In Claude Code web sessions the same `SIGMA_*` vars are injected as
-  environment variables — `.env` is not required there.
-- Source via `eval "$(scripts/load-env.sh)"`. The script never echoes values.
-- Token retrieval is owned by the skill: `scripts/api/_env.sh` shells out to
-  `scripts/api/get-token.sh` (a ~30-line `client_credentials` exchange
-  against `/v2/auth/token`) and caches the token at a per-user
-  `$SIGMA_TOKEN_CACHE` path for 55 min. Override with
-  `SIGMA_TOKEN_FETCHER=/path/to/fetcher.sh` if you want
-  to use the upstream `sigma-api` plugin's fetcher instead.
+- **Browser sign-in, no admin-provisioned credential needed.**
+  `eval "$(scripts/api/browser-login.sh)"` runs an OAuth 2.1
+  authorization-code + PKCE flow and stores a refresh token in the OS
+  keychain (never a workspace file). This is also the only auth path
+  Sigma's `/mcp/v2` accepts — see
+  `.claude/skills/sigma-workbook-conventions/reference/workflows/discover.md`
+  → "MCP status". `scripts/api/refresh-token.sh` redeems the stored
+  refresh token for repeat sessions with no browser round-trip; point
+  `_env.sh` at it via `SIGMA_TOKEN_FETCHER` if desired.
+- **Claude Code web injects credentials automatically.** The platform sets
+  `SIGMA_CLIENT_ID`/`SIGMA_CLIENT_SECRET`/`SIGMA_BASE_URL` as already-
+  exported env vars before the session starts — no file, no user setup, and
+  no browser to redirect to in that execution context.
+- Token retrieval is owned by the skill: `scripts/api/_env.sh` uses an
+  already-exported `SIGMA_API_TOKEN` if present (e.g. from
+  `browser-login.sh`); otherwise, if the client-credentials vars above are
+  already exported, it shells out to `scripts/api/get-token.sh` (a ~30-line
+  `client_credentials` exchange against `/v2/auth/token`) and caches the
+  token at a per-user `$SIGMA_TOKEN_CACHE` path for 55 min. Override with
+  `SIGMA_TOKEN_FETCHER=/path/to/fetcher.sh` if you want to use the upstream
+  `sigma-api` plugin's fetcher, or `refresh-token.sh`, instead.
 - Never paste a token into a prompt, comment, file, or commit message.
 
 ## Platform support

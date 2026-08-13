@@ -1,4 +1,8 @@
-# Secrets
+# Nothing in this repo reads a .env file — browser sign-in
+# (scripts/api/browser-login.sh) and Claude Code web's injected env vars
+# cover every auth path (see CLAUDE.md -> "Authentication"). Ignored purely
+# as a safety net in case one gets created out of old habit; it should
+# never get committed.
 .env
 .env.*.local
 
@@ -33,5 +37,9 @@ docs/twells89-review.md
 .vscode/
 *.swp
 
-# Token cache (if anything writes one locally)
-.sigma-token
+# Note: no token/keychain state is ever written inside the repo tree.
+# _env.sh's cache lives at $SIGMA_TOKEN_CACHE (default: a per-user path
+# under $XDG_RUNTIME_DIR/$TMPDIR, outside this repo); browser-login.sh's
+# refresh token lives in the OS keychain, not a file. The prior
+# `.sigma-token` entry here didn't match anything either script actually
+# writes and has been removed.

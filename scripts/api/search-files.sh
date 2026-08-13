@@ -1,13 +1,15 @@
 #!/usr/bin/env bash
-# REST-only workspace search by name/topic — the PRIMARY discovery path for
-# "find X by name or topic" prompts.
+# REST-only workspace search by name/topic — the fallback discovery path
+# for "find X by name or topic" prompts when MCP isn't available.
 #
-# mcp-search.sh (Sigma's /mcp/v2 `search` tool) is semantic/fuzzy and richer,
-# but as of 2026-07-30 Sigma's /mcp/v2 only accepts interactive user OAuth,
-# not the client_credentials API token this skill's auth model produces —
-# confirmed by Sigma's MCP engineering team, see reference/history.md →
-# "2026-08-07." Use this script first; reach for mcp-search.sh only if a
-# future session confirms client_credentials MCP access has shipped.
+# mcp-search.sh (Sigma's /mcp/v2 `search` tool) is semantic/fuzzy and
+# richer, and is the default discovery tool under this skill's current
+# browser-login.sh auth path — see reference/workflows/discover.md → "MCP
+# status" for current guidance. Reach for this script when MCP isn't
+# available (e.g. a client_credentials session, where Sigma's /mcp/v2 only
+# accepts interactive user OAuth — confirmed by Sigma's MCP engineering
+# team, see reference/history.md → "2026-08-07") or as a fallback if
+# mcp-search.sh fails.
 #
 # Usage:
 #   scripts/api/search-files.sh <query> [--types <list>] [--limit N]
@@ -30,12 +32,11 @@
 #     inside a data model or warehouse tables. For those, use
 #     scripts/api/probe-schema-tables.sh / scripts/api/list-table-columns.sh,
 #     or scripts/api/mcp-describe.sh datamodel <id> once you have the
-#     data model's id from this search (mcp-describe.sh has the same
-#     MCP-scope caveat as mcp-search.sh — expect exit 3).
+#     data model's id from this search.
 #   - Substring match, not semantic — "sales" won't surface a workbook
 #     named "Q3 Revenue" the way MCP's fuzzy search might.
 #
-# Env:    self-bootstrapped via _env.sh (loads .env, caches OAuth token)
+# Env:    self-bootstrapped via _env.sh (uses already-exported creds, caches OAuth token)
 set -euo pipefail
 source "$(dirname "$0")/_env.sh"
 

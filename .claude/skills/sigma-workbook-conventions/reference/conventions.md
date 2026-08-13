@@ -83,9 +83,9 @@ tool" for the full incident.
 **Rule.** Every formula in a proposed plan must trace to one of:
 
 - A `[Metrics/<X>]` confirmed in `GET /v2/dataModels/{id}/spec`'s
-  `metrics` array for the source element (or opportunistically
-  `mcp-describe.sh datamodel-element <dm> <el>`, expect exit 3 — see
-  `reference/workflows/discover.md` → "MCP status"), OR
+  `metrics` array for the source element (or via `mcp-describe.sh
+  datamodel-element <dm> <el>` — see `reference/workflows/discover.md`
+  → "MCP status" for current guidance on MCP vs. REST), OR
 - A column declared on the source table that recon confirmed exists.
 
 **"Reasonable assumption" formulas are forbidden.** If recon doesn't
@@ -246,8 +246,9 @@ without touching what formulas resolve against.
 **Resolution.** `[Metrics/<Name>]` references resolve against the
 data-model element a spec sources from. `GET /v2/dataModels/{id}/spec`
 returns the metric catalog FOR THAT ELEMENT in its `metrics` array
-(or opportunistically `mcp-describe.sh datamodel-element <dm> <el>`,
-expect exit 3). Treat that catalog as the source of truth — if a
+(or `mcp-describe.sh datamodel-element <dm> <el>` — see
+`reference/workflows/discover.md` → "MCP status"). Treat that catalog
+as the source of truth — if a
 metric isn't listed there, do not reference it from a spec that
 sources off that element.
 
@@ -279,8 +280,8 @@ The 2026-05-19 regression was caused by carrying
 original DM's plan into a spec sourced against a different DM that
 did not contain those metrics. Treat the prior plan as discarded for
 metric purposes; re-run `GET /v2/dataModels/{new-dm}/spec` (or
-opportunistically `mcp-describe.sh datamodel-element <new-dm>
-<new-el>`, expect exit 3) and regenerate.
+`mcp-describe.sh datamodel-element <new-dm> <new-el>` — see
+`reference/workflows/discover.md` → "MCP status") and regenerate.
 
 ### Distinct from official's `[Source/Col]` syntax
 

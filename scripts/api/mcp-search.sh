@@ -15,18 +15,20 @@
 #             Default: all four.
 #   --limit   Max results (1-20). Default: 10.
 #
-# Env:    self-bootstrapped via _env.sh (loads .env, caches OAuth token)
+# Env:    self-bootstrapped via _env.sh
 #
 # Exit codes:
 #   0 — success (including "no matches", which prints `[]`)
 #   1 — MCP responded but reported an error
 #   2 — usage error (bad args)
-#   3 — MCP endpoint itself failed at the HTTP/transport level. As of
-#       2026-07-30, this fires on every call when auth is a client_credentials
-#       API token: Sigma's /mcp/v2 now only accepts interactive user OAuth
-#       (confirmed by Sigma's MCP engineering team — see reference/history.md
-#       → "2026-08-07"). Use scripts/api/search-files.sh instead — same
-#       "find by name" job via REST, substring not semantic match.
+#   3 — MCP endpoint itself failed at the HTTP/transport level. Most
+#       likely cause now: a stale or wrong-scope token (e.g. minted
+#       before mcp:access was added, or a client_credentials token —
+#       Sigma's /mcp/v2 only accepts interactive user OAuth, confirmed
+#       by Sigma's MCP engineering team — see reference/history.md →
+#       "2026-08-07"). Re-run scripts/api/browser-login.sh first; fall
+#       back to scripts/api/search-files.sh (REST, substring not
+#       semantic match) if MCP still isn't available.
 set -euo pipefail
 source "$(dirname "$0")/_env.sh"
 
@@ -64,7 +66,17 @@ python3 - "$SIGMA_BASE_URL" "$SIGMA_API_TOKEN" "$QUERY" "$TYPES" "$LIMIT" <<'PY'
 import json, re, sys, urllib.error, urllib.request
 
 base, tok, query, types_csv, limit_s = sys.argv[1:]
-types = [t.strip() for t in types_csv.split(",") if t.strip()]
+
+def to_kebab(t):
+    # The MCP `search` tool's entityTypes enum is kebab-case (data-model,
+    # data-model-element) -- confirmed live 2026-08-12 against a real org,
+    # which rejects the camelCase forms this script's own --help text and
+    # default previously used (dataModel, dataModelElement). Translate so
+    # both spellings work rather than silently 400ing on the documented
+    # camelCase usage.
+    return re.sub(r"(?<!^)(?=[A-Z])", "-", t).lower()
+
+types = [to_kebab(t.strip()) for t in types_csv.split(",") if t.strip()]
 limit = int(limit_s)
 
 body = {
@@ -92,13 +104,14 @@ except urllib.error.HTTPError as e:
     err_body = e.read().decode(errors="replace")[:500]
     sys.stderr.write(
         f"mcp-search: MCP endpoint returned HTTP {e.code} for query '{query}'.\n"
-        f"  This is a transport-level failure, not \"no matches\" — a 403 here\n"
-        f"  commonly means this org's OAuth client lacks MCP scope. As of\n"
-        f"  2026-07-30, Sigma's /mcp/v2 only accepts interactive user OAuth,\n"
-        f"  not client_credentials API tokens (confirmed by Sigma's MCP\n"
-        f"  engineering team — see reference/history.md). Use\n"
-        f"  scripts/api/search-files.sh \"{query}\" instead — REST-based,\n"
-        f"  substring match rather than semantic search.\n"
+        f"  This is a transport-level failure, not \"no matches\" — most likely\n"
+        f"  a stale or wrong-scope token. Re-run scripts/api/browser-login.sh\n"
+        f"  first (this skill's /mcp/v2 access requires an interactive-OAuth\n"
+        f"  token with mcp:access scope, not a client_credentials one —\n"
+        f"  confirmed by Sigma's MCP engineering team, see reference/history.md).\n"
+        f"  If MCP still isn't available after that, fall back to\n"
+        f"  scripts/api/search-files.sh \"{query}\" — REST-based, substring\n"
+        f"  match rather than semantic search.\n"
         f"  Response body: {err_body}\n"
     )
     sys.exit(3)
@@ -141,25 +154,44 @@ for c in result.get("content", []):
     # Normalize to a flat {type, id, name, url, description} shape so callers
     # don't have to know that workbook IDs come from `inodeId` while
     # data-model elements expose both `dataModelId` + `elementId`.
+    #
+    # `data-model-element` results (confirmed live 2026-08-12) have a
+    # genuinely different shape from every other type: no `name` key (the
+    # element's own display name is `elementTitle`; `dataModelName` names
+    # the parent for context) and no `dataModelId` key (the parent data
+    # model's id -- same id space as GET /v2/dataModels/{id} -- rides on
+    # `inodeId` instead). A previous version of this normalizer assumed
+    # `name`/`dataModelId` keys that don't exist on this result type, which
+    # silently produced `"name": null` and a missing `dataModelId` on every
+    # data-model-element match -- not the occasional server omission
+    # discover.md's "known gap" note described, but this bug, every time.
     out = []
     for r in results:
-        rid = (
-            r.get("inodeId")
-            or r.get("workbookId")
-            or r.get("dataModelId")
-            or r.get("elementId")
-        )
-        item = {
-            "type": r.get("type"),
-            "id": rid,
-            "name": r.get("name"),
-            "url": r.get("url"),
-            "description": r.get("description"),
-        }
-        # Data-model elements need both IDs to be addressable downstream.
-        if r.get("type") == "dataModelElement":
-            item["dataModelId"] = r.get("dataModelId")
-            item["elementId"] = r.get("elementId")
+        rtype = r.get("type")
+        if rtype == "data-model-element":
+            item = {
+                "type": rtype,
+                "id": r.get("elementId"),
+                "name": r.get("elementTitle") or r.get("name"),
+                "url": r.get("url"),
+                "description": r.get("description"),
+                "dataModelId": r.get("inodeId"),
+                "elementId": r.get("elementId"),
+            }
+        else:
+            rid = (
+                r.get("inodeId")
+                or r.get("workbookId")
+                or r.get("dataModelId")
+                or r.get("elementId")
+            )
+            item = {
+                "type": rtype,
+                "id": rid,
+                "name": r.get("name"),
+                "url": r.get("url"),
+                "description": r.get("description"),
+            }
         out.append(item)
     print(json.dumps(out, indent=2))
     sys.stderr.write(

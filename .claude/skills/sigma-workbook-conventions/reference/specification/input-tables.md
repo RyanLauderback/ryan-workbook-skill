@@ -156,6 +156,51 @@ correctly), only array position. Don't diff a re-fetched spec's
 `columns` array positionally against what you sent; diff by column
 `id`.
 
+## GET-back trap — system columns pick up a `formula` field that breaks the next PUT
+
+**Confirmed 2026-08-11 (health-plan-enterprise-stars-portfolio build
+session), recurred on 2 separate PUTs in that session.** A system
+column (`ID`, `CREATED_AT`, `CREATED_BY`, `UPDATED_AT`, `UPDATED_BY`) —
+documented above as a bare `{id}` object — comes back on GET-back with
+a `formula` field silently added by Sigma, e.g.:
+
+```json
+{ "id": "UPDATED_AT", "formula": "[New Input Table/UPDATED_AT]" }
+```
+
+That `formula` value references an internal element name that doesn't
+match the element's actual display name. Resubmitting this GET-back
+spec **unmodified** then fails PUT with:
+
+> `system column \`ID\` cannot set \`type\` or \`formula\` — its data
+> type is fixed by the protocol.`
+
+This is on top of the column-*order* normalization above — a separate
+trap on the same columns. **Fix:** before any PUT on a workbook
+containing an input-table, strip every system column back down to a
+bare `{id}` object (drop `type` and `formula` if Sigma added them) —
+every time, not just the first time a formula field appears. Diffing by
+`id` (per the section above) will surface this since the field set
+changes, but the fix still needs applying explicitly; it isn't
+automatic.
+
+## Writeback restriction — `linked` sources reject `delete-rows`
+
+**Confirmed 2026-08-11 (health-plan-enterprise-stars-portfolio build
+session).** A `linked`-source input table rejects the `delete-rows`
+effect outright:
+
+> `"input-scenario is a linked input table — cannot delete rows from a
+> linked input table."`
+
+This is a clean, specific, actionable error — not a generic
+`Invalid kind`. It's distinct from the `empty`-source case, where
+`delete-rows` is confirmed working (see "Writeback" above and
+`reference/capability-ledger.md`'s input-table entry). `actions.md`
+doesn't currently distinguish `linked` from `empty` for this effect —
+treat `delete-rows` as `empty`-source-only until `actions.md` is
+updated to say the same.
+
 ## Cross-references
 
 - `reference/conventions.md` → "Passthrough mandate" — every table

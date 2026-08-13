@@ -2,7 +2,7 @@
 # Look up a fully-qualified path under a connection.
 # Usage:  scripts/api/lookup-path.sh <connectionId> <path1> <path2> [<path3>]
 # Output: JSON {kind, inodeId, url, path} on success, {error, code, message} on 4xx.
-# Env:    self-bootstrapped via _env.sh (loads .env, caches OAuth token)
+# Env:    self-bootstrapped via _env.sh (uses already-exported creds, caches OAuth token)
 set -euo pipefail
 source "$(dirname "$0")/_env.sh"
 

@@ -2,7 +2,10 @@
 # Self-bootstrap for scripts in scripts/api/. Sourced (not executed).
 #
 # After sourcing, these vars are set in the calling script's shell:
-#   SIGMA_BASE_URL   from .env (or already-exported env vars — Claude Code web)
+#   SIGMA_BASE_URL   already-exported before this file is sourced —
+#                    browser-login.sh/refresh-token.sh set it alongside
+#                    SIGMA_API_TOKEN; Claude Code web injects it directly.
+#                    No file is ever read.
 #   SIGMA_API_TOKEN  cached on disk at $SIGMA_TOKEN_CACHE (per-user path under
 #                    XDG_RUNTIME_DIR/TMPDIR, mode 0600), refreshed when older
 #                    than 55 min, fetched fresh via the repo-local
@@ -24,7 +27,7 @@
 # from inside a bash script/`bash -c`. dirname of an empty string silently
 # resolves to ".", turning the "../.." below into a walk from the *caller's
 # cwd* instead of this file's location — landing on a wrong-but-plausible
-# repo root 2 directories shallower, with load-env.sh then failing on a
+# repo root 2 directories shallower, with get-token.sh then failing on a
 # garbled path instead of a clear error. Fail loudly here instead.
 if [ -z "${BASH_SOURCE[0]:-}" ]; then
   echo "_env.sh: \$BASH_SOURCE is unset — this file must be sourced from" >&2
@@ -69,17 +72,36 @@ SIGMA_TOKEN_CACHE="${SIGMA_TOKEN_CACHE:-${XDG_RUNTIME_DIR:-${TMPDIR:-/tmp}}/.sig
 export SIGMA_TOKEN_CACHE
 _sigma_token_ttl=$((55 * 60))   # refresh 5 min before the 60-min OAuth expiry
 
-# 1. Load .env if the relevant vars aren't already exported.
-if [ -z "${SIGMA_BASE_URL:-}" ] || [ -z "${SIGMA_CLIENT_ID:-}" ] || [ -z "${SIGMA_CLIENT_SECRET:-}" ]; then
-  # Capture load-env.sh's own stdout+exit code rather than `eval`-ing it
-  # directly — `eval ""` on a failed/empty run returns 0, so a missing or
-  # misplaced .env used to proceed silently with every SIGMA_* var empty,
-  # surfacing far later as an opaque empty-token failure.
-  if ! _sigma_envout="$("${_sigma_repo_root}/scripts/load-env.sh")"; then
-    echo "_env.sh: could not load .env (see load-env.sh output above)." >&2
-    return 1 2>/dev/null || exit 1
-  fi
-  eval "$_sigma_envout"
+# 1. Require a usable auth source. Nothing here reads from disk — there is
+# no .env file. Either:
+#   - SIGMA_API_TOKEN is already exported (browser-login.sh, refresh-token.sh,
+#     or set some other way) — just require SIGMA_BASE_URL too, and move on; or
+#   - SIGMA_CLIENT_ID/SIGMA_CLIENT_SECRET/SIGMA_BASE_URL are already exported
+#     (Claude Code web: the platform injects these directly, no human, no
+#     browser to redirect to in that execution context) — fall through to
+#     step 2 below, which calls get-token.sh exactly as before; or
+#   - neither — fail with a clear pointer to browser-login.sh.
+if [ -n "${SIGMA_API_TOKEN:-}" ]; then
+  # SIGMA_BASE_URL is still required either way — every scripts/api/*.sh call
+  # builds its request URL from it, token source notwithstanding.
+  : "${SIGMA_BASE_URL:?SIGMA_BASE_URL not set (required even with a pre-exported SIGMA_API_TOKEN)}"
+elif [ -n "${SIGMA_CLIENT_ID:-}" ] && [ -n "${SIGMA_CLIENT_SECRET:-}" ] && [ -n "${SIGMA_BASE_URL:-}" ]; then
+  : # Claude Code web (or any shell with client_credentials vars already
+    # exported) — step 2 below mints a token via get-token.sh.
+elif [ -n "${SIGMA_TOKEN_FETCHER:-}" ] && [ -n "${SIGMA_BASE_URL:-}" ]; then
+  : # A returning browser-login session in a fresh shell: SIGMA_API_TOKEN
+    # isn't exported here (each new shell starts empty), but a fetcher is
+    # configured (e.g. refresh-token.sh, which redeems the OS-keychain
+    # refresh token with no browser round-trip) — step 2 below will call
+    # it. Without this branch, this documented "returning user" path
+    # (SKILL.md / CLAUDE.md → "Authentication") fell through to the error
+    # below every time, since neither of the first two conditions ever
+    # became true in a shell that only exports SIGMA_TOKEN_FETCHER.
+else
+  echo "_env.sh: no usable auth found." >&2
+  echo "  Run: eval \"\$(scripts/api/browser-login.sh)\" to sign in via browser" >&2
+  echo "  (no admin-provisioned credential needed)." >&2
+  return 1 2>/dev/null || exit 1
 fi
 
 # 2. Resolve SIGMA_API_TOKEN via cache → fresh fetch.
@@ -167,6 +189,6 @@ sigma_curl() {
 }
 export -f sigma_curl
 
-unset _sigma_repo_root _sigma_token_ttl _fresh _mtime _age _gettoken _sigma_envout
+unset _sigma_repo_root _sigma_token_ttl _fresh _mtime _age _gettoken
 # SIGMA_ENV_SH and SIGMA_TOKEN_CACHE stay exported — sigma_curl's 401
 # self-heal and any child script need both.
