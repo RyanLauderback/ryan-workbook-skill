@@ -2,23 +2,42 @@
 
 Project-local Claude Code skills + a working sandbox for building Sigma Computing workbooks/dashboards via Claude Code. Pairs Sigma's official `sigma-api` and `sigma-data-models` plugins with a project-local skill that encodes workbook-spec conventions (naming, layout, control catalog, POST-time gotchas), plus helper scripts that resolve user prompts ("the FUN.BIKES schema, Claude Testing folder") into Sigma API identifiers and validate workbook specs before POST.
 
-## Quick start (for colleagues)
+## Quick start
 
-```bash
-# 1. Clone this repo
-git clone https://github.com/RyanLauderback/ryan-workbook-skill.git
-cd ryan-workbook-skill
+**Install as a plugin (recommended)** — self-contained, works in any repo, no local clone needed:
 
-# 2. Authenticate — sign in via browser, no admin-provisioned credential needed
-export SIGMA_BASE_URL=https://aws-api.sigmacomputing.com  # pick your region — see help.sigmacomputing.com/docs/region-warehouse-and-feature-support
-eval "$(skills/sigma-workbook-conventions/scripts/api/browser-login.sh)"
-
-# 3. Open the folder in Claude Code (CLI, desktop app, or IDE extension)
+```text
+# Claude Code
+/plugin marketplace add RyanLauderback/ryan-workbook-skill
+/plugin install sigma-workbook-conventions@ryan-workbook-skill
 ```
 
-On first open, Claude Code reads `.claude/settings.json` and **automatically installs the upstream `sigma-agent-skills` plugin** (which provides `sigma-api` and `sigma-data-models`) from `github.com/sigmacomputing/sigma-agent-skills`. The canonical `sigma-workbook-conventions` skill lives at `skills/sigma-workbook-conventions/` (marketplace-installable — see `.claude-plugin/`); a thin stub at `.claude/skills/sigma-workbook-conventions/SKILL.md` loads automatically in this checkout because it lives in the standard skill directory, and points at the canonical copy.
+```text
+# Snowflake Cortex Code
+/skill add https://github.com/RyanLauderback/ryan-workbook-skill.git
+```
+Skills are cached locally and auto-discovered from `.cortex/skills/`; `/skill sync` pulls updates.
 
-You don't need to run `/plugin marketplace add` or `/plugin install` manually — those are only required if you want the upstream plugin available globally instead of project-scoped.
+Then authenticate — sign in via browser, no admin-provisioned credential needed:
+
+```bash
+export SIGMA_BASE_URL=https://aws-api.sigmacomputing.com  # pick your region — see help.sigmacomputing.com/docs/region-warehouse-and-feature-support
+eval "$(${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/api/browser-login.sh)"
+```
+
+Then say **`start build mode`**.
+
+**Fallback — clone this repo directly**, e.g. to also get this repo's own `workbooks/` sandbox and iteration history, or if plugin installs aren't available in your environment:
+
+```bash
+git clone https://github.com/RyanLauderback/ryan-workbook-skill.git
+cd ryan-workbook-skill
+export SIGMA_BASE_URL=https://aws-api.sigmacomputing.com
+eval "$(skills/sigma-workbook-conventions/scripts/api/browser-login.sh)"
+# open the folder in Claude Code (CLI, desktop app, or IDE extension)
+```
+
+On first open, Claude Code reads `.claude/settings.json` and **automatically installs the upstream `sigma-agent-skills` plugin** (which provides `sigma-api` and `sigma-data-models`) from `github.com/sigmacomputing/sigma-agent-skills`. The canonical `sigma-workbook-conventions` skill lives at `skills/sigma-workbook-conventions/` (the same content the plugin install above pulls); a thin stub at `.claude/skills/sigma-workbook-conventions/SKILL.md` loads automatically in this checkout because it lives in the standard skill directory, and points at the canonical copy. You don't need to run `/plugin marketplace add` or `/plugin install` yourself in this path — that's what the stub is for.
 
 ## Starting a session
 

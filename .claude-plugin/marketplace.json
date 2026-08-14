@@ -8,7 +8,7 @@
   "plugins": [
     {
       "name": "sigma-workbook-conventions",
-      "source": { "source": "url", "url": "https://github.com/RyanLauderback/ryan-workbook-skill.git", "ref": "worktree-marketplace-plugin-packaging" },
+      "source": { "source": "url", "url": "https://github.com/RyanLauderback/ryan-workbook-skill.git" },
       "description": "Sigma Computing workbook-authoring conventions and auth/CRUD tooling for Claude Code. Builds, edits, and publishes Sigma workbook/dashboard specs via the REST API.",
       "version": "0.1.0",
       "author": { "name": "Ryan Lauderback" },
