@@ -146,7 +146,7 @@ Claude: [confirms SIGMA_BASE_URL is set]
         Claude-Testing-3Kzaga67BMlB7vVJQksjlX folder"
 
 Claude: [writes the verbatim prompt to workbooks/<name>/prompts/<ts>.md]
-        [resolves URL slugs via ${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/api/find-file-by-urlid.sh]
+        [resolves URL slugs via mcp-search.sh, falling back to find-file-by-urlid.sh]
         [enters Recon — GET /v2/dataModels/{id}/spec on the data model]
         [drafts the Plan, surfaces for user approval]
 ```

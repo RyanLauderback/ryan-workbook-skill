@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
-# REST-only workspace search by name/topic — the fallback discovery path
-# for "find X by name or topic" prompts when MCP isn't available.
+# REST-only, ACCOUNT-ROOT-LEVEL-ONLY search by name/topic -- calls
+# /v2/files with no parentId, which doesn't recurse into subfolders
+# (confirmed live 2026-08-14: false-negatived on a subfolder object) --
+# the fallback discovery path for "find X by name or topic" prompts
+# when MCP isn't available.
 #
 # mcp-search.sh (Sigma's /mcp/v2 `search` tool) is semantic/fuzzy and
 # richer, and is the default discovery tool under this skill's current

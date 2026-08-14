@@ -139,7 +139,7 @@ for first — MCP search, then describe the resolved id:
 |---|---|
 | Names or topics ("the PLUGS data model", "find the sales workbook") | `${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/api/mcp-search.sh "<query>" --types workbook,dataModel [--limit N]` — fallback: `search-files.sh` (see "Discovery via REST primitives" below) |
 | Warehouse table name(s), schema/DB confirmed or not | `${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/api/mcp-search.sh "<table-name>" --types table [--limit N]` — semantic search resolves it without needing a confirmed schema first; see "Routing: raw warehouse tables" below for what happens when it doesn't resolve cleanly |
-| URL slugs (`/b/<id>`, `…-<urlId>`) | `${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/api/find-file-by-urlid.sh <urlId>` — REST only, no MCP equivalent |
+| URL slugs (`/b/<id>`, `…-<urlId>`) | `${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/api/mcp-search.sh "<name-in-slug>" --types workbook,dataModel` first, confirming the returned `url` matches — fall back to `find-file-by-urlid.sh <urlId>` only if MCP doesn't resolve it. `find-file-by-urlid.sh` only sees account-**root**-level `/v2/files` results (confirmed live 2026-08-14: false-negatived on a data model in a subfolder), so a `null` there doesn't mean the object doesn't exist |
 | `/s/<id>`/`/t/<id>` schema URLs, or messy/mixed prose | `${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/sigma-resolve.py "<prompt-verbatim>"` — and if the schema still can't be resolved, ask the user rather than guessing (see below) |
 
 After resolution, inspect the resolved id:
@@ -306,8 +306,12 @@ warehouse-column renames.
 ## Discovery via REST primitives (fallback)
 
 Reach for these when `mcp-search.sh`/`mcp-describe.sh` exit 3 (see "MCP
-status" above), or when there's no MCP equivalent at all
-(`find-file-by-urlid.sh`'s URL-slug resolution has none).
+status" above). `find-file-by-urlid.sh`, `search-files.sh`, and
+`list-folders.sh` all call `/v2/files` with no `parentId`, which only
+lists account-**root**-level entries, not a full-org index (confirmed
+live 2026-08-14) — prefer `mcp-search.sh` for these even when MCP is
+working, and treat a `null`/empty result from any of the three as
+inconclusive, not proof the object doesn't exist.
 
 ```bash
 # Find a workbook/data model/dataset by name or topic (substring match)

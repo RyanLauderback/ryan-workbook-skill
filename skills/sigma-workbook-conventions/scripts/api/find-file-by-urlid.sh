@@ -1,7 +1,12 @@
 #!/usr/bin/env bash
 # Look up a file (folder, workbook, dataset, datamodel) by its url-id slug.
 # Usage:  scripts/api/find-file-by-urlid.sh <urlId-or-full-workbook-url>
-# Output: JSON metadata for the match, or "null" if not found.
+# Output: JSON metadata for the match, or "null" if not found AT ACCOUNT
+#         ROOT LEVEL -- /v2/files with no parentId only lists root-level
+#         entries, not a full-org index (confirmed live 2026-08-14: false-
+#         negatived on a data model in a subfolder). "null" does not mean
+#         the object doesn't exist -- try mcp-search.sh first instead
+#         (see reference/workflows/discover.md -> "The routing decision").
 # Env:    self-bootstrapped via _env.sh (uses already-exported creds, caches OAuth token)
 #
 # Accepts a bare urlId, a full pasted Sigma URL, or a bare "pretty slug"
