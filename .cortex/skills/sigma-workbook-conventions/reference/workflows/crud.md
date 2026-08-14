@@ -31,18 +31,18 @@ jq '.paths."/v2/workbooks/spec".post, .paths."/v2/workbooks/{workbookId}/spec".g
 Prefer this over direct curl for POST / GET / metadata:
 
 ```bash
-${CLAUDE_PLUGIN_ROOT}/scripts/api/publish-workbook.sh post     workbooks/<name>/spec.json   # POST (auto-validates first)
-${CLAUDE_PLUGIN_ROOT}/scripts/api/publish-workbook.sh get-spec <workbookId> > workbooks/<name>/spec.json
-${CLAUDE_PLUGIN_ROOT}/scripts/api/publish-workbook.sh get-meta <workbookId>                 # url, name, path, folderId
+${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/api/publish-workbook.sh post     workbooks/<name>/spec.json   # POST (auto-validates first)
+${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/api/publish-workbook.sh get-spec <workbookId> > workbooks/<name>/spec.json
+${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/api/publish-workbook.sh get-meta <workbookId>                 # url, name, path, folderId
 ```
 
 The wrapper:
 - Sources `_env.sh` for auth (caches OAuth token at a per-user `$SIGMA_TOKEN_CACHE` path)
-- Runs `${CLAUDE_PLUGIN_ROOT}/scripts/validate-spec.py` before POST/PUT (fails fast on the
+- Runs `${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/validate-spec.py` before POST/PUT (fails fast on the
   passthrough-coverage and controlid-collision gotchas)
 - Uses `sigma_curl` for auth-injected, 401-retrying requests
 - Reports the HTTP status alongside the body
-- Runs `${CLAUDE_PLUGIN_ROOT}/scripts/api/audit-workbook-schema.sh` after every successful
+- Runs `${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/api/audit-workbook-schema.sh` after every successful
   POST/PUT — catches `error`-typed columns that `verify-workbook.sh`
   misses. Non-zero exit propagates. See
   `reference/workflows/validate.md` → §4. Suppress with
@@ -63,7 +63,7 @@ instead of re-running the command to "see it again."
 ## PUT — use the wrapper
 
 ```bash
-${CLAUDE_PLUGIN_ROOT}/scripts/api/publish-workbook.sh put <workbook-id> workbooks/<name>/spec.json
+${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/api/publish-workbook.sh put <workbook-id> workbooks/<name>/spec.json
 ```
 
 Validates first (fail-fast), then PUTs via `sigma_curl` (auth-injected,
@@ -90,7 +90,7 @@ curl -sS -X DELETE -H "Authorization: Bearer $SIGMA_API_TOKEN" \
 
 DELETE stays on the direct-curl path so it hits the `ask` pattern in
 `.claude/settings.json` (`Bash(curl * -X DELETE *)`). Any deletion wrapper
-must be named `${CLAUDE_PLUGIN_ROOT}/scripts/api/delete-*` so the corresponding `ask` rule
+must be named `${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/api/delete-*` so the corresponding `ask` rule
 catches it — see `reference/workflows/plan.md` → "Approval model."
 
 The API accepts both `application/json` and `application/yaml`. This
@@ -105,7 +105,7 @@ The POST body must include:
 
 - `name` (string)
 - `folderId` (string — usually the user's `homeFolderId` or a folder
-  resolved via `${CLAUDE_PLUGIN_ROOT}/scripts/sigma-resolve.py`)
+  resolved via `${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/sigma-resolve.py`)
 - `schemaVersion` (number — see below)
 - `pages` (array — at least one page with at least one element)
 
@@ -119,7 +119,7 @@ official skill recommends reading the value back from a recent
 reference GET:
 
 ```bash
-${CLAUDE_PLUGIN_ROOT}/scripts/api/publish-workbook.sh get-spec <reference-workbook-id> \
+${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/api/publish-workbook.sh get-spec <reference-workbook-id> \
   | python3 -c "import json,sys; print(json.load(sys.stdin)['schemaVersion'])"
 ```
 
@@ -160,13 +160,13 @@ The canonical iteration pattern:
 # 1. Edit workbooks/<name>/spec.json on disk (using your original IDs)
 
 # 2. Validate
-${CLAUDE_PLUGIN_ROOT}/scripts/validate-spec.py workbooks/<name>/spec.json
+${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/validate-spec.py workbooks/<name>/spec.json
 
 # 3. PUT (uses the wrapper for validation + auth)
-${CLAUDE_PLUGIN_ROOT}/scripts/api/publish-workbook.sh put <wb-id> workbooks/<name>/spec.json
+${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/api/publish-workbook.sh put <wb-id> workbooks/<name>/spec.json
 
 # 4. Verify
-${CLAUDE_PLUGIN_ROOT}/scripts/api/verify-workbook.sh <wb-id>
+${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/api/verify-workbook.sh <wb-id>
 ```
 
 If you're editing a GET-back spec (rather than your own saved
@@ -197,7 +197,7 @@ skill's per-workbook folder is preferred for iteration audit trails.
 
 | Error | Cause | Fix |
 |---|---|---|
-| `401 Unauthorized` | Token missing or expired | Delete the file at `$SIGMA_TOKEN_CACHE`, re-run any `${CLAUDE_PLUGIN_ROOT}/scripts/api/*.sh` to re-fetch |
+| `401 Unauthorized` | Token missing or expired | Delete the file at `$SIGMA_TOKEN_CACHE`, re-run any `${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/api/*.sh` to re-fetch |
 | `403 Forbidden` on POST | Credential can't create in this folder | Ask user's Sigma admin to check folder permissions |
 | `schemaVersion mismatch` | Hardcoded `1` against a newer API | Read `schemaVersion` from a reference GET, use that value |
 | `Invalid kind: pages[0].elements[N], got "..."` | Inner element shape mismatch (NOT kind unsupported) | See `reference/workflows/validate.md` → "Decoding cryptic errors" |

@@ -96,9 +96,9 @@ Column formulas can reference:
   `reference/conventions.md` → "`[Metrics/<Name>]` resolution"
 
 Discover available data models with
-`${CLAUDE_PLUGIN_ROOT}/scripts/api/search-files.sh "<topic>" --types data-model`. Inspect a
+`${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/api/search-files.sh "<topic>" --types data-model`. Inspect a
 specific model's elements + metrics via `GET /v2/dataModels/{id}/spec`,
-or `${CLAUDE_PLUGIN_ROOT}/scripts/api/mcp-describe.sh datamodel-element <dm-id> <el-id>` —
+or `${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/api/mcp-describe.sh datamodel-element <dm-id> <el-id>` —
 see `reference/workflows/discover.md` → "MCP status" for current
 guidance on reaching for MCP vs. the REST GET as fallback.
 
@@ -213,7 +213,7 @@ SQL fails to compile.
 
 These exist but are less common; model the shape off an existing
 workbook's spec via
-`${CLAUDE_PLUGIN_ROOT}/scripts/api/publish-workbook.sh get-spec <wb-id>`:
+`${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/api/publish-workbook.sh get-spec <wb-id>`:
 
 - `sql` — custom SQL query. Inspect via `jq
   '.components.schemas.SqlSource' /tmp/sigma-api.json`.

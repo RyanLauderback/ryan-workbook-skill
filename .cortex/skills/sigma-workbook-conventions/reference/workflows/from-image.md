@@ -189,6 +189,6 @@ does not redefine:
   `reference/specification/*.md`)
 - How to validate a spec before submitting (see
   `reference/workflows/validate.md`)
-- How to verify after creating (see `${CLAUDE_PLUGIN_ROOT}/scripts/api/verify-workbook.sh`)
+- How to verify after creating (see `${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/api/verify-workbook.sh`)
 
 You still need those — this workflow just sits in front of them.

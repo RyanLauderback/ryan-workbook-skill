@@ -2,7 +2,7 @@
 # Diagnose whether this environment can run the skill's scripts.
 #
 # Usage:  bash doctor.sh   (run from wherever this script lives — this repo's
-#         skills/sigma-workbook-conventions/scripts/, or ${CLAUDE_PLUGIN_ROOT}/scripts/
+#         skills/sigma-workbook-conventions/scripts/, or ${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/
 #         when installed as a plugin elsewhere)
 #
 # Checks required binaries, resolves the python/bash interpreters that
@@ -18,7 +18,7 @@ set -uo pipefail  # not -e: we want to keep checking after a failure
 
 # Resolve relative to THIS script's own location, not cwd — doctor.sh may be
 # invoked from this repo's skills/sigma-workbook-conventions/scripts/ or from
-# a plugin install's ${CLAUDE_PLUGIN_ROOT}/scripts/, so any advice we print
+# a plugin install's ${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/, so any advice we print
 # below must point at a path that's correct in either context.
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 fail=0

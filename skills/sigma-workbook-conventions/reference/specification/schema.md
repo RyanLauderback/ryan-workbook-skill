@@ -177,7 +177,7 @@ a `document` key." A GET on an existing workbook's spec confirms the
 same nesting comes back on read: `{"workbookId": ..., "document":
 {"schemaVersion": 1, "kind": "workbook", "pages": [...], ...}}`.
 
-**You do not need to hand-wrap this.** `${CLAUDE_PLUGIN_ROOT}/scripts/api/publish-workbook.sh`
+**You do not need to hand-wrap this.** `${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/api/publish-workbook.sh`
 wraps flat → wire on `post`/`put` and unwraps wire → flat on
 `get-spec`, transparently, so the flat shape stays the one authoring
 convention across this skill's tooling, examples, and docs. This only
@@ -188,8 +188,8 @@ wrap/unwrap by hand per the shape above.
 A separate claim from the same investigation — that successful
 POST/PUT responses come back as plain `key: value` text instead of
 JSON — was checked and is **not real** for this skill's actual call
-path: `${CLAUDE_PLUGIN_ROOT}/scripts/api/_env.sh`'s `sigma_curl` helper already sends
-`Accept: application/json` (every script in `${CLAUDE_PLUGIN_ROOT}/scripts/api/` goes
+path: `${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/api/_env.sh`'s `sigma_curl` helper already sends
+`Accept: application/json` (every script in `${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/api/` goes
 through it), and the API honors that header on both GET and POST/PUT.
 The plain-text response only appears when that header is omitted
 (e.g. a raw `curl` call made outside `sigma_curl` during ad-hoc
@@ -221,8 +221,8 @@ below:
 - `createdAt`
 - `updatedAt`
 
-`${CLAUDE_PLUGIN_ROOT}/scripts/workbook-manifest.py` recognizes these and won't flag them
-as unknown. `${CLAUDE_PLUGIN_ROOT}/scripts/validate-spec.py` warns when they're present on
+`${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/workbook-manifest.py` recognizes these and won't flag them
+as unknown. `${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/validate-spec.py` warns when they're present on
 a file being POSTed.
 
 ## Pages

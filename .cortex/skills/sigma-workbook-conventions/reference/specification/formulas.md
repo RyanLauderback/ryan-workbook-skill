@@ -87,7 +87,7 @@ will start with `[<SourceName>/...]`. Bare refs are only for columns
 you literally defined a line or two above in the same `columns[]`
 array.
 
-`${CLAUDE_PLUGIN_ROOT}/scripts/validate-spec.py`'s `bare-ref-resolution` check catches
+`${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/validate-spec.py`'s `bare-ref-resolution` check catches
 this pre-POST.
 
 ## ⚠️ READ SECOND — Raw vs. friendly column names
@@ -103,7 +103,7 @@ the auto-fix doesn't cover everything.
 
 **Don't guess the normalization rules** — Sigma's are more
 aggressive than they look. When verify fails, ask the readback:
-`${CLAUDE_PLUGIN_ROOT}/scripts/api/publish-workbook.sh get-spec <wb-id>` shows Sigma's
+`${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/api/publish-workbook.sh get-spec <wb-id>` shows Sigma's
 canonical friendly names.
 
 ## ⚠️ READ THIRD — Boolean operators are NOT function calls
@@ -672,7 +672,7 @@ Fallback: `WebFetch` against `https://help.sigmacomputing.com/`
 
 ## When the formula fails at render
 
-If `${CLAUDE_PLUGIN_ROOT}/scripts/api/verify-workbook.sh <wb-id>` reports `[FAIL]` on an
+If `${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/api/verify-workbook.sh <wb-id>` reports `[FAIL]` on an
 element:
 
 1. **Bare warehouse ref** — `Sum([ORDER_TOTAL])` instead of

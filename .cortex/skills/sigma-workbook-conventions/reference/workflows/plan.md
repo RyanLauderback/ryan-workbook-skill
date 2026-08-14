@@ -60,7 +60,7 @@ written plan with the six sections below and wait for explicit approval.
 
 Where the workbook (or data-model update) will be published — folder
 `name` + `path` + `urlId`, resolved from the user's prompt via
-`${CLAUDE_PLUGIN_ROOT}/scripts/sigma-resolve.py`. If the user named a folder inline,
+`${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/sigma-resolve.py`. If the user named a folder inline,
 restate it back so they can correct it. If the user did NOT name a
 folder, this becomes an **Open Decision** (item 6) the plan must
 ask, not a default the agent picks.
@@ -74,8 +74,8 @@ must be named explicitly in the plan, never implied.
 What table(s) and which columns are actually available — pulled via
 `GET /v2/dataModels/{id}/spec` (data model: returns column types,
 descriptions, formulas, and the metrics catalog in one call) or
-`${CLAUDE_PLUGIN_ROOT}/scripts/api/list-table-columns.sh` (raw table: raw warehouse names
-only), NOT assumed. `${CLAUDE_PLUGIN_ROOT}/scripts/api/mcp-describe.sh datamodel-element
+`${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/api/list-table-columns.sh` (raw table: raw warehouse names
+only), NOT assumed. `${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/api/mcp-describe.sh datamodel-element
 <dm-id> <el-id>` returns the same info as SQL DDL and is expected to
 work under this skill's current `browser-login.sh` auth path — see
 `reference/workflows/discover.md` → "MCP status" — with the REST
@@ -217,13 +217,13 @@ The rules:
 
 - **POST/PUT inside the workbook / data-model namespace:** silent.
   Plan approval is the authorization. `.claude/settings.json`
-  allowlists `Bash(${CLAUDE_PLUGIN_ROOT}/scripts/api/*)` (which covers
+  allowlists `Bash(${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/api/*)` (which covers
   `publish-workbook.sh`) and the direct curl patterns.
 - **POST/PUT outside that namespace** (e.g. `/v2/connections`,
   `/v2/files` mutations): not pre-authorized — surface to the user.
 - **DELETE on any endpoint:** always asks. The `ask` patterns in
   `.claude/settings.json` (`Bash(curl * -X DELETE *)` and
-  `Bash(${CLAUDE_PLUGIN_ROOT}/scripts/api/delete-*)`) override the broad allow. Every
+  `Bash(${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/api/delete-*)`) override the broad allow. Every
   DELETE call is surfaced for explicit confirmation, regardless of
   whether the plan mentioned deletion.
 
@@ -234,7 +234,7 @@ That contract puts the burden on the agent:
   state-changing call wasn't covered in the plan, do not make it —
   go back and amend the plan first.
 - Any future deletion-wrapper script must be named
-  `${CLAUDE_PLUGIN_ROOT}/scripts/api/delete-*` so the ask pattern catches it. Do not
+  `${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/api/delete-*` so the ask pattern catches it. Do not
   bypass via a different name.
 
 ## After plan approval — proceed to build
@@ -243,9 +243,9 @@ That contract puts the burden on the agent:
    YAML — the API accepts both; this skill's exemplars use JSON).
    Follow the rules in `reference/conventions.md` and the per-element
    shape docs in `reference/specification/`.
-2. **Validate** via `${CLAUDE_PLUGIN_ROOT}/scripts/validate-spec.py workbooks/<name>/spec.json`.
+2. **Validate** via `${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/validate-spec.py workbooks/<name>/spec.json`.
    Fix everything reported.
-3. **POST** via `${CLAUDE_PLUGIN_ROOT}/scripts/api/publish-workbook.sh post workbooks/<name>/spec.json`.
+3. **POST** via `${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/api/publish-workbook.sh post workbooks/<name>/spec.json`.
    The wrapper runs validate-spec.py, POSTs, then auto-runs
    `audit-workbook-schema.sh`. Exit 1 means the audit found errored
    columns; fix and PUT before proceeding. **Exit 3 means the audit
@@ -258,13 +258,13 @@ That contract puts the burden on the agent:
    a manual UI check. **Do not report the workbook as built until
    audit returns clean (exit 0), and do not treat exit 3 as
    equivalent to exit 0.**
-4. **GET-back** via `${CLAUDE_PLUGIN_ROOT}/scripts/api/publish-workbook.sh get-spec <wb-id>`.
+4. **GET-back** via `${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/api/publish-workbook.sh get-spec <wb-id>`.
    Save to `workbooks/<name>/spec.json` (overwriting the authored
    version) so subsequent PUTs start from the server's source of
    truth — captures any server-added fields (response-only metadata,
    normalized layout XML, etc.). IDs are preserved verbatim, but the
    GET-back also picks up any UI-side edits made after the POST.
-5. **Verify** via `${CLAUDE_PLUGIN_ROOT}/scripts/api/verify-workbook.sh <wb-id>`. Checks
+5. **Verify** via `${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/api/verify-workbook.sh <wb-id>`. Checks
    that every element's compiled SQL doesn't contain
    `"Unknown column"` or `"Circular reference"` markers — POST
    accepts specs whose formulas don't resolve at render time, and

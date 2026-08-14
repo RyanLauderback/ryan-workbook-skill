@@ -19,7 +19,7 @@ POST). A claim with no entry here is not yet load-bearing — treat it as
 ## The retest protocol — apply this before adding a new "unsupported" claim anywhere in this skill
 
 1. **Find a reference workbook that appears to use the feature.**
-   `${CLAUDE_PLUGIN_ROOT}/scripts/api/search-files.sh "<name>"` / browsing the org, or ask
+   `${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/api/search-files.sh "<name>"` / browsing the org, or ask
    the user for one (or `mcp-search.sh` — see
    `reference/workflows/discover.md` → "MCP status" for current
    guidance on MCP vs. REST discovery).
@@ -106,7 +106,7 @@ determined. This does not undermine what those probes proved (the
 element shapes, field names, and referential semantics are unaffected
 by wire-level nesting), but if you need to re-run one of those probes
 verbatim, wrap it in `document`/`kind:"workbook"` first — or use
-`${CLAUDE_PLUGIN_ROOT}/scripts/api/publish-workbook.sh`, which does this for you.
+`${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/api/publish-workbook.sh`, which does this for you.
 
 ## Unverified — probe pending (do not treat as fact either way)
 

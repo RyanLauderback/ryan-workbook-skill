@@ -52,7 +52,7 @@ prefixes — use the join leg's `name` instead. See
 
 A warehouse table's path must be exactly the depth its warehouse
 uses (e.g., Snowflake is always 3; Postgres is always 2). Use
-`${CLAUDE_PLUGIN_ROOT}/scripts/api/lookup-path.sh` to resolve ambiguity.
+`${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/api/lookup-path.sh` to resolve ambiguity.
 
 ## Friendly vs. raw column names
 
@@ -86,7 +86,7 @@ raw warehouse" for the reliable workflow.
   user has supplied or confirmed.
 - **Wrong path depth** — a warehouse table's path must be exactly
   the depth its warehouse uses. Use
-  `${CLAUDE_PLUGIN_ROOT}/scripts/api/lookup-path.sh <conn-id> "<DB>.<SCHEMA>.<TABLE>"` to
+  `${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/api/lookup-path.sh <conn-id> "<DB>.<SCHEMA>.<TABLE>"` to
   resolve.
 
 ## When to use `warehouse-table` vs `data-model`

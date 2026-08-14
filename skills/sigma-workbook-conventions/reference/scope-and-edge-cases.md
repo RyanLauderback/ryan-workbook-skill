@@ -130,7 +130,7 @@ appears to stay tripped across versions.
 Diagnostic steps when GET-spec returns 500:
 
 1. **Sanity check** another workbook's GET-spec to rule out a global
-   serializer outage. `${CLAUDE_PLUGIN_ROOT}/scripts/api/whoami.sh` exercises this on the
+   serializer outage. `${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/api/whoami.sh` exercises this on the
    `/v2/files` listing.
 2. **Capture the `incident-id`** from the response body and file a
    Sigma support ticket — this is a server-side bug.
@@ -144,7 +144,7 @@ heatmaps, maps, buttons) **last**, after any spec round-tripping for
 that workbook is done. Once they're applied, GET-spec may be dead for
 that workbook until they're removed.
 
-`${CLAUDE_PLUGIN_ROOT}/scripts/api/harvest-workbook.sh` fails fast on `service_error`
+`${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/api/harvest-workbook.sh` fails fast on `service_error`
 responses with a diagnostic message — added 2026-05-21 after four
 workbook harvests all tripped this.
 
@@ -179,14 +179,14 @@ If your workbook needs none of those (a single-table dashboard with
 hand-derived calcs), `warehouse-table` source is simpler and
 sometimes unblocks builds when the DM has issues.
 
-Discovery flow: `${CLAUDE_PLUGIN_ROOT}/scripts/api/lookup-path.sh <conn-id>
+Discovery flow: `${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/api/lookup-path.sh <conn-id>
 "<DB>.<SCHEMA>.<TABLE>"` resolves the inodeId; then
-`${CLAUDE_PLUGIN_ROOT}/scripts/api/list-table-columns.sh <inode-id>` lists columns. Switch
+`${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/api/list-table-columns.sh <inode-id>` lists columns. Switch
 the spec's source from `kind: "data-model"` to `kind: "warehouse-
 table"` and update all column formulas from `[<DM-element-name>/Col]`
 to `[<TABLE>/Col]`.
 
-`${CLAUDE_PLUGIN_ROOT}/scripts/sigma-resolve.py` handles the resolution when the prompt
+`${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/sigma-resolve.py` handles the resolution when the prompt
 mixes warehouse paths and folder names. See
 `reference/workflows/discover.md`.
 

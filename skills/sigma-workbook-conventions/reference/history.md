@@ -105,7 +105,7 @@ POST returned 200 and the format field round-tripped via GET-spec intact, with t
 
 Rule going forward: `format: {kind: "number", formatString: "<python-format-spec>"}` is verified. Other kinds (`date`, `percent`, `text`) likely exist — discover via UI-toggle + GET-back diff. Skill section: `reference/scope-and-edge-cases.md` → "Column `format` field."
 
-`${CLAUDE_PLUGIN_ROOT}/scripts/validate-spec.py` still flags any `format` field present — that rule is overly conservative and should be updated to only flag `format` objects *missing* the `kind` field (follow-up).
+`${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/validate-spec.py` still flags any `format` field present — that rule is overly conservative and should be updated to only flag `format` objects *missing* the `kind` field (follow-up).
 
 ## 2026-05-19 — Cold-start test session: chunk files not consumed (Phase 9 trigger)
 
@@ -200,7 +200,7 @@ Rules going forward:
 **Discovery technique worth keeping.** When the skill claims a property
 is UI-only and the user wants it spec-able, ask whether there's a
 reference workbook in the same workspace that has the property
-configured. `${CLAUDE_PLUGIN_ROOT}/scripts/api/find-file-by-urlid.sh <url-slug>` →
+configured. `${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/api/find-file-by-urlid.sh <url-slug>` →
 `publish-workbook.sh get-spec <id>` → diff against the current spec.
 That's how this round of fields was found, and it's reusable for the
 remaining UI-only properties (axis label styling, comparison-period,
@@ -287,11 +287,11 @@ Rules going forward:
   subsection covering padding/spacing/gap UI-only.
 - New exemplar `examples/styled-card-dashboard.json` +
   `.prompt.md` added to SKILL.md catalog.
-- `${CLAUDE_PLUGIN_ROOT}/scripts/workbook-manifest.py` → recognized name-object keys expanded
+- `${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/workbook-manifest.py` → recognized name-object keys expanded
   to `{text, color, fontSize, fontWeight, visibility}`; dynamic-text
   heuristic narrowed to Sigma template syntax (`{{...}}`) so inline
   HTML stops triggering false positives.
-- `${CLAUDE_PLUGIN_ROOT}/scripts/api/harvest-workbook.sh` → fail-fast on `service_error`
+- `${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/api/harvest-workbook.sh` → fail-fast on `service_error`
   responses with diagnostic message + cleanup of bogus spec.json.
 
 ## 2026-07-12 — `audit-workbook-schema.sh` added as post-POST data-layer gate
@@ -316,7 +316,7 @@ class of error went unfixed at the source for almost a month. See
 warning and the entry below, "Follow-up, same day — `Percentile` is
 not a real Sigma function."
 
-**Fix.** `${CLAUDE_PLUGIN_ROOT}/scripts/api/audit-workbook-schema.sh <wb-id>` iterates
+**Fix.** `${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/api/audit-workbook-schema.sh <wb-id>` iterates
 every element via `mcp-describe workbook-element`, parses the DDL
 for `error`-typed columns, and reports element + column + formula.
 `publish-workbook.sh` auto-invokes it after POST/PUT and propagates
@@ -442,7 +442,7 @@ the wrong path once inherited via `export -f`. Added `.gitattributes`
 PATH, and threading a `$SIGMA_PYTHON` shim through 25 call sites for a
 platform with no CI coverage was judged not worth the permanent
 unenforced-drift risk. Added `scripts/doctor.sh` as a first-run
-diagnostic. Verified end-to-end: `bash ${CLAUDE_PLUGIN_ROOT}/scripts/api/whoami.sh` succeeds
+diagnostic. Verified end-to-end: `bash ${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/api/whoami.sh` succeeds
 when invoked from an unrelated cwd (the actual bug), with a fresh token
 mint, the cached-token fast path, and correct `0600` permissions on the
 new cache path.
@@ -816,10 +816,10 @@ with `Accept: application/json` confirmed the same nesting on read.
 
 **Claim 2 — checked and refuted (red herring):** the claim that
 successful POST/PUT responses come back as plain `key: value` text
-rather than JSON. `${CLAUDE_PLUGIN_ROOT}/scripts/api/_env.sh`'s `sigma_curl` helper — the
-actual call path for every script in `${CLAUDE_PLUGIN_ROOT}/scripts/api/`, including
+rather than JSON. `${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/api/_env.sh`'s `sigma_curl` helper — the
+actual call path for every script in `${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/api/`, including
 `publish-workbook.sh` — already sends `Accept: application/json`
-(confirmed via `grep -n "Accept:" ${CLAUDE_PLUGIN_ROOT}/scripts/api/_env.sh`). Explicit
+(confirmed via `grep -n "Accept:" ${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/api/_env.sh`). Explicit
 `Accept`-header tests on both GET and POST returned clean JSON in both
 directions. The plain-text response only appeared in raw `curl` calls
 (the test sub-agent's own ad-hoc bisection scripts, and mine when
@@ -841,7 +841,7 @@ the flat top-level shape is POST-able today — re-verify the wire
 format specifically before relying on it.
 
 **Fix.** Added `wrap_flat_to_wire()`/`unwrap_wire_to_flat()` to
-`${CLAUDE_PLUGIN_ROOT}/scripts/api/publish-workbook.sh`, wired into `post`/`put` (wraps
+`${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/api/publish-workbook.sh`, wired into `post`/`put` (wraps
 before sending, via a temp file to avoid `ARG_MAX` limits on large
 specs) and `get-spec` (unwraps after receiving). The flat shape stays
 the one authoring convention across every example, validator, and doc
@@ -1496,11 +1496,11 @@ at all.
    instead of from inside a bash script. Found by accident while
    sourcing `_env.sh` directly to get `sigma_curl` for an ad hoc probe;
    not reachable through any documented usage pattern (every documented
-   call goes through `bash ${CLAUDE_PLUGIN_ROOT}/scripts/api/<name>.sh`, which guarantees a
+   call goes through `bash ${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/api/<name>.sh`, which guarantees a
    bash context), but a real trap for anyone doing the same. Fixed to
    fail loudly instead of silently walking to the wrong directory.
 
-**Fix.** Added `${CLAUDE_PLUGIN_ROOT}/scripts/api/search-files.sh` — REST-based (`/v2/files`
+**Fix.** Added `${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/api/search-files.sh` — REST-based (`/v2/files`
 with repeated `typeFilters` params, confirmed live: a comma-joined value
 400s with "Expecting Array<...> at typeFilters.0"), substring not
 semantic, no `url` field (not present on `/v2/files` entries) — as the
@@ -1552,7 +1552,7 @@ not a shortcut; it's a worse strategy than schema-level probing.
 **Bonus finding:** `discover.md` claimed `/s/<id>`/`/t/<id>` schema URL
 slugs are flatly "not reversible via Sigma's public API." Tested live:
 there IS a real endpoint (`/v2/connections/paths`, already wired into
-`${CLAUDE_PLUGIN_ROOT}/scripts/sigma-resolve.py`'s `find_path_by_urlid`) that reverses them —
+`${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/sigma-resolve.py`'s `find_path_by_urlid`) that reverses them —
 but it's a full org-wide paginated enumeration (4,225+ entries and still
 paginating in one run, one unthrottled retry hit a 429). Technically
 reversible, practically useless for a single lookup. The doc's
@@ -1878,11 +1878,11 @@ review."
 
 **Tooling fixed to make the new shape the authoring convention
 end-to-end (not just documented):**
-- `${CLAUDE_PLUGIN_ROOT}/scripts/api/publish-workbook.sh` — `wrap_flat_to_wire()`'s
+- `${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/api/publish-workbook.sh` — `wrap_flat_to_wire()`'s
   `DOC_KEYS` updated to include `elements`/`overlays` and swap
   `themeOverrides` for `settings`; `unwrap_wire_to_flat()` needed no
   change (already generically hoists every `document.*` key).
-- `${CLAUDE_PLUGIN_ROOT}/scripts/validate-spec.py` — every check that walked
+- `${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/validate-spec.py` — every check that walked
   `pages[].elements` (7 functions: `_all_elements`,
   `issues_elements_placed`, `issues_containers_have_children`,
   `issues_column_format_shape`, `issues_control_id_unique`,
@@ -1896,7 +1896,7 @@ end-to-end (not just documented):**
   fix-subagent hit false FAILs on every container-bearing example.
   Both now accept old and new tag names, matching the pattern already
   used in `issues_elements_placed`.
-- `${CLAUDE_PLUGIN_ROOT}/scripts/workbook-manifest.py` — `page_summary`/`manifest`/
+- `${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/workbook-manifest.py` — `page_summary`/`manifest`/
   `top_level_summary`/`collect_unknown_kinds` updated to read the flat
   `elements[]` and derive per-page membership from the layout XML via
   a new `_element_ids_in_layout()` helper.
@@ -2160,7 +2160,7 @@ none was identified during this fix.
 
 ## 2026-08-12 — Browser-OAuth `/mcp/v2` unblock confirmed live; two real bugs fixed on first real contact
 
-The `oauth-token-exchange` branch added `${CLAUDE_PLUGIN_ROOT}/scripts/api/browser-login.sh`
+The `oauth-token-exchange` branch added `${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/api/browser-login.sh`
 (interactive OAuth 2.1 + PKCE) specifically because `/mcp/v2` rejects
 `client_credentials` tokens outright (see "2026-08-07" above) — the
 hypothesis was that a user-delegated browser-login token would be
@@ -2280,7 +2280,7 @@ before). No file is ever read from disk anymore. Collapsed the
 2-question one across `SKILL.md`, `CLAUDE.md`, and
 `docs/iteration-playbook.md` — auth resolves automatically now, only
 falling to an actual browser login when nothing usable is already
-exported. `${CLAUDE_PLUGIN_ROOT}/scripts/api/get-token.sh` was left deliberately untouched
+exported. `${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/api/get-token.sh` was left deliberately untouched
 (still the exchange Claude Code web relies on); its own now-unreachable
 `.env`-fallback branch (only reachable via a direct, standalone
 invocation with no env vars set and a stray leftover `.env` file

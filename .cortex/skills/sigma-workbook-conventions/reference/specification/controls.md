@@ -466,7 +466,7 @@ Use when the pills should reflect a column's distinct values.
 - Omit `name` if you don't want a visible label above the pills
   (both harvested variants do this).
 
-`${CLAUDE_PLUGIN_ROOT}/scripts/workbook-manifest.py` recognizes both `manual` and `source`
+`${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/workbook-manifest.py` recognizes both `manual` and `source`
 kinds on segmented.
 
 ---
@@ -527,7 +527,7 @@ control's selection (a scalar), not the column.
 Full rule + worked example in `reference/conventions.md` →
 "Control/column ID collision."
 
-`${CLAUDE_PLUGIN_ROOT}/scripts/validate-spec.py`'s `controlid-collision` check catches
+`${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/validate-spec.py`'s `controlid-collision` check catches
 this pre-POST.
 
 ## Where control bindings apply

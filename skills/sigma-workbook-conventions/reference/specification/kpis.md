@@ -160,7 +160,7 @@ A bare `[col]` is only valid for referencing another column defined
 in this KPI's own `columns[]` array. This is the single most common
 mistake — see `formulas.md`.
 
-Run `${CLAUDE_PLUGIN_ROOT}/scripts/validate-spec.py` before publishing to catch it.
+Run `${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/validate-spec.py` before publishing to catch it.
 
 ## Value formula pitfall: can't reference sibling aggregation columns
 
@@ -227,7 +227,7 @@ table, and the ratio computes over the resulting scalars.
   reference its columns without hitting the aggregation-nesting
   problem because the source is already at the right grain.
 
-`${CLAUDE_PLUGIN_ROOT}/scripts/validate-spec.py`'s `kpi-value-references-aggregation`
+`${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/validate-spec.py`'s `kpi-value-references-aggregation`
 check (added 2026-07-02) warns pre-POST when a KPI value formula
 uses bare refs to sibling columns whose formulas contain
 aggregation functions. Warn-level, not fail — a false positive is

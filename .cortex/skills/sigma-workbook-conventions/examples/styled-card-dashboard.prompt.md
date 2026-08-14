@@ -26,7 +26,7 @@ Replace before POST:
 
 Everything else — element IDs, control IDs, column IDs, layout XML — is
 internally consistent and POSTs cleanly via
-`${CLAUDE_PLUGIN_ROOT}/scripts/api/publish-workbook.sh post` after the four placeholders are
+`${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/api/publish-workbook.sh post` after the four placeholders are
 swapped.
 
 ## Layout architecture

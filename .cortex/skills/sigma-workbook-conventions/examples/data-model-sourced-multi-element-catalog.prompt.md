@@ -47,7 +47,7 @@ When cloning this exemplar, substitute:
 - `<DATA_MODEL_ELEMENT_NAME>` — the display name of that element (referenced in formula passthroughs like `[<DATA_MODEL_ELEMENT_NAME>/Column Name]`)
 - `<DESTINATION_FOLDER_ID>` — the folder UUID where you want the new workbook to land
 
-`${CLAUDE_PLUGIN_ROOT}/scripts/api/find-file-by-urlid.sh <url-slug>` resolves Sigma URL slugs → UUIDs for the
-data model and folder; `${CLAUDE_PLUGIN_ROOT}/scripts/api/mcp-describe.sh datamodel <DATA_MODEL_ID>` lists the
+`${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/api/find-file-by-urlid.sh <url-slug>` resolves Sigma URL slugs → UUIDs for the
+data model and folder; `${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/api/mcp-describe.sh datamodel <DATA_MODEL_ID>` lists the
 element IDs and display names — see `reference/workflows/discover.md` →
 "MCP status" (REST fallback: `GET /v2/dataModels/<DATA_MODEL_ID>/spec`).

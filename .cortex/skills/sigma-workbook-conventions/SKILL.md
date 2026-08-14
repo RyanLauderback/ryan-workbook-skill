@@ -22,7 +22,7 @@ generating or editing any `spec.json` in `workbooks/` or `examples/`.
 
 This skill is reference-only — no scripts. It assumes:
 
-- Sigma auth is bootstrapped by the repo-local `${CLAUDE_PLUGIN_ROOT}/scripts/api/_env.sh`
+- Sigma auth is bootstrapped by the repo-local `${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/api/_env.sh`
   (see "Auth is auto-bootstrapped" below). The upstream `sigma-api`
   plugin is optional — used only when `SIGMA_TOKEN_FETCHER` points at
   its `get-token.sh`.
@@ -56,11 +56,11 @@ Before asking anything, Claude resolves auth:
    (a returning `browser-login.sh`/`refresh-token.sh` session), or
    `SIGMA_CLIENT_ID`/`SIGMA_CLIENT_SECRET` already exported (Claude Code web
    injects these automatically — no human sets them up). If either is true,
-   skip straight to `${CLAUDE_PLUGIN_ROOT}/scripts/api/whoami.sh`.
-3. Otherwise, run `eval "$(${CLAUDE_PLUGIN_ROOT}/scripts/api/browser-login.sh)"` — no
+   skip straight to `${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/api/whoami.sh`.
+3. Otherwise, run `eval "$(${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/api/browser-login.sh)"` — no
    admin-provisioned credential needed, and the only auth path `/mcp/v2`
    accepts (see `reference/workflows/discover.md` → "MCP status") — then
-   `${CLAUDE_PLUGIN_ROOT}/scripts/api/whoami.sh`.
+   `${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/api/whoami.sh`.
 
 Why both `_env.sh`/`browser-login.sh` and `whoami.sh`: passive bootstrap
 succeeds even when credentials are wrong, as long as the variables are
@@ -94,7 +94,7 @@ trusting either tool's recon. See `reference/workflows/discover.md` →
 own `mcp-search.sh`/`mcp-describe.sh` with a native MCP connector.
 
 A returning user who already completed a browser login once can skip
-re-opening a browser: `export SIGMA_TOKEN_FETCHER=$PWD/${CLAUDE_PLUGIN_ROOT}/scripts/api/refresh-token.sh`
+re-opening a browser: `export SIGMA_TOKEN_FETCHER=$PWD/${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/api/refresh-token.sh`
 before step 3 above, and `_env.sh`'s cache-miss path redeems the stored
 refresh token instead.
 
@@ -137,7 +137,7 @@ User: start build mode
 Claude: [confirms SIGMA_BASE_URL is set]
         [SIGMA_API_TOKEN already exported from a prior browser-login.sh
          session, so auth resolution skips straight to whoami.sh]
-        [${CLAUDE_PLUGIN_ROOT}/scripts/api/whoami.sh]
+        [${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/api/whoami.sh]
         → "Authenticated to api.sigmacomputing.com. Recent files: ..."
         [calls AskUserQuestion with Q1, Q2 above]
 
@@ -146,7 +146,7 @@ Claude: [confirms SIGMA_BASE_URL is set]
         Claude-Testing-3Kzaga67BMlB7vVJQksjlX folder"
 
 Claude: [writes the verbatim prompt to workbooks/<name>/prompts/<ts>.md]
-        [resolves URL slugs via ${CLAUDE_PLUGIN_ROOT}/scripts/api/find-file-by-urlid.sh]
+        [resolves URL slugs via ${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/api/find-file-by-urlid.sh]
         [enters Recon — GET /v2/dataModels/{id}/spec on the data model]
         [drafts the Plan, surfaces for user approval]
 ```
@@ -173,7 +173,7 @@ readers know it's opt-in, not canonical.
 ## Discovery: use the bash helpers
 
 Read-only discovery against the Sigma workspace routes through the bash
-helpers in `${CLAUDE_PLUGIN_ROOT}/scripts/api/`. Full protocol — routing table
+helpers in `${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/api/`. Full protocol — routing table
 (name/URL/messy-prose), MCP-first / REST-fallback status, `mcp-describe`
 batching rules, resolver JSON shape, friendly-vs-raw column-name
 normalization, troubleshooting — lives in `reference/workflows/discover.md`.
@@ -186,12 +186,12 @@ Sigma functions."
 
 ### Auth is auto-bootstrapped
 
-Each `${CLAUDE_PLUGIN_ROOT}/scripts/api/*.sh` sources `_env.sh` on first call. No file is ever
+Each `${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/api/*.sh` sources `_env.sh` on first call. No file is ever
 read: it uses an already-exported `SIGMA_API_TOKEN` if present (from
 `browser-login.sh`/`refresh-token.sh`), or, if `SIGMA_CLIENT_ID`/
 `SIGMA_CLIENT_SECRET`/`SIGMA_BASE_URL` are already exported (Claude Code
 web injects these automatically), mints an OAuth token via the repo-local
-`${CLAUDE_PLUGIN_ROOT}/scripts/api/get-token.sh` (a self-contained `client_credentials`
+`${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/api/get-token.sh` (a self-contained `client_credentials`
 exchange against `/v2/auth/token`) and caches it at a per-user path
 under `$SIGMA_TOKEN_CACHE` (mode 0600, 55-min TTL). Callers pass no env vars,
 no tokens. **CLI and web run identical code** — the skill owns auth
@@ -206,22 +206,22 @@ custom one.
 When dropping this skill into another project, merge the rules in
 `recommended-permissions.json` (alongside this `SKILL.md`) into that
 project's `.claude/settings.json` under `permissions`. With those rules
-in place, every script in `${CLAUDE_PLUGIN_ROOT}/scripts/api/*` runs without an approval
+in place, every script in `${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/api/*` runs without an approval
 prompt; `curl` calls for workbook authoring/publishing still prompt
 (by design — they're state-changing).
 
 ### Invoking scripts — skill-bundled, not workspace-level
 
-Scripts live **inside this skill's own folder** (`${CLAUDE_PLUGIN_ROOT}/scripts/`,
-`${CLAUDE_PLUGIN_ROOT}/scripts/api/`), not at the invoking workspace's root.
+Scripts live **inside this skill's own folder** (`${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/`,
+`${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/api/`), not at the invoking workspace's root.
 This is what makes the skill self-contained and marketplace-installable:
 `${CLAUDE_PLUGIN_ROOT}` resolves to wherever this plugin is actually
 installed, regardless of the caller's cwd, so invocations don't depend on
 the workspace root being the current working directory. Invoke
-`${CLAUDE_PLUGIN_ROOT}/scripts/api/*.sh` and `python3 ${CLAUDE_PLUGIN_ROOT}/scripts/*.py`
+`${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/api/*.sh` and `python3 ${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/*.py`
 with that fully-resolved prefix — no `cd <repo> &&` needed, and no
 bare-relative-path invocation to keep cwd-correct. The
-`Bash(${CLAUDE_PLUGIN_ROOT}/scripts/api/*)` allowlist pattern (see
+`Bash(${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/api/*)` allowlist pattern (see
 `recommended-permissions.json`) matches these invocations and runs silent.
 
 ## Sources of truth
@@ -233,7 +233,7 @@ two authoritative sources:
    and field. `https://help.sigmacomputing.com/openapi/sigma-computing-public-rest-api.json`
 2. **Existing workbooks on the user's org** — concrete working specs,
    accessible via `GET /v2/workbooks/{id}/spec` (or via
-   `${CLAUDE_PLUGIN_ROOT}/scripts/api/publish-workbook.sh get-spec <wb-id>`).
+   `${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/api/publish-workbook.sh get-spec <wb-id>`).
 
 **When this skill and the OpenAPI disagree, the OpenAPI wins.** For the
 `jq` recipes to fetch and inspect the OpenAPI, and the schema-drift
@@ -245,8 +245,8 @@ the OpenAPI" and "Schema-drift signal."
 The Sigma API accepts both `application/json` and `application/yaml`
 on `POST /v2/workbooks/spec`. **This skill's tooling defaults to JSON**
 — all canonical exemplars in `examples/` are `.json`,
-`${CLAUDE_PLUGIN_ROOT}/scripts/validate-spec.py` reads JSON, `${CLAUDE_PLUGIN_ROOT}/scripts/workbook-manifest.py`
-reads JSON, `${CLAUDE_PLUGIN_ROOT}/scripts/api/publish-workbook.sh` doesn't care.
+`${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/validate-spec.py` reads JSON, `${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/workbook-manifest.py`
+reads JSON, `${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/api/publish-workbook.sh` doesn't care.
 
 YAML is fine for hand-authoring and the upstream `sigma-workbooks`
 skill prefers it for human readability. If you receive a YAML spec
@@ -431,7 +431,7 @@ violated, ship a broken workbook.
 
 ## Publishing
 
-Use `${CLAUDE_PLUGIN_ROOT}/scripts/api/publish-workbook.sh` for POST / PUT / GET / metadata —
+Use `${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/api/publish-workbook.sh` for POST / PUT / GET / metadata —
 it auto-runs `validate-spec.py` before writes, injects auth, 401-retries
 via `sigma_curl`, and auto-runs `audit-workbook-schema.sh` after every
 successful POST/PUT to catch `error`-typed columns that

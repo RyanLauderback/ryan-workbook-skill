@@ -232,7 +232,7 @@ id="<modalPageId>">`.
 - `<Container elementId="X" ...>...</Container>` — **container**.
   Wraps child `<Element>`s inside its own inner grid.
 
-`${CLAUDE_PLUGIN_ROOT}/scripts/validate-spec.py`'s `layout-element-ids` check catches some
+`${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/validate-spec.py`'s `layout-element-ids` check catches some
 layout-XML issues pre-POST but does NOT detect `<Element>`-
 with-children. The manual layout pass in `validate.md` does.
 

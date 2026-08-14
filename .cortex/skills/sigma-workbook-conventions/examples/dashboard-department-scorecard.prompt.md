@@ -83,11 +83,11 @@ Replace before POST:
 - `[Metrics/<Name>]` used for data-model metric references
   (`Total Revenue`, `Distinct Orders`); non-metric passthrough uses
   `[<Data Model Element>/<Column>]`.
-- Validated clean: `python3 ${CLAUDE_PLUGIN_ROOT}/scripts/validate-spec.py` — 0 fail, 0 warn.
+- Validated clean: `python3 ${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/validate-spec.py` — 0 fail, 0 warn.
 
 ## Known gap, not yet fixed
 
-`${CLAUDE_PLUGIN_ROOT}/scripts/workbook-manifest.py` doesn't yet recognize `periodComparison`/
+`${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/workbook-manifest.py` doesn't yet recognize `periodComparison`/
 `timeline` as known KPI keys (it will flag them as "unknown_keys" —
 harmless, just a manifest-registry gap, not a spec defect). Follow-up,
 not blocking.

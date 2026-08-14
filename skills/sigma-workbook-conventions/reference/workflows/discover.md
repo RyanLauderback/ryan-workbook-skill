@@ -7,7 +7,7 @@ workbooks via the Sigma REST API. Load before composing any new spec.
 `/mcp/v2` endpoint requires a user-delegated OAuth token —
 `client_credentials` tokens are categorically rejected, confirmed
 directly by Sigma's MCP engineering team (2026-07-30, see
-`reference/history.md` → "2026-08-07"). `${CLAUDE_PLUGIN_ROOT}/scripts/api/browser-login.sh`
+`reference/history.md` → "2026-08-07"). `${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/api/browser-login.sh`
 (interactive OAuth 2.1 + PKCE — see CLAUDE.md → "Authentication") is
 this skill's only CLI-facing auth path and mints exactly the token type
 `/mcp/v2` needs, so `mcp-search.sh` / `mcp-describe.sh` are the first
@@ -88,7 +88,7 @@ MCP or REST. `mcp-search.sh --types dataModel` → `mcp-describe.sh
 datamodel-element <dm-id> <element-id>` returns friendly column names,
 descriptions, and the full metrics catalog in one call. The REST
 fallback, `GET /v2/dataModels/{id}/spec` (raw `curl`, self-bootstrapped
-auth via `source ${CLAUDE_PLUGIN_ROOT}/scripts/api/_env.sh` — no dedicated wrapper script yet),
+auth via `source ${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/api/_env.sh` — no dedicated wrapper script yet),
 returns the same tree, just more verbose. Confirmed live via REST
 (2026-08-07, a real 117-column, 28-metric data model, see
 `reference/history.md`) and via MCP (2026-08-12, the `Healthcare Claims
@@ -137,10 +137,10 @@ for first — MCP search, then describe the resolved id:
 
 | Prompt contains | Use first |
 |---|---|
-| Names or topics ("the PLUGS data model", "find the sales workbook") | `${CLAUDE_PLUGIN_ROOT}/scripts/api/mcp-search.sh "<query>" --types workbook,dataModel [--limit N]` — fallback: `search-files.sh` (see "Discovery via REST primitives" below) |
-| Warehouse table name(s), schema/DB confirmed or not | `${CLAUDE_PLUGIN_ROOT}/scripts/api/mcp-search.sh "<table-name>" --types table [--limit N]` — semantic search resolves it without needing a confirmed schema first; see "Routing: raw warehouse tables" below for what happens when it doesn't resolve cleanly |
-| URL slugs (`/b/<id>`, `…-<urlId>`) | `${CLAUDE_PLUGIN_ROOT}/scripts/api/find-file-by-urlid.sh <urlId>` — REST only, no MCP equivalent |
-| `/s/<id>`/`/t/<id>` schema URLs, or messy/mixed prose | `${CLAUDE_PLUGIN_ROOT}/scripts/sigma-resolve.py "<prompt-verbatim>"` — and if the schema still can't be resolved, ask the user rather than guessing (see below) |
+| Names or topics ("the PLUGS data model", "find the sales workbook") | `${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/api/mcp-search.sh "<query>" --types workbook,dataModel [--limit N]` — fallback: `search-files.sh` (see "Discovery via REST primitives" below) |
+| Warehouse table name(s), schema/DB confirmed or not | `${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/api/mcp-search.sh "<table-name>" --types table [--limit N]` — semantic search resolves it without needing a confirmed schema first; see "Routing: raw warehouse tables" below for what happens when it doesn't resolve cleanly |
+| URL slugs (`/b/<id>`, `…-<urlId>`) | `${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/api/find-file-by-urlid.sh <urlId>` — REST only, no MCP equivalent |
+| `/s/<id>`/`/t/<id>` schema URLs, or messy/mixed prose | `${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/sigma-resolve.py "<prompt-verbatim>"` — and if the schema still can't be resolved, ask the user rather than guessing (see below) |
 
 After resolution, inspect the resolved id:
 - **Data model**: `mcp-describe.sh datamodel-element <dm-id> <element-id>`
@@ -151,7 +151,7 @@ After resolution, inspect the resolved id:
   `list-table-columns.sh` (raw warehouse column names — see "Column
   names — friendly vs raw warehouse" below).
 - **Workbook**: `mcp-describe.sh workbook <wb-id>` — REST fallback:
-  `${CLAUDE_PLUGIN_ROOT}/scripts/api/publish-workbook.sh get-spec <wb-id>`.
+  `${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/api/publish-workbook.sh get-spec <wb-id>`.
 
 If `mcp-search.sh`/`mcp-describe.sh` exit 3, that means something's
 actually wrong (stale/wrong-scope token, or a genuine MCP outage — see
@@ -167,13 +167,13 @@ org, with no confirmed schema/DB needed first. Try this before anything
 else:
 
 ```bash
-${CLAUDE_PLUGIN_ROOT}/scripts/api/mcp-search.sh "<table-name>" --types table --limit 10
+${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/api/mcp-search.sh "<table-name>" --types table --limit 10
 ```
 
 - Confirm the match the same way as any MCP search result — surface
   ambiguous matches to the user rather than picking the top hit blind
   (see "Searching the workspace" below).
-- Once resolved, `${CLAUDE_PLUGIN_ROOT}/scripts/api/mcp-describe.sh table <inode-id>` returns
+- Once resolved, `${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/api/mcp-describe.sh table <inode-id>` returns
   DDL-level column info for it.
 
 **If MCP search doesn't resolve the table with confidence** (ambiguous
@@ -188,9 +188,9 @@ confirmed**, not whether table names were given:
 
 | Prompt gives | Do this | Cost (measured) |
 |---|---|---|
-| Table name(s) **and** confirmed schema/DB | `${CLAUDE_PLUGIN_ROOT}/scripts/api/lookup-path.sh <connection-id> "<DB>.<SCHEMA>.<TABLE>"` per table → `${CLAUDE_PLUGIN_ROOT}/scripts/api/list-table-columns.sh <inode-id>` | 2 calls/table, no guessing |
+| Table name(s) **and** confirmed schema/DB | `${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/api/lookup-path.sh <connection-id> "<DB>.<SCHEMA>.<TABLE>"` per table → `${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/api/list-table-columns.sh <inode-id>` | 2 calls/table, no guessing |
 | Table name(s), schema/DB **not** confirmed | **Ask the user to confirm the schema/DB before attempting REST resolution.** Do not cascade into guessing sibling schemas. | One live test cascading through guessed schemas cost 29 calls chasing 2 tables — zero hits |
-| Schema/DB only, no table names | `${CLAUDE_PLUGIN_ROOT}/scripts/api/probe-schema-tables.sh <connection-id> "<DB>.<SCHEMA>"` — guessed-name probing, but bounded to one schema | 11 calls found 3/3 real tables in one live run |
+| Schema/DB only, no table names | `${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/api/probe-schema-tables.sh <connection-id> "<DB>.<SCHEMA>"` — guessed-name probing, but bounded to one schema | 11 calls found 3/3 real tables in one live run |
 
 The middle row is exactly why this REST fallback is worse than MCP
 search: naming specific tables is **not** automatically cheaper than
@@ -203,7 +203,7 @@ table only matters once MCP hasn't resolved the table with confidence.
 
 ## Discovery via MCP (default discovery path)
 
-`${CLAUDE_PLUGIN_ROOT}/scripts/api/mcp-search.sh` and `mcp-describe.sh` call Sigma's MCP
+`${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/api/mcp-search.sh` and `mcp-describe.sh` call Sigma's MCP
 server (`/mcp/v2`) using the session's OAuth token. Since
 `browser-login.sh` is this skill's only CLI-facing auth path and mints
 the token type `/mcp/v2` requires, these succeed by default — reach for
@@ -214,16 +214,16 @@ See "MCP status" above.
 
 ```bash
 # Find a workbook by name
-${CLAUDE_PLUGIN_ROOT}/scripts/api/mcp-search.sh "Sales Performance" --types workbook --limit 5
+${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/api/mcp-search.sh "Sales Performance" --types workbook --limit 5
 
 # Find data models matching a topic
-${CLAUDE_PLUGIN_ROOT}/scripts/api/mcp-search.sh "transactions" --types dataModel --limit 10
+${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/api/mcp-search.sh "transactions" --types dataModel --limit 10
 
 # Find a raw warehouse table by name (no confirmed schema needed)
-${CLAUDE_PLUGIN_ROOT}/scripts/api/mcp-search.sh "ORDERS" --types table --limit 10
+${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/api/mcp-search.sh "ORDERS" --types table --limit 10
 
 # Find all element kinds across a topic
-${CLAUDE_PLUGIN_ROOT}/scripts/api/mcp-search.sh "claims" --types workbook,dataModel,dataModelElement --limit 20
+${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/api/mcp-search.sh "claims" --types workbook,dataModel,dataModelElement --limit 20
 ```
 
 Rules:
@@ -252,20 +252,20 @@ Rules:
 
 ```bash
 # Data model overview (lists elements)
-${CLAUDE_PLUGIN_ROOT}/scripts/api/mcp-describe.sh datamodel <dm-id>
+${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/api/mcp-describe.sh datamodel <dm-id>
 
 # Data model element (returns columns, types, formulas, metrics catalog)
-${CLAUDE_PLUGIN_ROOT}/scripts/api/mcp-describe.sh datamodel-element <dm-id> <element-id>
+${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/api/mcp-describe.sh datamodel-element <dm-id> <element-id>
 
 # Workbook (lists pages + elements)
-${CLAUDE_PLUGIN_ROOT}/scripts/api/mcp-describe.sh workbook <wb-id>
+${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/api/mcp-describe.sh workbook <wb-id>
 
 # Workbook element (returns full element spec)
-${CLAUDE_PLUGIN_ROOT}/scripts/api/mcp-describe.sh workbook-element <wb-id> <element-id>
+${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/api/mcp-describe.sh workbook-element <wb-id> <element-id>
 
 # Warehouse table (by inodeId — from mcp-search.sh --types table, or
 # REST's lookup-path.sh)
-${CLAUDE_PLUGIN_ROOT}/scripts/api/mcp-describe.sh table <inode-id>
+${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/api/mcp-describe.sh table <inode-id>
 ```
 
 **Batch the describes after the first datamodel overview.** The flow:
@@ -311,22 +311,22 @@ status" above), or when there's no MCP equivalent at all
 
 ```bash
 # Find a workbook/data model/dataset by name or topic (substring match)
-${CLAUDE_PLUGIN_ROOT}/scripts/api/search-files.sh "<query>" --types workbook,data-model,dataset --limit 10
+${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/api/search-files.sh "<query>" --types workbook,data-model,dataset --limit 10
 
 # List connections
-${CLAUDE_PLUGIN_ROOT}/scripts/api/list-connections.sh
+${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/api/list-connections.sh
 
 # Resolve a warehouse path to inodeId (for column listing)
-${CLAUDE_PLUGIN_ROOT}/scripts/api/lookup-path.sh <connection-id> "<DB>.<SCHEMA>.<TABLE>"
+${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/api/lookup-path.sh <connection-id> "<DB>.<SCHEMA>.<TABLE>"
 
 # List columns on a warehouse table
-${CLAUDE_PLUGIN_ROOT}/scripts/api/list-table-columns.sh <inode-id>
+${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/api/list-table-columns.sh <inode-id>
 
 # List folders matching a substring
-${CLAUDE_PLUGIN_ROOT}/scripts/api/list-folders.sh "<name-substring>"
+${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/api/list-folders.sh "<name-substring>"
 
 # Probe a schema for table inventory
-${CLAUDE_PLUGIN_ROOT}/scripts/api/probe-schema-tables.sh <connection-id> "<DB>.<SCHEMA>"
+${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/api/probe-schema-tables.sh <connection-id> "<DB>.<SCHEMA>"
 ```
 
 These hit `/v2/files`, `/v2/connections`, `/v2/connection/<id>/lookup`,
@@ -359,7 +359,7 @@ When the prompt mixes URLs, warehouse paths, and names ("build a
 workbook in /b/abc123 sourcing from PLUGS.PUBLIC.ORDERS"), use:
 
 ```bash
-${CLAUDE_PLUGIN_ROOT}/scripts/sigma-resolve.py "<prompt-verbatim>"
+${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/sigma-resolve.py "<prompt-verbatim>"
 ```
 
 Returns structured JSON:
@@ -378,7 +378,7 @@ When `candidates` is populated, surface names to the user; when
 `unresolved` has warehouse-path entries, ask for the missing
 `<DB>.<SCHEMA>` and connection name. The resolver handles `/s/<id>`
 and `/t/<id>` schema URLs too — these are technically reachable via
-`/v2/connections/paths` (`${CLAUDE_PLUGIN_ROOT}/scripts/sigma-resolve.py`'s
+`/v2/connections/paths` (`${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/sigma-resolve.py`'s
 `find_path_by_urlid`), but confirmed live (2026-08-07) that endpoint is
 a full org-wide paginated enumeration — 4,225+ entries and still
 paginating in one run, with an unthrottled retry hitting a 429. Not
@@ -413,7 +413,7 @@ Examples observed:
 is more aggressive than it looks. Reliable workflow:
 
 1. POST with your best guess (raw names often work for ALL_CAPS).
-2. Run `${CLAUDE_PLUGIN_ROOT}/scripts/api/verify-workbook.sh <wb-id>`.
+2. Run `${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/api/verify-workbook.sh <wb-id>`.
 3. If any element compiles to `'Unknown column "[X]"'`, GET the spec
    back — Sigma's readback shows the canonical friendly names.
 4. Update formulas in your spec and re-PUT.

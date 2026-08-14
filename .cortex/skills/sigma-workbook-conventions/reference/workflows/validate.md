@@ -2,11 +2,11 @@
 
 Validation runs in three phases:
 
-1. **Pre-submit** — `${CLAUDE_PLUGIN_ROOT}/scripts/validate-spec.py` catches what's visible
+1. **Pre-submit** — `${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/validate-spec.py` catches what's visible
    in the spec text (17 checks; see the note on JSON/YAML input below).
-2. **Post-create** — `${CLAUDE_PLUGIN_ROOT}/scripts/api/verify-workbook.sh` catches
+2. **Post-create** — `${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/api/verify-workbook.sh` catches
    unresolved / circular refs in the compiled SQL;
-   `${CLAUDE_PLUGIN_ROOT}/scripts/api/audit-workbook-schema.sh` catches `error`-typed
+   `${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/api/audit-workbook-schema.sh` catches `error`-typed
    columns in the schema. Both run automatically via
    `publish-workbook.sh`.
 3. **Visual** — open the workbook URL and confirm it renders.
@@ -16,10 +16,10 @@ hidden failure mode.
 
 Load this before any POST or PUT.
 
-## 1. Pre-submit — `${CLAUDE_PLUGIN_ROOT}/scripts/validate-spec.py`
+## 1. Pre-submit — `${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/validate-spec.py`
 
 ```bash
-${CLAUDE_PLUGIN_ROOT}/scripts/validate-spec.py workbooks/<name>/spec.json
+${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/validate-spec.py workbooks/<name>/spec.json
 ```
 
 Accepts `.json` or `.yaml`/`.yml` (YAML needs PyYAML or `yq` on PATH —
@@ -114,7 +114,7 @@ For each column's `formula`:
 - Controls bind via `filters[].columnId` matching a column `id` on
   the target element (NOT `name`).
 
-## 4. Post-create — `${CLAUDE_PLUGIN_ROOT}/scripts/api/verify-workbook.sh`
+## 4. Post-create — `${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/api/verify-workbook.sh`
 
 **Do not skip.** A successful POST is necessary but not sufficient.
 Sigma accepts specs whose column formulas don't actually resolve,
@@ -133,7 +133,7 @@ After every CREATE and after every PUT that touches columns or
 formulas, run:
 
 ```bash
-${CLAUDE_PLUGIN_ROOT}/scripts/api/verify-workbook.sh <wb-id>
+${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/api/verify-workbook.sh <wb-id>
 ```
 
 It hits `GET /v2/workbooks/<id>/elements/<eid>/query` for each
@@ -174,7 +174,7 @@ unknown functions (e.g. `NTile`), aggregation-across-element-boundary
 on grouped-source columns, `Rollup` arg3 mismatches. A cascade of
 errors usually traces to one upstream errored column — fix the root,
 downstream clears. Suppress with `SIGMA_SKIP_AUDIT=1`; standalone
-re-audit via `${CLAUDE_PLUGIN_ROOT}/scripts/api/audit-workbook-schema.sh <wb-id>`.
+re-audit via `${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/api/audit-workbook-schema.sh <wb-id>`.
 
 **Exit 3 means the gate didn't actually run — treat it as a hard
 blocker, not a pass.** Originally found via a live build-mode test
@@ -192,7 +192,7 @@ clean. **Under this skill's current `browser-login.sh` auth path,
 something's actually wrong (a stale/wrong-scope token, or a real MCP
 outage), not a routine/permanent condition to route around.** Do not
 report a workbook as built-and-verified on an exit-3 audit — fall
-back to a manual UI check, or re-run `${CLAUDE_PLUGIN_ROOT}/scripts/api/browser-login.sh` if
+back to a manual UI check, or re-run `${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/api/browser-login.sh` if
 auth looks stale.
 
 ## 5. Visual verify in the UI
@@ -229,5 +229,5 @@ check the spec reference file for that feature to compare shapes.
 **General strategy:** the error path names the offending field; the
 spec reference file for that feature shows the shape. If after
 checking both you still can't see the mismatch, fetch a known-good
-reference workbook via `${CLAUDE_PLUGIN_ROOT}/scripts/api/publish-workbook.sh get-spec
+reference workbook via `${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/api/publish-workbook.sh get-spec
 <wb-id>` and diff your shape against it.
