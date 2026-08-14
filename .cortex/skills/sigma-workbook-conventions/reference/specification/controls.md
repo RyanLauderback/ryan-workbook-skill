@@ -31,6 +31,7 @@ teach — that's what this file is for.
   - [`hierarchy`, `switch`, `date`, `number`](#additional-controltype-variants)
   - [`drill` — drill-down navigation](#drill--drill-down-navigation)
   - [Numeric parameter control referenced from formulas](#numeric-parameter-control-referenced-from-formulas)
+  - [OPEN QUESTION — `controlId` bare-ref scope: workbook or page?](#open-question--needs-live-verification-is-a-bare-controlid-ref-workbook-scoped-or-page-scoped)
 - Patterns:
   - [One control, multiple elements](#one-control-multiple-elements)
   - [One element, multiple controls](#one-element-multiple-controls)
@@ -722,6 +723,49 @@ resolves to the control if no column on the referencing element has
 collision" above.
 
 Verified 2026-07-02 against `Product-and-Basket-Performance` build.
+
+### OPEN QUESTION — needs live verification: is a bare `controlId` ref workbook-scoped or page-scoped?
+
+> ⚠️ **Not independently verified — left as an open question, not an
+> assertion either way.** The line above ("its value is instead pulled
+> by formulas anywhere on the page") only claims same-page scope, and
+> `reference/specification/dynamic-values.md` → "Bare `[controlId]`
+> references work both inside `{{}}` interpolation and directly in
+> ordinary formulas" doesn't state a scope either way — but every
+> live-POST probe backing *either* claim (this section's 2026-07-02
+> verification, and `dynamic-values.md`'s Wave 2/Wave 3 probes) happened
+> to place the control and the referencing formula/element on the
+> **same page**. None of them tested a **cross-page** reference. Whether
+> `[<controlId>]` resolves at all from a formula on a *different* page than the control,
+> and — if it does resolve — whether changing the control's value on
+> page 1 actually re-triggers recompute of a dependent formula on page 2,
+> is **not verified either way**.
+>
+> Contrast with `Lookup()`, which has an explicit, documented same-page
+> requirement: `reference/specification/formulas.md` → "Cross-element
+> joins via `Lookup()`" — "a sibling element on the same page sourcing
+> the lookup table." No equivalent statement exists here for bare
+> `controlId` refs, and it would be a mistake to assume either the same
+> restriction or full workbook-wide scope without testing.
+>
+> **Known workaround, not a resolution:** a real build-mode session
+> (2026-08-13) needed a control's value read from a formula on a
+> different page. Rather than assume workbook-wide scope, it placed the
+> control on page 1 and had the user visually confirm in the Sigma UI
+> that the page-2 formula referencing it actually recomputed when the
+> control's value changed. That confirms the workaround *rendered
+> correctly in that one case* — it does not establish the general
+> scoping rule, and the case wasn't isolated from other variables (e.g.
+> whether the two pages shared a common source table).
+>
+> **Before relying on cross-page `controlId` references as a designed
+> pattern:** build a minimal 2-page probe — control on page 1, a formula
+> column on page 2 referencing it bare — POST it, then change the
+> control's value and confirm via `GET /v2/workbooks/{id}/elements/{eid}/query`
+> (compiled SQL) or a UI screenshot whether the page-2 value actually
+> changes. Record the result in `reference/history.md` and
+> `reference/capability-ledger.md` either way, rather than re-discovering
+> this ambiguity from scratch next session.
 
 ## Element-level filters — `top-n`
 

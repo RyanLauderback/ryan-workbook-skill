@@ -433,11 +433,15 @@ placed on a chart where `[Margin]` is already an aggregated metric
 (`[Metrics/Total Profit Margin]`) creates a recursive aggregate.
 Sigma rejects it with "Column has a recursive formula."
 
-The correct shape is a **three-piece composition on a single parent
-table**:
+The correct shape **for this categorization use case** — bucketing rows
+against a scalar derived from an already-aggregated metric, without
+tripping the recursive-formula rejection — is a **three-piece
+composition on a single parent table**:
 
-1. **Aggregated parent table** with `groupings` at the relevant grain
-   (per-store, per-customer, per-cohort).
+1. **Parent table**, grouped (`groupings` at the relevant grain —
+   per-store, per-customer, per-cohort) *because* the categorization
+   column in step 3 needs to live inside a grouping's `calculations` to
+   avoid the recursive-aggregate error above.
 2. **`summary: [<col-id>, ...]`** on that table — a top-level field
    on the table element (singular `summary`, NOT `summaries`). Each
    entry is a column id whose formula is evaluated at the summary-bar
@@ -450,6 +454,22 @@ table**:
 Charts then source from this parent and reference the bucket via the
 sibling namespace. Full example with code in
 `reference/specification/tables.md` → "Summary bar pattern."
+
+**`groupings` is a requirement of the categorization pattern above, not
+of `summary` itself.** `summary` is a standalone table-level field that
+broadcasts a scalar to every row on *any* table, grouped or not — see
+`reference/specification/tables.md` → "`summary` — summary-bar pattern,"
+which documents it with no grouping prerequisite. **Confirmed live
+(2026-08-13):** a build used `summary` on both a plain, ungrouped table
+and a grouped table — one case broadcasting a `Max([Date])`
+"as-of-date"/"window-start" anchor with no categorization involved at
+all — and both POSTed and rendered clean. Reach for the full three-piece
+composition (with `groupings`) only when you also need a **categorization
+column** computed against an aggregated metric; for a plain broadcast
+value (an anchor date, a total, a target), a bare `summary` field on an
+ungrouped table is sufficient on its own. See `reference/history.md` →
+"2026-08-13 (continued) — `summary` does not require `groupings`" for
+the test that resolved this.
 
 **Why parent-table, not inline-on-chart:**
 

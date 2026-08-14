@@ -25,7 +25,7 @@ Language:
 
 - [Operators](#operators) (arithmetic, boolean, string concat)
 - [Aggregation functions](#aggregation-functions)
-- [Date functions](#date-functions)
+- [Date functions](#date-functions) (incl. [anchoring "today" to `Max([Date])` for demo/synthetic data](#anchoring-today-for-demo--historical--synthetic-data--maxdate-not-today))
 - [Conditional](#conditional)
 - [Text functions](#text-functions)
 - [JSON / struct field access](#json--struct-field-access)
@@ -34,7 +34,7 @@ Advanced patterns:
 
 - [Cross-element joins via `Lookup()`](#cross-element-joins-via-lookup) (with verified dimension-passthrough example)
 - [Per-row windowed aggregations — `Rollup`](#per-row-windowed-aggregations--rollup)
-- [Window functions](#window-functions) (`Rank`, `Lead`, `Lag`, `RunningSum`, etc.)
+- [Window functions](#window-functions) (`Rank`, `Lead`, `Lag`, `RunningSum`, `Ntile`, etc.)
 - [Numeric guards](#numeric-guards) (safe division, `Zn`, DivideSafe hallucination warning)
 
 Troubleshooting:
@@ -350,6 +350,42 @@ above.
 Date parts (must be quoted strings): `"year"`, `"quarter"`,
 `"month"`, `"week"`, `"day"`, `"hour"`, `"minute"`, `"second"`.
 
+### Anchoring "today" for demo / historical / synthetic data — `Max([Date])`, not `Today()`
+
+`Today()`/`Now()` resolve to the *real* calendar clock at render time,
+not to the data's own range. Against a demo org, a historical snapshot,
+or any synthetic/seeded dataset that doesn't extend up to the actual
+current date, a formula anchored to `Today()` (a rolling window, a
+"days since" calc, a period-comparison anchor) silently computes
+against a window the data doesn't cover — usually rendering blank or
+nonsensical rather than erroring. This is the same underlying failure
+mode already documented at the control layer — see `reference/history.md`
+→ "2026-08-03 — Four more bugs found live-iterating the same build" (item
+1, the `date-range` control's `last`/`next`/`current` modes zeroing every
+row against a synthetic dataset) and `reference/specification/controls.md`
+→ the caution under `date-range` — just hit here in a hand-written
+formula instead of a control default.
+
+**Pattern:** when "today" needs to anchor to the dataset's own timeline
+rather than the real calendar, derive it from the data instead of the
+clock:
+
+```
+Max([Date])          // over the relevant table (or per-partition, inside Rollup/groupings)
+```
+
+and use that in place of `Today()` in downstream calcs (`DateDiff`,
+rolling-window buckets, "as of"/"window-start" anchors, etc.). Confirmed
+live (2026-08-13): a build anchored a broadcast "as-of-date"/
+"window-start" value to `Max([Date])` via a table's `summary` field
+rather than `Today()`, specifically because the dataset didn't extend to
+the real calendar date — this was the load-bearing fix that made the
+anchor correct instead of silently wrong.
+
+Default to `Max([Date])` of the relevant table unless recon has
+confirmed the data is live-updated through the present; only then is
+`Today()`/`Now()` safe to use as an anchor.
+
 ## Conditional
 
 ```
@@ -572,6 +608,7 @@ than the `groupings` pattern above.
 | `Lag(<col>)` | Previous row's value |
 | `RunningSum(<col>)` | Cumulative sum |
 | `RunningAvg(<col>)` | Cumulative average |
+| `Ntile(<ranks>, [<col>], [direction])` | Divides rows into `<ranks>` equal-sized buckets (e.g. quartiles, deciles) ranked by `[<col>]`. `direction` is optional: `"asc"` (default) ranks the **lowest** values `1`; `"desc"` ranks the **highest** values `1`. Getting `direction` backwards silently inverts every bucket — no error, just an inverted score — so confirm which end should be rank 1 before shipping a quintile/RFM-style scoring formula. Verified against `https://help.sigmacomputing.com/docs/ntile` (2026-08-13): `Ntile(4, [Population 2010])` → lowest quartile ranked 1; `Ntile(4, [Population 2010], "desc")` → highest quartile ranked 1. |
 
 Window functions require pre-materialized columns in many cases —
 see `examples/data-model-sourced-multi-level-aggregated-table.json`

@@ -70,6 +70,29 @@ URLs, and revoked tokens *before* recon starts — not mid-build.
 If `whoami.sh` returns non-zero, the agent surfaces the Sigma error verbatim
 and stops — does NOT continue into Recon with broken auth.
 
+**`whoami.sh` returning 0 confirms auth works — it does NOT confirm it's
+the org the user meant.** Read the org/host line and the recent-files
+sample `whoami.sh` prints, and actively check them against what the user
+actually asked for, not just that the call succeeded. This matters most
+when some *other* Sigma-flavored tool is also available in the session —
+e.g. a native claude.ai-side connector (`mcp__claude_ai_Sigma_MCP__*` or
+similar), which authenticates completely independently of this skill's
+`browser-login.sh`/`get-token.sh` and can be pointed at a different org
+entirely. Confirmed in a real build-mode session (2026-08-13): a tester
+had exactly such a connector active from an unrelated prior setup,
+authenticated to a different Sigma org than this skill's own auth
+resolved, and used it for initial recon before catching the mismatch —
+both orgs happened to hold near-identically-named demo data models
+("Plugs Data Model" vs "PLUGS Data Model vREL," both a "Plugs
+Electronics retail demo"). **Demo/seed data is not a reliable "yes,
+that's my org" signal** — common demo verticals (retail, healthcare
+claims, etc.) get reused across many orgs and can look identical at a
+glance. If two Sigma-facing tools disagree on org, or the user hasn't
+said which org they mean and more than one is reachable, ask before
+trusting either tool's recon. See `reference/workflows/discover.md` →
+"MCP status" for the related caution about not conflating this skill's
+own `mcp-search.sh`/`mcp-describe.sh` with a native MCP connector.
+
 A returning user who already completed a browser login once can skip
 re-opening a browser: `export SIGMA_TOKEN_FETCHER=$PWD/${CLAUDE_PLUGIN_ROOT}/scripts/api/refresh-token.sh`
 before step 3 above, and `_env.sh`'s cache-miss path redeems the stored

@@ -172,8 +172,17 @@ summary value is broadcast to every row.
 ```
 
 Use cases: median/mean/percentile thresholds for downstream
-bucketing columns. Full pattern + rationale in
-`reference/conventions.md` → "Summary-bar pattern."
+bucketing columns, or a plain broadcast anchor (an as-of date, a
+grand total) that doesn't need any bucketing at all. **`groupings` is
+NOT a prerequisite** — `summary` is a standalone table-level field and
+works on an ungrouped table just as well as a grouped one. Confirmed
+live 2026-08-13 on both a plain table and a grouped table in the same
+build session (see `reference/history.md` → "2026-08-13 (continued) —
+`summary` does not require `groupings`"). `groupings` only becomes
+necessary if you're also composing the categorization pattern in
+`reference/conventions.md` → "Summary-bar pattern" (bucketing rows
+against an aggregated metric) — full pattern + rationale for that
+specific use case there.
 
 **`summary` × `groupings.calculations` are mutually exclusive.** A
 column id in `summary` MUST NOT also appear in any grouping's

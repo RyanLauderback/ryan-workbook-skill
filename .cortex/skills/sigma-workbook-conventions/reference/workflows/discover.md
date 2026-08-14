@@ -14,6 +14,19 @@ this skill's only CLI-facing auth path and mints exactly the token type
 tools to reach for below — for workbooks, data models, *and* raw
 warehouse tables.
 
+**Don't conflate these scripts with a native claude.ai-side MCP
+connector that might also be present in the session** (e.g.
+`mcp__claude_ai_Sigma_MCP__*` tools) — that's a separate,
+independently-authenticated integration and can be pointed at a
+*different* Sigma org than the one `browser-login.sh`/`whoami.sh`
+resolved for this skill. Confirmed in a real build-mode session
+(2026-08-13): a tester used exactly such a connector for initial recon
+before realizing it was authenticated to a different org than this
+skill's own auth — the two orgs' demo data models were similar enough in
+name to mask the mismatch initially. See `SKILL.md` → "Auth resolution"
+for the org-confirmation step (check `whoami.sh`'s org/host output
+against what the user actually meant, not just that auth succeeded).
+
 **Confirmed live 2026-08-12** (real org, `Healthcare Claims Transactions`
 data model): a `browser-login.sh`-authenticated session's
 `mcp-search.sh`/`mcp-describe.sh` calls both succeeded end-to-end,

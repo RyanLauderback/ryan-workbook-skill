@@ -54,6 +54,7 @@ to flag "this rule was once unverified and bit us — treat it as load-bearing."
 - [2026-08-12 (continued) — MCP flipped from opportunistic to default; `.env` retired as a CLI auth path](#2026-08-12-continued--mcp-flipped-from-opportunistic-to-default-env-retired-as-a-cli-auth-path)
 - [2026-08-13 — Container span should match children's local total](#2026-08-13--container-span-should-match-childrens-local-total)
 - [2026-08-13 (continued) — `backgroundScale` on `pivot-table` retested live: POST-verified, GET-spec no longer 500s](#2026-08-13-continued--backgroundscale-on-pivot-table-retested-live-post-verified-get-spec-no-longer-500s)
+- [2026-08-13 (continued) — `summary` does not require `groupings`](#2026-08-13-continued--summary-does-not-require-groupings)
 
 ## 2026-05-11 — Per-page `layout` field silently discarded
 
@@ -2367,3 +2368,42 @@ status") and `reference/scope-and-edge-cases.md` ("GET-spec 500" —
 resolving that section's own long-standing "retest required" note for this
 specific case) — both narrowly scoped to `backgroundScale` on `pivot-table`,
 not conditional formatting in general.
+
+## 2026-08-13 (continued) — `summary` does not require `groupings`
+
+The same 2026-08-13 build-mode session tested `summary`'s actual
+grouping requirement directly, rather than continuing to build around
+it as an assumption. `reference/conventions.md`'s "Summary-bar pattern"
+section framed `summary` as one leg of a three-piece composition that
+also requires an aggregated parent table with `groupings` — but that
+framing had never been separately confirmed for `summary` on its own,
+and it disagreed with `reference/specification/tables.md`'s own
+`summary` section, which documents it as a plain table-level field
+(`summary: [<col-id>, ...]`, broadcast across all rows) with no
+grouping prerequisite stated anywhere.
+
+Tested both configurations in the same session:
+
+- `summary` on a **plain, ungrouped table** — broadcasting a
+  `Max([Date])`-derived "as-of-date"/"window-start" anchor across all
+  rows, with no categorization or grouping involved at all (see
+  `reference/specification/formulas.md` → "Anchoring 'today' for demo /
+  historical / synthetic data" for the `Max([Date])`-vs-`Today()` reason
+  this anchor was needed in the first place).
+- `summary` on a **grouped table** — the existing three-piece
+  categorization pattern (aggregated parent + `groupings` +
+  categorization column in `calculations`).
+
+Both POSTed successfully and rendered clean.
+
+**Fix:** `reference/conventions.md` → "Summary-bar pattern" reframed so
+`groupings` is scoped to the categorization use case specifically — the
+categorization column has to live inside a grouping's `calculations` to
+avoid the recursive-aggregate rejection described earlier in that same
+section — not to `summary` in general. `reference/specification/tables.md`'s
+own `summary` section already had the correct (unrestricted) substantive
+claim, so it needed no correction, only an explicit confirming note +
+citation to this test so a future reader doesn't have to infer it from
+`conventions.md`'s reframing alone. This closes the gap between the two
+files rather than reversing either file's underlying claim about what
+`summary` itself requires.
