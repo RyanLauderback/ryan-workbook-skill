@@ -89,17 +89,23 @@ elif [ -n "${SIGMA_CLIENT_ID:-}" ] && [ -n "${SIGMA_CLIENT_SECRET:-}" ] && [ -n 
   : # Claude Code web (or any shell with client_credentials vars already
     # exported) — step 2 below mints a token via get-token.sh.
 elif [ -n "${SIGMA_TOKEN_FETCHER:-}" ] && [ -n "${SIGMA_BASE_URL:-}" ]; then
-  : # A returning browser-login session in a fresh shell: SIGMA_API_TOKEN
-    # isn't exported here (each new shell starts empty), but a fetcher is
-    # configured (e.g. refresh-token.sh, which redeems the OS-keychain
-    # refresh token with no browser round-trip) — step 2 below will call
-    # it. Without this branch, this documented "returning user" path
-    # (SKILL.md / CLAUDE.md → "Authentication") fell through to the error
-    # below every time, since neither of the first two conditions ever
-    # became true in a shell that only exports SIGMA_TOKEN_FETCHER.
+  : # Explicit override: caller already knows which fetcher to use.
+elif [ -n "${SIGMA_BASE_URL:-}" ]; then
+  # No token, no client creds, no explicit fetcher -- but SIGMA_BASE_URL IS
+  # set. This is the NORMAL case on the very next call after a
+  # browser-login.sh session in a fresh shell, not a rare "returning user"
+  # edge case: Claude Code's Bash tool (and any non-persistent-shell caller)
+  # does not carry exported env vars across separate invocations, so the
+  # SIGMA_API_TOKEN that eval set a moment ago is already gone. Default to
+  # refresh-token.sh -- it redeems the OS-keychain refresh token
+  # browser-login.sh stores, with no browser round-trip. If no
+  # browser-login.sh session has ever run, refresh-token.sh's own preflight
+  # fails fast (no network call) with "run browser-login.sh first" -- a
+  # more actionable default than erroring here with no fetcher configured.
+  SIGMA_TOKEN_FETCHER="$_sigma_repo_root/scripts/api/refresh-token.sh"
 else
-  echo "_env.sh: no usable auth found." >&2
-  echo "  Run: eval \"\$(scripts/api/browser-login.sh)\" to sign in via browser" >&2
+  echo "_env.sh: no usable auth found -- SIGMA_BASE_URL is not set." >&2
+  echo "  Export it, then run: eval \"\$(scripts/api/browser-login.sh)\" to sign in via browser" >&2
   echo "  (no admin-provisioned credential needed)." >&2
   return 1 2>/dev/null || exit 1
 fi
