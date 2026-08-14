@@ -93,10 +93,15 @@ trusting either tool's recon. See `reference/workflows/discover.md` →
 "MCP status" for the related caution about not conflating this skill's
 own `mcp-search.sh`/`mcp-describe.sh` with a native MCP connector.
 
-A returning user who already completed a browser login once can skip
-re-opening a browser: `export SIGMA_TOKEN_FETCHER=$PWD/${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/api/refresh-token.sh`
-before step 3 above, and `_env.sh`'s cache-miss path redeems the stored
-refresh token instead.
+`_env.sh` auto-falls-back to `refresh-token.sh` whenever `SIGMA_BASE_URL`
+is set but no token/client-creds/explicit fetcher are — the normal case on
+every call after step 3 in a non-persistent-shell caller (env vars don't
+survive across separate Bash tool invocations, so this isn't a rare
+"returning user" edge case, it's every call). No env var to set by hand:
+the refresh token step 3's browser login stored is redeemed automatically,
+with no second browser round-trip. Set
+`SIGMA_TOKEN_FETCHER=${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/api/refresh-token.sh`
+explicitly only if you want to skip that auto-detection.
 
 ### The 2-question kickoff
 

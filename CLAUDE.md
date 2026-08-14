@@ -89,9 +89,12 @@ Browser sign-in is the only auth step a CLI user takes:
    (`security` on macOS, `secret-tool`/libsecret on Linux) so future
    sessions don't need a second browser round-trip.
 2. `skills/sigma-workbook-conventions/scripts/api/whoami.sh` — confirms the token against the live API.
-3. Repeat sessions: `export SIGMA_TOKEN_FETCHER=$PWD/skills/sigma-workbook-conventions/scripts/api/refresh-token.sh`
-   before calling any `skills/sigma-workbook-conventions/scripts/api/*.sh` — `_env.sh`'s cache-miss path then
-   redeems the stored refresh token instead of prompting a new browser login.
+3. Repeat sessions: automatic — `_env.sh` falls back to `refresh-token.sh`
+   whenever `SIGMA_BASE_URL` is set but no token/client-creds/explicit
+   fetcher are (the normal case on every call in a non-persistent-shell
+   caller), redeeming the stored refresh token with no second browser
+   round-trip. Set `SIGMA_TOKEN_FETCHER=$PWD/skills/sigma-workbook-conventions/scripts/api/refresh-token.sh`
+   explicitly only to skip that auto-detection.
 
 This is also the path that unblocks Sigma's `/mcp/v2` endpoint — see
 `reference/workflows/discover.md` → "MCP status": `/mcp/v2` categorically
