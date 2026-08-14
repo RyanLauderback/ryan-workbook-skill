@@ -23,18 +23,18 @@ silently fail to render. Trusting HTTP 200 alone produces broken dashboards.
 Before the per-attempt protocol runs, a build-mode session resolves auth
 automatically, then opens a 2-question `AskUserQuestion` gate for the data
 source and what/where to build (full spec in
-`.claude/skills/sigma-workbook-conventions/SKILL.md` → "Session kickoff"):
+`skills/sigma-workbook-conventions/SKILL.md` → "Session kickoff"):
 
 - **Auth (resolved automatically — not a question).** Claude confirms
   `SIGMA_BASE_URL` is resolvable (asking the user only if it's genuinely
-  unknown), then runs `eval "$(scripts/api/browser-login.sh)"` followed by
-  `scripts/api/whoami.sh` to actively validate the token against
+  unknown), then runs `eval "$(skills/sigma-workbook-conventions/scripts/api/browser-login.sh)"` followed by
+  `skills/sigma-workbook-conventions/scripts/api/whoami.sh` to actively validate the token against
   `/v2/files`. No admin-provisioned credential needed, and the only path
   that unblocks `/mcp/v2` (see `reference/workflows/discover.md` → "MCP
   status"). If `SIGMA_API_TOKEN` or `SIGMA_CLIENT_ID`/`SIGMA_CLIENT_SECRET`
   are already exported at session start (a returning `browser-login.sh`
   session, `refresh-token.sh`, or Claude Code web injecting credentials
-  automatically), Claude skips straight to `scripts/api/whoami.sh`. If
+  automatically), Claude skips straight to `skills/sigma-workbook-conventions/scripts/api/whoami.sh`. If
   `whoami` fails, surface the Sigma error and abort — don't continue into
   Recon with broken auth.
 - **Q1: What data source?** (data model URL/slug / warehouse path / mixed)
@@ -50,7 +50,7 @@ Step 1 (Recon).
 
 Before drafting a plan or writing any spec JSON, `Read` the chunk files
 mapped to the task type in the skill's
-`.claude/skills/sigma-workbook-conventions/SKILL.md` →
+`skills/sigma-workbook-conventions/SKILL.md` →
 "Required reading before authoring." This is not optional and not
 satisfied by reading the SKILL.md index alone.
 
@@ -71,16 +71,16 @@ prompt file so future iterations don't re-discover them.
 
 ```bash
 # Folder — resolve url-id slug to the internal UUID.
-scripts/api/find-file-by-urlid.sh <folder-urlId>
+skills/sigma-workbook-conventions/scripts/api/find-file-by-urlid.sh <folder-urlId>
 
 # Data model — mcp-describe.sh returns columns, types, descriptions,
 # formulas, and the metrics catalog as SQL DDL, all in one call. Default
 # discovery path under this skill's browser-login.sh auth — see
 # reference/workflows/discover.md → "MCP status".
-scripts/api/mcp-describe.sh datamodel-element <dataModelId> <elementId>
+skills/sigma-workbook-conventions/scripts/api/mcp-describe.sh datamodel-element <dataModelId> <elementId>
 
 # REST fallback (if mcp-describe.sh exits 3):
-source scripts/api/_env.sh
+source skills/sigma-workbook-conventions/scripts/api/_env.sh
 sigma_curl "$SIGMA_BASE_URL/v2/dataModels/<dataModelId>/spec" | jq .
 ```
 
@@ -124,10 +124,10 @@ approved plan from step 2.
 
 `workbooks/<name>/iterations/<YYYYMMDD-HHMM>.json`. Apply the rules in the
 appropriate `reference/*.md` chunk
-([formulas](../.claude/skills/sigma-workbook-conventions/reference/specification/formulas.md),
-[per-element specification/](../.claude/skills/sigma-workbook-conventions/reference/specification/),
-[layout](../.claude/skills/sigma-workbook-conventions/reference/specification/layout.md),
-[scope-and-edge-cases](../.claude/skills/sigma-workbook-conventions/reference/scope-and-edge-cases.md)):
+([formulas](../skills/sigma-workbook-conventions/reference/specification/formulas.md),
+[per-element specification/](../skills/sigma-workbook-conventions/reference/specification/),
+[layout](../skills/sigma-workbook-conventions/reference/specification/layout.md),
+[scope-and-edge-cases](../skills/sigma-workbook-conventions/reference/scope-and-edge-cases.md)):
 
 - Declare every column you'll reference downstream, with stable readable ids
   (`col-date`, `col-store-region`) — no implicit inheritance.
@@ -142,7 +142,7 @@ Don't overwrite `spec.json` yet — that comes after the GET-back.
 ### 5. POST via the wrapper
 
 ```bash
-scripts/api/publish-workbook.sh post workbooks/<name>/iterations/<file>.json
+skills/sigma-workbook-conventions/scripts/api/publish-workbook.sh post workbooks/<name>/iterations/<file>.json
 ```
 
 The wrapper:
@@ -170,7 +170,7 @@ mode 0600 and gitignored; tokens never cross a tool boundary.
 ### 7. GET back; that's the new source of truth
 
 ```bash
-scripts/api/publish-workbook.sh get-spec <workbookId> \
+skills/sigma-workbook-conventions/scripts/api/publish-workbook.sh get-spec <workbookId> \
   | jq . > workbooks/<name>/spec.json
 ```
 
@@ -198,7 +198,7 @@ previous version:
 
 ```bash
 TS=$(date +%Y%m%d-%H%M)
-scripts/api/publish-workbook.sh get-spec <workbookId> \
+skills/sigma-workbook-conventions/scripts/api/publish-workbook.sh get-spec <workbookId> \
   | jq . > workbooks/<name>/iterations/${TS}-from-sigma.json
 
 # The 9 fields deleted below are response-only — canonical list lives in
@@ -246,11 +246,11 @@ Where to put it:
 
 | Lesson type | Destination |
 |-------------|-------------|
-| Naming / layout / general workbook conventions | `.claude/skills/sigma-workbook-conventions/reference/naming.md` or `reference/conventions.md` |
-| Function signatures / formula namespaces | `.claude/skills/sigma-workbook-conventions/reference/specification/formulas.md` |
-| Element shape mechanics (KPI/bar/pie/scatter/pivot/controls) | `.claude/skills/sigma-workbook-conventions/reference/specification/<kind>.md` (e.g., `charts.md`, `kpis.md`, `tables.md`, `controls.md`, `maps.md`) |
-| Layout XML, cross-element formulas, groupings, summary-bar | `.claude/skills/sigma-workbook-conventions/reference/specification/layout.md` + `reference/conventions.md` |
-| Scope-of-code limits, edge cases, format field, fallbacks | `.claude/skills/sigma-workbook-conventions/reference/scope-and-edge-cases.md` |
+| Naming / layout / general workbook conventions | `skills/sigma-workbook-conventions/reference/naming.md` or `reference/conventions.md` |
+| Function signatures / formula namespaces | `skills/sigma-workbook-conventions/reference/specification/formulas.md` |
+| Element shape mechanics (KPI/bar/pie/scatter/pivot/controls) | `skills/sigma-workbook-conventions/reference/specification/<kind>.md` (e.g., `charts.md`, `kpis.md`, `tables.md`, `controls.md`, `maps.md`) |
+| Layout XML, cross-element formulas, groupings, summary-bar | `skills/sigma-workbook-conventions/reference/specification/layout.md` + `reference/conventions.md` |
+| Scope-of-code limits, edge cases, format field, fallbacks | `skills/sigma-workbook-conventions/reference/scope-and-edge-cases.md` |
 | Pattern-specific (e.g. financial recon variance formula) | `.claude/skills/<pattern-skill>/reference/<topic>.md` |
 | A whole spec that exemplifies a pattern | `workbooks/_exemplars/<pattern>-<shape>.json` |
 | Account-specific (folder IDs, broken helpers, staging quirks) | Memory only — these don't belong in a shareable skill |

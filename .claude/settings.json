@@ -12,12 +12,12 @@
   },
   "permissions": {
     "allow": [
-      "Bash(scripts/api/*)",
-      "Bash(bash scripts/api/*)",
-      "Bash(python3 scripts/sigma-resolve.py:*)",
-      "Bash(python3 scripts/validate-spec.py:*)",
+      "Bash(skills/sigma-workbook-conventions/scripts/api/*)",
+      "Bash(bash skills/sigma-workbook-conventions/scripts/api/*)",
+      "Bash(python3 skills/sigma-workbook-conventions/scripts/sigma-resolve.py:*)",
+      "Bash(python3 skills/sigma-workbook-conventions/scripts/validate-spec.py:*)",
       "Bash(bash scripts/refresh-vendor.sh:*)",
-      "Bash(bash scripts/doctor.sh:*)",
+      "Bash(bash skills/sigma-workbook-conventions/scripts/doctor.sh:*)",
       "Bash(curl * $SIGMA_BASE_URL/v2/dataModels/*)",
       "Bash(curl * $SIGMA_BASE_URL/v2/workbooks/*)",
       "Bash(curl * $SIGMA_BASE_URL/v2/files*)",
@@ -43,8 +43,8 @@
     ],
     "ask": [
       "Bash(curl * -X DELETE *)",
-      "Bash(scripts/api/delete-*)",
-      "Bash(bash scripts/api/delete-*)"
+      "Bash(skills/sigma-workbook-conventions/scripts/api/delete-*)",
+      "Bash(bash skills/sigma-workbook-conventions/scripts/api/delete-*)"
     ]
   }
 }

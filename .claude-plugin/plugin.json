@@ -1,0 +1,8 @@
+{
+  "name": "sigma-workbook-conventions",
+  "version": "0.1.0",
+  "description": "Sigma Computing workbook-authoring conventions and auth/CRUD tooling for Claude Code. Builds, edits, and publishes Sigma workbook/dashboard specs via the REST API.",
+  "author": { "name": "Ryan Lauderback" },
+  "repository": "https://github.com/RyanLauderback/ryan-workbook-skill",
+  "skills": "./skills/"
+}
