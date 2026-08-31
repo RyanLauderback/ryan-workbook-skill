@@ -395,7 +395,7 @@ ID semantics and is separate from this workbook-spec behavior.
 
 ## Load-bearing rules — always-loaded summary
 
-Four rules carry most of the round-trip failures from prior sessions.
+Five rules carry most of the round-trip failures from prior sessions.
 Inline here as one-line summaries because they're too important to live
 only in chunks. **Read `reference/conventions.md` for the full versions**
 — required on every build per the hard gate above. These summaries are
@@ -428,10 +428,21 @@ resolution or visualization quality.
    resolves to the control before the column when names collide;
    downstream `Month([Date])` silently breaks.
    `reference/conventions.md` → "Control/column ID collision."
+5. **Function names must be verified, not guessed.** Every function
+   name used in a formula must be a real, verified Sigma function.
+   Prefer the native form when one exists (`SumIf(x, cond)`) over a
+   hand-rolled composition (`Sum(If(cond, x, 0))`) — and look up any
+   unfamiliar function via the Sigma Docs MCP before using it, rather
+   than guessing. Two functions have already shipped in this skill's
+   own tables as if real and then failed silently at render
+   (`DivideSafe`, bare `Percentile`).
+   `reference/conventions.md` → "Function names must be verified, not
+   guessed" and `reference/specification/formulas.md` → "Conditional
+   aggregates — the `*If` family."
 
 The deeper edge-case checklist (explicit-`name`, rename-cascade,
 bar-chart orientation, summary-bar, two-tier sourcing) lives in
-`reference/conventions.md`. The 4 rules above are the ones that, when
+`reference/conventions.md`. The 5 rules above are the ones that, when
 violated, ship a broken workbook.
 
 ## Publishing
@@ -455,9 +466,10 @@ mapping.
 - `reference/conventions.md` — the ryan-specific cross-cutting rules
   (passthrough mandate, drill-down corollary, explicit-`name` rule,
   rename-cascade corollary, `[Metrics/<Name>]` resolution + DM-switch
-  hard rule, control/column ID collision, bar-chart orientation,
-  summary-bar pattern, two-tier sourcing, notes-promotion guardrail).
-  **Required on every build.**
+  hard rule, control/column ID collision, function names must be
+  verified not guessed, bar-chart orientation, summary-bar pattern,
+  two-tier sourcing, notes-promotion guardrail). **Required on every
+  build.**
 - `reference/scope-and-edge-cases.md` — what the code spec does NOT
   represent (chart series theme palette, pivot heatmap status,
   axis-label rotation), GET-spec 500 cases, warehouse-table fallback,
@@ -484,7 +496,7 @@ mapping.
 - `discover.md` — REST-first discovery (`search-files.sh` sequencing,
   data-model-vs-table routing, raw-table schema-confirmation rule),
   friendly-vs-raw warehouse name normalization, MCP status (blocked).
-- `validate.md` — `validate-spec.py` (pre-submit, 17 checks) +
+- `validate.md` — `validate-spec.py` (pre-submit, 18 checks) +
   `verify-workbook.sh` (SQL-compile check) +
   `audit-workbook-schema.sh` (data-layer schema audit, auto-run by
   `publish-workbook.sh`) + cryptic-error decoding table.

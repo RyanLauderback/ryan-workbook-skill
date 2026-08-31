@@ -167,7 +167,7 @@ Run `${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/validate-sp
 A `value.columnId` formula that uses bare `[Sibling]` refs to other
 columns in the same KPI **renders as `null`** when those siblings
 themselves contain aggregation functions (`Sum`, `Avg`, `Count`,
-`CountDistinct`, `Median`, `Percentile`, etc.).
+`CountDistinct`, `Median`, `PercentileCont`, etc.).
 
 **Why it fails:** Sigma evaluates the value formula per-row of the
 source table first, then aggregates. Bare `[Sibling]` refs resolve

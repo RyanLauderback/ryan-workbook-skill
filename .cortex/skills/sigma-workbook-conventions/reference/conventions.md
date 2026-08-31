@@ -14,6 +14,7 @@ The plan's `Chunks Read:` line must list this file.
 
 - [Recon scope boundary + hard stop on permission questions](#recon-scope-boundary)
 - [Inference anchor — every formula traces to recon](#inference-anchor)
+- [Function names must be verified, not guessed](#function-names-must-be-verified-not-guessed)
 - [Passthrough mandate + drill-down corollary](#passthrough-mandate)
 - [Explicit-`name` rule + rename-cascade corollary](#explicit-name-rule)
 - [`[Metrics/<Name>]` resolution + DM-switch hard rule](#metrics-resolution)
@@ -99,6 +100,59 @@ This applies equally to vague prompts ("build me a cost analysis") and
 specific ones ("show NIM by region"). For vague prompts, the agent's
 job is to lean into the recon and propose what's actually computable
 — not to imagine a dashboard and hope the data supports it.
+
+---
+
+## Function names must be verified, not guessed
+
+**Rule.** Every function name used in a formula must be a real,
+verified Sigma function. When a native aggregate form exists for what
+you're trying to express (a conditional sum, count, average, etc.),
+use it instead of hand-rolling the same result with a plain aggregate
+wrapped around a nested `If(...)` — prefer `SumIf(<x>, <cond>)` over
+`Sum(If(<cond>, <x>, 0))`. When you're not sure a function exists,
+look it up via the Sigma Docs MCP
+(`mcp__claude_ai_Sigma_Docs__searchDocs`) before using it in a
+formula — do not guess a plausible-sounding name, and do not assume a
+function doesn't exist just because it isn't in one of this skill's
+own reference tables. Those tables document common, verified
+patterns, not an exhaustive catalog — see
+`reference/specification/formulas.md` → "Looking up Sigma functions."
+
+**Why this is load-bearing, not just a style preference.** Two
+function names have already shipped in this skill's own reference
+tables as if they were real, verified Sigma functions, and both
+failed silently at render: a hallucinated function name compiles to
+an `'Unknown function <Name>'` string embedded in the compiled
+SQL — invisible to POST, `validate-spec.py`, and
+`verify-workbook.sh`, none of which inspect actual function names in a
+formula. `DivideSafe` (2026-05-15) and bare `Percentile` (2026-08-04)
+are both confirmed incidents of exactly this failure mode. Both trace
+to the same root cause: the reference table was trusted as exhaustive
+instead of treated as a starting point to verify against. See
+`reference/history.md` → "2026-05-15" and "2026-08-04" (the
+`Percentile` follow-up) for the full incidents.
+
+**The specific anti-pattern this rule was written to catch.** Until
+this rule was added, this skill's formula reference documented
+`If(...)` but never documented Sigma's native conditional-aggregate
+family (`SumIf`, `CountIf`, `CountDistinctIf`, `AvgIf`, `MinIf`,
+`MaxIf`) — so an agent asked to compute a conditional sum/count had no
+path to the idiomatic form and always composed `Sum(If(<cond>, <x>,
+0))` / `Count(If(<cond>, ...))` instead. That composition works (both
+forms compile and render), but it's non-idiomatic, and the two forms
+have different null behavior on an all-non-matching group. See
+`reference/specification/formulas.md` → "Conditional aggregates — the
+`*If` family" for the full mapping and the null-behavior caveat.
+`validate-spec.py`'s `conditional-aggregate-antipattern` check
+(WARN-level) now flags this composition wherever it appears in a
+`formula` string in the spec.
+
+**Verification path.** `mcp__claude_ai_Sigma_Docs__searchDocs("<function
+name>")` — see `reference/specification/formulas.md` → "Looking up
+Sigma functions." If the MCP isn't available in the current session,
+`WebFetch` against `https://help.sigmacomputing.com/` is the
+documented fallback.
 
 ---
 
@@ -484,8 +538,8 @@ the test that resolved this.
   scalar is computed once.
 
 **When the scalar isn't a summary:** `summary` works when the scalar
-is one of Sigma's aggregate functions (`Median`, `Mean`, `Sum`,
-`Min`, `Max`, `Percentile`, `Count`, etc.) applied across the parent
+is one of Sigma's aggregate functions (`Median`, `Avg`, `Sum`,
+`Min`, `Max`, `Count`, etc.) applied across the parent
 table's rows. When the scalar comes from somewhere else — a control
 value, a cross-element Lookup, a fixed threshold — declare it as a
 regular column (not in `summary`) and reference it the same way from

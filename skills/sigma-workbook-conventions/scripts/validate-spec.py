@@ -44,6 +44,7 @@ CHECKS = [
     "description-object-on-kpi-and-table",
     "pivot-missing-rows-and-columns",
     "channel-exclusivity",
+    "conditional-aggregate-antipattern",
 ]
 
 
@@ -897,11 +898,35 @@ def issues_action_refs_resolve(spec: dict) -> list[tuple[str, str]]:
 # Sigma aggregation function names that make a column an "aggregation column"
 # — i.e. the column has no per-row value, so bare refs from a KPI value
 # formula resolve to null.
+#
+# `Percentile` (no Cont/Disc suffix) and `GetPercentile` were removed
+# 2026-08-30 — both confirmed NOT to exist in Sigma (see
+# `reference/specification/formulas.md` → the Percentile retraction
+# warning, and `reference/history.md` → "2026-08-04" for `Percentile`;
+# `GetPercentile` was an additional, previously-undetected fake name
+# found independently while auditing this list against Sigma's own
+# aggregate-functions catalog — it was never caught failing at render,
+# unlike `Percentile`/`DivideSafe`, so there's no incident entry for it).
+# The `*If` conditional-aggregate family was added the same day so this
+# classifier still recognizes the native form after a `Sum(If(...))` →
+# `SumIf(...)` rewrite (see "Conditional aggregates" in formulas.md).
+#
+# Also added the same day: `PercentileCont`/`PercentileDisc` explicitly.
+# The bare `Percentile` alternative previously in this list never
+# actually matched either of these real function names — `\bPercentile`
+# matches, but the following `\s*\(` then fails against the literal
+# `Cont(`/`Disc(` suffix, so the whole alternative fails and (since none
+# of the other alternatives match either) the search fails outright.
+# This was a real, pre-existing classifier gap independent of the
+# `Percentile` retraction itself; fixed here while already auditing this
+# pattern rather than filed separately.
 _AGG_FN_PATTERN = re.compile(
     r"\b("
-    r"Sum|Avg|Count|CountDistinct|CountNonNull|Min|Max|Median|"
-    r"Percentile|StdDev|StdDevP|Variance|VarianceP|Mode|First|Last|"
-    r"Any|GetPercentile"
+    r"Sum|SumIf|Avg|AvgIf|Count|CountIf|CountDistinct|CountDistinctIf|"
+    r"CountNonNull|Min|MinIf|Max|MaxIf|Median|"
+    r"PercentileCont|PercentileDisc|"
+    r"StdDev|StdDevP|Variance|VarianceP|Mode|First|Last|"
+    r"Any"
     r")\s*\(",
     re.IGNORECASE,
 )
@@ -1090,6 +1115,105 @@ def issues_pivot_missing_rows_and_columns(spec: dict) -> list[tuple[str, str]]:
     return issues
 
 
+# Maps the plain-aggregate function name used in the `<Fn>(If(...))`
+# anti-pattern to its native `*If` replacement + a null-behavior note.
+# Only `Sum`→`SumIf` actually changes null-vs-zero behavior on rewrite
+# (see formulas.md → "Conditional aggregates" for why): the anti-pattern
+# is only sensibly written with a `0` else-branch for `Sum` (a `0`
+# else-branch on `Min`/`Max`/`Avg` would corrupt the result), so those
+# four already return NULL on an empty match today, same as their `*If`
+# counterparts. `CountDistinctIf`'s empty-match behavior isn't
+# explicitly documented by Sigma either way — flagged defensively.
+_CONDITIONAL_AGG_NATIVE_FORM = {
+    "sum": (
+        "SumIf(<value>, <condition>)",
+        "returns NULL (not 0) on an empty match — if the original used "
+        "a `0` else-branch, wrap the rewrite: Zn(SumIf(<value>, <condition>))",
+    ),
+    "count": (
+        "CountIf(<condition>)",
+        "returns 0 on an empty match, same as the composed form — no "
+        "null-behavior change",
+    ),
+    "countdistinct": (
+        "CountDistinctIf(<value>, <condition>)",
+        "empty-match behavior isn't explicitly documented by Sigma; "
+        "verify before assuming parity, and wrap in Coalesce(..., 0) "
+        "defensively if a non-null result is required",
+    ),
+    "avg": (
+        "AvgIf(<value>, <condition>)",
+        "returns NULL on an empty match, same as the composed form "
+        "(assuming a Null, not 0, else-branch) — no null-behavior change",
+    ),
+    "min": (
+        "MinIf(<value>, <condition>)",
+        "returns NULL on an empty match, same as the composed form "
+        "(assuming a Null, not 0, else-branch) — no null-behavior change",
+    ),
+    "max": (
+        "MaxIf(<value>, <condition>)",
+        "returns NULL on an empty match, same as the composed form "
+        "(assuming a Null, not 0, else-branch) — no null-behavior change",
+    ),
+}
+
+_CONDITIONAL_AGG_ANTIPATTERN = re.compile(
+    r"\b(Sum|CountDistinct|Count|Avg|Min|Max)\s*\(\s*If\s*\(",
+    re.IGNORECASE,
+)
+
+
+def issues_conditional_aggregate_antipattern(spec: dict) -> list[tuple[str, str]]:
+    """Warn on the `Sum(If(...))`-style composition where a native
+    Sigma `*If` conditional-aggregate function exists instead.
+
+    Until 2026-08-30, this skill's own formula reference never
+    documented Sigma's native conditional-aggregate family (`SumIf`,
+    `CountIf`, `CountDistinctIf`, `AvgIf`, `MinIf`, `MaxIf`) — so the
+    only way this skill ever taught expressing a conditional aggregate
+    was composing a plain aggregate around a nested `If(...)`:
+    `Sum(If(<cond>, <x>, 0))`, `Count(If(<cond>, ...))`,
+    `CountDistinct(If(<cond>, <x>, Null))`, and the `Avg`/`Min`/`Max`
+    equivalents. That composition compiles and renders — this is not a
+    validity problem — but it's non-idiomatic now that the native form
+    is documented, and (for `Sum` specifically) the two forms have
+    different null behavior on an empty match. See
+    `reference/specification/formulas.md` → "Conditional aggregates —
+    the `*If` family" for the full mapping this warning references.
+
+    WARN-level, not FAIL: flags working, non-idiomatic output, not a
+    broken spec.
+    """
+    issues = []
+    for pi, el in _all_elements(spec):
+        for col in el.get("columns") or []:
+            formula = col.get("formula") or ""
+            if not formula:
+                continue
+            seen = set()
+            for m in _CONDITIONAL_AGG_ANTIPATTERN.finditer(formula):
+                plain_fn = m.group(1)
+                key = plain_fn.lower()
+                if key in seen:
+                    continue
+                seen.add(key)
+                native, null_note = _CONDITIONAL_AGG_NATIVE_FORM.get(
+                    key, (f"{plain_fn}If(...)", "verify null behavior before relying on it")
+                )
+                col_label = col.get("name") or col.get("id") or "(unnamed)"
+                issues.append((
+                    "warn",
+                    f"elements[{pi}] ({el.get('id')}) / column '{col_label}': "
+                    f"formula uses the `{plain_fn}(If(...))` composition — "
+                    f"Sigma has a native conditional-aggregate form for this, "
+                    f"`{native}`. Prefer the native form ({null_note}). See "
+                    f"reference/specification/formulas.md → 'Conditional "
+                    f"aggregates — the *If family'. Formula: {formula}"
+                ))
+    return issues
+
+
 def _load_spec(path: str) -> dict:
     """Load a spec from JSON or YAML.
 
@@ -1150,6 +1274,7 @@ def main() -> None:
         ("description-object-on-kpi-and-table", lambda: issues_description_object_on_kpi_and_table(spec)),
         ("pivot-missing-rows-and-columns", lambda: issues_pivot_missing_rows_and_columns(spec)),
         ("channel-exclusivity",       lambda: issues_channel_exclusivity(spec)),
+        ("conditional-aggregate-antipattern", lambda: issues_conditional_aggregate_antipattern(spec)),
     ]:
         for level, msg in fn():
             all_issues.append((level, tag, msg))
