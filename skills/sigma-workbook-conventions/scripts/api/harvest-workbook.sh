@@ -29,7 +29,7 @@ is_uuid() { [[ "$1" =~ ^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]
 if is_uuid "$input"; then
   wb_id="$input"
   # Need the name for the slug — pull metadata.
-  wb_name=$("$(dirname "$0")/publish-workbook.sh" get-meta "$wb_id" | python3 -c 'import json,sys; d=json.load(sys.stdin); print(d.get("name",""))')
+  wb_name=$("$(dirname "$0")/publish-workbook.sh" get-meta "$wb_id" | "$SIGMA_PYTHON" -c 'import json,sys; d=json.load(sys.stdin); print(d.get("name",""))')
 else
   echo "Resolving urlId '$input'…" >&2
   meta=$("$(dirname "$0")/find-file-by-urlid.sh" "$input")
@@ -37,8 +37,8 @@ else
     echo "harvest-workbook: urlId '$input' not found via /v2/files scan" >&2
     exit 1
   fi
-  wb_id=$(echo "$meta" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("id",""))')
-  wb_name=$(echo "$meta" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("name",""))')
+  wb_id=$(echo "$meta" | "$SIGMA_PYTHON" -c 'import json,sys; print(json.load(sys.stdin).get("id",""))')
+  wb_name=$(echo "$meta" | "$SIGMA_PYTHON" -c 'import json,sys; print(json.load(sys.stdin).get("name",""))')
   if [ -z "$wb_id" ]; then
     echo "harvest-workbook: could not extract workbook id from /v2/files entry" >&2
     exit 1
@@ -46,7 +46,7 @@ else
 fi
 
 # Compute slug. lowercase, replace non-alnum with -, collapse, trim.
-default_slug=$(echo "$wb_name" | python3 -c '
+default_slug=$(echo "$wb_name" | "$SIGMA_PYTHON" -c '
 import re, sys
 s = sys.stdin.read().strip().lower()
 s = re.sub(r"[^a-z0-9]+", "-", s).strip("-")
@@ -77,8 +77,8 @@ set -e
 # message. Sigma returns 500 with `code: service_error` on workbooks
 # whose UI features the spec serializer can't represent (confirmed
 # trigger: pivot conditional formatting; suspected: maps, color-by).
-if python3 -c "import json,sys; d=json.load(open(sys.argv[1])); sys.exit(0 if d.get('code')=='service_error' else 1)" "$out_dir/spec.json" 2>/dev/null; then
-  err_msg=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1])).get('message',''))" "$out_dir/spec.json" 2>/dev/null)
+if "$SIGMA_PYTHON" -c "import json,sys; d=json.load(open(sys.argv[1])); sys.exit(0 if d.get('code')=='service_error' else 1)" "$out_dir/spec.json" 2>/dev/null; then
+  err_msg=$("$SIGMA_PYTHON" -c "import json,sys; print(json.load(open(sys.argv[1])).get('message',''))" "$out_dir/spec.json" 2>/dev/null)
   echo "" >&2
   echo "✗ GET-spec returned service_error for this workbook (exit=$get_exit):" >&2
   echo "    $err_msg" >&2
@@ -109,7 +109,7 @@ cat > "$out_dir/source.json" <<EOF
 EOF
 
 # Generate manifest.
-python3 "$skill_root/scripts/workbook-manifest.py" "$out_dir/spec.json" --out "$out_dir/manifest.md"
+"$SIGMA_PYTHON" "$skill_root/scripts/workbook-manifest.py" "$out_dir/spec.json" --out "$out_dir/manifest.md"
 
 echo "" >&2
 echo "✓ harvested to workbooks/harvest/$slug/" >&2

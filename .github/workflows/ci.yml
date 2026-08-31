@@ -1,0 +1,207 @@
+name: CI
+
+# Quoted "on" -- unquoted `on:` is parsed as the boolean `true` by strict
+# YAML 1.1 loaders (PyYAML, yamllint, etc.); GitHub's own workflow parser
+# special-cases the bare form so it works either way, but quoting avoids
+# the ambiguity outright.
+#
+# workflow_dispatch gives a manual "Run workflow" button under the Actions
+# tab in GitHub's UI -- no CLI/API call needed to trigger a run by hand.
+"on":
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # --- validate-spec.py over every example/eval/exemplar spec ---
+      # workbooks/_template/spec.json is deliberately excluded from this
+      # glob set -- it's a 3-line placeholder that legitimately fails the
+      # `elements-placed-in-layout` check (no layout yet). That's expected,
+      # not a regression; don't add it here and don't "fix" the template.
+      - name: validate-spec.py over examples/evals/exemplars (non-Windows)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          set -euo pipefail
+          fail=0
+          for f in skills/sigma-workbook-conventions/examples/*.json evals/*.spec.json workbooks/_exemplars/*.json; do
+            echo "validating $f"
+            python3 skills/sigma-workbook-conventions/scripts/validate-spec.py "$f" || fail=1
+          done
+          exit "$fail"
+
+      - name: validate-spec.py over examples/evals/exemplars (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $fail = 0
+          $files = @()
+          $files += Get-ChildItem skills/sigma-workbook-conventions/examples/*.json
+          $files += Get-ChildItem evals/*.spec.json
+          $files += Get-ChildItem workbooks/_exemplars/*.json
+          foreach ($f in $files) {
+            Write-Host "validating $($f.FullName)"
+            python skills/sigma-workbook-conventions/scripts/validate-spec.py $f.FullName
+            if ($LASTEXITCODE -ne 0) { $fail = 1 }
+          }
+          exit $fail
+
+      # --- workbook-manifest.py smoke test ---
+      # Deliberately targets evals/01-... rather than an examples/*.json or
+      # workbooks/_exemplars/*.json file: every current file in those two
+      # directories already trips workbook-manifest.py's "unknown top-level
+      # keys: ['elements', 'settings']" warning -- its SPEC_KEYS allowlist
+      # predates publish-workbook.sh's 2026-08-10 document-shape change and
+      # hasn't caught up. That's a real, pre-existing gap in
+      # workbook-manifest.py itself, out of scope for this CI-wiring task
+      # (and examples/evals/workbooks content is out of scope to edit here
+      # regardless) -- gating this smoke test on it would make the step
+      # fail on day one for a reason unrelated to any change in this PR.
+      # evals/01-... has no such drift. The `grep -v "_Manifest generated"`
+      # filter mirrors the one harvest-workbook.sh already uses -- the
+      # manifest's own trailing usage note literally contains the string
+      # "UNKNOWN ELEMENT KIND" as an instruction to the reader, not a
+      # finding, and would otherwise false-positive every run.
+      - name: workbook-manifest.py smoke test (non-Windows)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 skills/sigma-workbook-conventions/scripts/workbook-manifest.py \
+            evals/01-data-model-multi-page-profitability.spec.json --out /tmp/manifest-smoke.md
+          hits=$(grep -E "⚠️|UNKNOWN ELEMENT KIND" /tmp/manifest-smoke.md | grep -v "_Manifest generated" || true)
+          if [ -n "$hits" ]; then
+            echo "Schema drift detected in workbook-manifest.py output:" >&2
+            echo "$hits" >&2
+            exit 1
+          fi
+
+      - name: workbook-manifest.py smoke test (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          python skills/sigma-workbook-conventions/scripts/workbook-manifest.py evals/01-data-model-multi-page-profitability.spec.json --out manifest-smoke.md
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+          $hits = Select-String -Path manifest-smoke.md -Pattern "UNKNOWN ELEMENT KIND", "⚠" |
+                  Where-Object { $_.Line -notmatch "_Manifest generated" }
+          if ($hits) {
+            Write-Host "Schema drift detected in workbook-manifest.py output:"
+            $hits | ForEach-Object { Write-Host $_.Line }
+            exit 1
+          }
+
+      # --- .cortex/ mirror-drift gate ---
+      - name: .cortex mirror drift gate (non-Windows)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 skills/sigma-workbook-conventions/scripts/sync-cortex-mirror.py
+          git diff --exit-code .cortex/
+
+      - name: .cortex mirror drift gate (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          python skills/sigma-workbook-conventions/scripts/sync-cortex-mirror.py
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+          git diff --exit-code .cortex/
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+
+      # --- bash -n over every .sh file in the repo ---
+      - name: bash -n over every .sh file
+        shell: bash
+        run: |
+          set -euo pipefail
+          fail=0
+          while IFS= read -r -d '' f; do
+            bash -n "$f" || { echo "Syntax error: $f" >&2; fail=1; }
+          done < <(find . -path ./.git -prune -o -type f -name '*.sh' -print0)
+          exit "$fail"
+
+      # --- python3 -m py_compile over every .py file in the repo ---
+      - name: py_compile every .py file (non-Windows)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          set -euo pipefail
+          fail=0
+          while IFS= read -r -d '' f; do
+            python3 -m py_compile "$f" || fail=1
+          done < <(find . -path ./.git -prune -o -type f -name '*.py' -print0)
+          exit "$fail"
+
+      - name: py_compile every .py file (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $fail = 0
+          Get-ChildItem -Path . -Recurse -File -Filter *.py |
+            Where-Object { $_.FullName -notmatch '\\\.git\\' } |
+            ForEach-Object {
+              python -m py_compile $_.FullName
+              if ($LASTEXITCODE -ne 0) { $fail = 1 }
+            }
+          exit $fail
+
+      # --- JSON parse validity over every .json file, excluding .git/ ---
+      - name: JSON validity over every .json file (non-Windows)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          set -euo pipefail
+          fail=0
+          while IFS= read -r -d '' f; do
+            python3 -c "import json,sys; json.load(open(sys.argv[1], encoding='utf-8'))" "$f" \
+              || { echo "Invalid JSON: $f" >&2; fail=1; }
+          done < <(find . -path ./.git -prune -o -type f -name '*.json' -print0)
+          exit "$fail"
+
+      - name: JSON validity over every .json file (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $fail = 0
+          Get-ChildItem -Path . -Recurse -File -Filter *.json |
+            Where-Object { $_.FullName -notmatch '\\\.git\\' } |
+            ForEach-Object {
+              python -c "import json,sys; json.load(open(sys.argv[1], encoding='utf-8'))" $_.FullName
+              if ($LASTEXITCODE -ne 0) { Write-Host "Invalid JSON: $($_.FullName)"; $fail = 1 }
+            }
+          exit $fail
+
+      # --- exec-bit assertion: every scripts/api/*.sh except _env.sh (which
+      # --- is meant to be sourced, not executed) must be mode 100755 ---
+      - name: exec-bit assertion on scripts/api/*.sh
+        shell: bash
+        run: |
+          set -euo pipefail
+          fail=0
+          while read -r mode _ _ path; do
+            base="${path##*/}"
+            [ "$base" = "_env.sh" ] && continue
+            if [ "$mode" != "100755" ]; then
+              echo "Missing exec bit (mode $mode): $path" >&2
+              fail=1
+            fi
+          done < <(git ls-files -s skills/sigma-workbook-conventions/scripts/api/*.sh)
+          exit "$fail"
+
+      # --- doctor.sh smoke run -- confirm it runs; its exit code isn't
+      # --- enforced across platforms yet (see doctor.sh's own comments) ---
+      - name: doctor.sh smoke run
+        shell: bash
+        run: bash skills/sigma-workbook-conventions/scripts/doctor.sh || true

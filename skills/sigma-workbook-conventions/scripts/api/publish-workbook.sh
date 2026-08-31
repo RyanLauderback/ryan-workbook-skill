@@ -75,7 +75,7 @@ wrap_flat_to_wire() {
   # `--data-binary "@<file>"` avoids ARG_MAX limits on large specs, matching
   # the existing @-file pattern below. Passes through unchanged if the input
   # already has a top-level "document" key.
-  python3 -c '
+  "$SIGMA_PYTHON" -c '
 import json, sys
 spec = json.load(open(sys.argv[1]))
 if "document" in spec:
@@ -108,7 +108,7 @@ unwrap_wire_to_flat() {
   # (`python3 - <<'PY' ... PY`) -- the heredoc form makes the heredoc content
   # itself python's stdin (the script source), leaving nothing for the piped
   # response body to land on when the script then tries to read sys.stdin.
-  python3 -c '
+  "$SIGMA_PYTHON" -c '
 import json, sys
 d = json.load(sys.stdin)
 doc = d.pop("document", None)
@@ -139,7 +139,7 @@ case "$cmd" in
       exit 2
     fi
     repo_root="$(cd "$(dirname "$0")/../.." && pwd)"
-    python3 "$repo_root/scripts/validate-spec.py" "$spec"
+    "$SIGMA_PYTHON" "$repo_root/scripts/validate-spec.py" "$spec"
     # Capture the response so we can parse the workbook ID for the audit,
     # then echo it back so callers still see the JSON they expect.
     #
@@ -179,7 +179,7 @@ case "$cmd" in
       exit 2
     fi
     repo_root="$(cd "$(dirname "$0")/../.." && pwd)"
-    python3 "$repo_root/scripts/validate-spec.py" "$spec"
+    "$SIGMA_PYTHON" "$repo_root/scripts/validate-spec.py" "$spec"
     # See the matching comment in the `post` case above — set +e around
     # the capture so a failed PUT's error body still gets echoed before
     # the script exits, instead of set -e silently discarding it.

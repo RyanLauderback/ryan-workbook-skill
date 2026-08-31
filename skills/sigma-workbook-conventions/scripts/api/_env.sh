@@ -55,11 +55,13 @@ for _sigma_bin in curl python3; do
 done
 unset _sigma_bin
 
-# SIGMA_PYTHON: resolved once here so a future portability pass (native
-# Windows, where the interpreter is `python`/`py -3`, not `python3`) is a
-# find-replace across scripts/ rather than a design change. Not yet
-# threaded through call sites — this repo currently targets macOS/Linux/WSL,
-# where `python3` is always present.
+# SIGMA_PYTHON: resolved once here and threaded through every python3
+# invocation in scripts/api/*.sh (and scripts/doctor.sh). On today's
+# supported hosts (macOS/Linux/WSL/Git Bash) this always resolves to
+# python3, since the preflight loop above already hard-requires it — the
+# shim exists so a future native interpreter name (`python`/`py -3`, if
+# this bash layer is ever ported past Git Bash/WSL) is a one-line change
+# here instead of a find-replace across every call site.
 SIGMA_PYTHON="${SIGMA_PYTHON:-$(command -v python3 || command -v python)}"
 export SIGMA_PYTHON
 

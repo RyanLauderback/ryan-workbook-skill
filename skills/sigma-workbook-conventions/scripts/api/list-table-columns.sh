@@ -13,7 +13,7 @@ fi
 
 curl -fsS -H "Authorization: Bearer $SIGMA_API_TOKEN" \
   "$SIGMA_BASE_URL/v2/connections/tables/$1/columns?pageSize=200" \
-  | python3 -c '
+  | "$SIGMA_PYTHON" -c '
 import sys, json
 d = json.load(sys.stdin)
 out = [{"name": c.get("name"), "type": (c.get("type") or {}).get("type")} for c in d.get("entries", [])]

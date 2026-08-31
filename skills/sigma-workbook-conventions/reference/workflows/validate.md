@@ -19,7 +19,7 @@ Load this before any POST or PUT.
 ## 1. Pre-submit — `${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/validate-spec.py`
 
 ```bash
-${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/validate-spec.py workbooks/<name>/spec.json
+python3 ${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/validate-spec.py workbooks/<name>/spec.json
 ```
 
 Accepts `.json` or `.yaml`/`.yml` (YAML needs PyYAML or `yq` on PATH —

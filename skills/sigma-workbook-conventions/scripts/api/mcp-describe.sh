@@ -44,7 +44,7 @@ USAGE
   exit 2
 fi
 
-python3 - "$SIGMA_BASE_URL" "$SIGMA_API_TOKEN" "$@" <<'PY'
+"$SIGMA_PYTHON" - "$SIGMA_BASE_URL" "$SIGMA_API_TOKEN" "$@" <<'PY'
 import json, re, sys, urllib.error, urllib.request
 
 base, tok, kind, *ids = sys.argv[1:]

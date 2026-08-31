@@ -28,7 +28,7 @@ _resp=$(sigma_curl "$SIGMA_BASE_URL/v2/files?limit=5") || {
 _org=$(echo "$SIGMA_BASE_URL" | sed -E 's#^https?://([^/]+).*#\1#')
 echo "Authenticated to $_org."
 echo "Recent files accessible to this account (up to 5):"
-echo "$_resp" | python3 -c '
+echo "$_resp" | "$SIGMA_PYTHON" -c '
 import sys, json
 d = json.load(sys.stdin)
 entries = d.get("entries", [])[:5]

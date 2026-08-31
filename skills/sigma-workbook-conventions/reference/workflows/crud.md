@@ -160,7 +160,7 @@ The canonical iteration pattern:
 # 1. Edit workbooks/<name>/spec.json on disk (using your original IDs)
 
 # 2. Validate
-${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/validate-spec.py workbooks/<name>/spec.json
+python3 ${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/validate-spec.py workbooks/<name>/spec.json
 
 # 3. PUT (uses the wrapper for validation + auth)
 ${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/api/publish-workbook.sh put <wb-id> workbooks/<name>/spec.json
