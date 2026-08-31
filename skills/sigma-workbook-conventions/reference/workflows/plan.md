@@ -243,7 +243,7 @@ That contract puts the burden on the agent:
    YAML — the API accepts both; this skill's exemplars use JSON).
    Follow the rules in `reference/conventions.md` and the per-element
    shape docs in `reference/specification/`.
-2. **Validate** via `${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/validate-spec.py workbooks/<name>/spec.json`.
+2. **Validate** via `python3 ${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/validate-spec.py workbooks/<name>/spec.json`.
    Fix everything reported.
 3. **POST** via `${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/api/publish-workbook.sh post workbooks/<name>/spec.json`.
    The wrapper runs validate-spec.py, POSTs, then auto-runs

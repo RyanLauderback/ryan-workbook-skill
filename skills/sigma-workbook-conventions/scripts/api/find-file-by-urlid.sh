@@ -30,7 +30,7 @@ if [ "$#" -ne 1 ]; then
   exit 2
 fi
 
-python3 - "$SIGMA_BASE_URL" "$SIGMA_API_TOKEN" "$1" <<'PY'
+"$SIGMA_PYTHON" - "$SIGMA_BASE_URL" "$SIGMA_API_TOKEN" "$1" <<'PY'
 import json, sys, urllib.parse, urllib.request
 
 base, tok, target = sys.argv[1], sys.argv[2], sys.argv[3]

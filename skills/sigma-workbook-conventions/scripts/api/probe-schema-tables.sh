@@ -26,7 +26,7 @@ if [ "$#" -eq 0 ]; then
     EMPLOYEE EMPLOYEES STORE STORES
 fi
 
-python3 - "$SIGMA_BASE_URL" "$SIGMA_API_TOKEN" "$CONN" "$DB" "$SCHEMA" "$@" <<'PY'
+"$SIGMA_PYTHON" - "$SIGMA_BASE_URL" "$SIGMA_API_TOKEN" "$CONN" "$DB" "$SCHEMA" "$@" <<'PY'
 import json, sys, urllib.parse, urllib.request, urllib.error
 from concurrent.futures import ThreadPoolExecutor
 

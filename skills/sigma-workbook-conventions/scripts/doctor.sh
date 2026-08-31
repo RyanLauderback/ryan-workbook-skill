@@ -11,8 +11,11 @@
 # script, for that). Run this first on an unfamiliar host before anything
 # else in this directory or its api/ subfolder.
 #
-# This repo currently targets macOS, Linux, and WSL. Native Windows
-# (outside WSL) is not supported — see docs/conventions.md.
+# This repo targets macOS, Linux, WSL, and Git Bash/MSYS2 on native
+# Windows for this bash-based scripts/api/ layer (the pure-Python tools —
+# validate-spec.py, workbook-manifest.py, sigma-resolve.py,
+# sync-cortex-mirror.py — also run under a native Windows `python`/`py -3`
+# with no bash at all). See docs/conventions.md -> "Platform support".
 
 set -uo pipefail  # not -e: we want to keep checking after a failure
 
@@ -37,7 +40,14 @@ case "$(uname -s)" in
       ok "Linux ($(uname -r))"
     fi
     ;;
-  *) warn "Unrecognized uname -s: $(uname -s) — this repo targets macOS/Linux/WSL only." ;;
+  MINGW*|MSYS*|CYGWIN*)
+    # Git Bash (Git for Windows) and MSYS2 report uname -s as
+    # MINGW64_NT-..., MSYS_NT-..., or CYGWIN_NT-... depending on the
+    # environment. This is a fully recognized, supported host for the
+    # scripts/api/*.sh bash layer (see docs/conventions.md -> "Platform
+    # support") -- not the generic "unrecognized platform" case below.
+    ok "Windows via Git Bash/MSYS ($(uname -s))" ;;
+  *) warn "Unrecognized uname -s: $(uname -s) — this repo targets macOS/Linux/WSL/Git Bash." ;;
 esac
 
 echo ""
@@ -67,8 +77,12 @@ done
 echo ""
 echo "== Python =="
 if command -v python3 >/dev/null 2>&1; then
-  ok "python3 -> $(python3 --version 2>&1)"
-  if python3 -c "import yaml" 2>/dev/null; then
+  # SIGMA_PYTHON: same shim as scripts/api/_env.sh's -- doctor.sh doesn't
+  # source _env.sh (it's meant to run standalone, first, before anything
+  # else), so resolve it locally for the actual invocations below.
+  SIGMA_PYTHON="${SIGMA_PYTHON:-$(command -v python3)}"
+  ok "python3 -> $("$SIGMA_PYTHON" --version 2>&1)"
+  if "$SIGMA_PYTHON" -c "import yaml" 2>/dev/null; then
     ok "PyYAML available"
   else
     warn "PyYAML not installed — validate-spec.py/workbook-manifest.py fall back to yq for YAML input"

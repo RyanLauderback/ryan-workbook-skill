@@ -207,8 +207,12 @@ open_browser() {
 # lands on it directly and the code never has to be read back from the address
 # bar. Bind failure or no python3 -> CODE stays empty and we fall back below.
 if command -v python3 >/dev/null 2>&1; then
+  # This script runs before auth, so _env.sh (which normally resolves
+  # SIGMA_PYTHON) hasn't been sourced yet -- resolve it locally, inside the
+  # branch that already confirmed python3 is present, so it's never empty.
+  SIGMA_PYTHON="${SIGMA_PYTHON:-$(command -v python3)}"
   LISTENER_OUT=$(mktemp)
-  python3 - "$REDIRECT_PORT" >"$LISTENER_OUT" 2>/dev/null <<'PYEOF' &
+  "$SIGMA_PYTHON" - "$REDIRECT_PORT" >"$LISTENER_OUT" 2>/dev/null <<'PYEOF' &
 import socket, sys, time
 
 port = int(sys.argv[1])

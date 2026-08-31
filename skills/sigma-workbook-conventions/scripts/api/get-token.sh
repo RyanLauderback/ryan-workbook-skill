@@ -8,6 +8,13 @@
 # (exported by the environment, or loaded from .env by load-env.sh).
 set -euo pipefail
 
+# SIGMA_PYTHON: normally already exported by _env.sh, the usual caller of
+# this script (`bash "$_gettoken"` after _env.sh's own preflight resolves
+# and exports it). Resolved again here too, defensively, so a direct/
+# standalone invocation of get-token.sh doesn't hit an unbound-variable
+# error under `set -u`.
+SIGMA_PYTHON="${SIGMA_PYTHON:-$(command -v python3 || command -v python || true)}"
+
 if [ -z "${SIGMA_BASE_URL:-}" ] || [ -z "${SIGMA_CLIENT_ID:-}" ] || [ -z "${SIGMA_CLIENT_SECRET:-}" ]; then
   _root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
   if [ -f "$_root/.env" ]; then
@@ -24,7 +31,7 @@ _token=$(curl -sS -X POST "$SIGMA_BASE_URL/v2/auth/token" \
   --data-urlencode "grant_type=client_credentials" \
   --data-urlencode "client_id=$SIGMA_CLIENT_ID" \
   --data-urlencode "client_secret=$SIGMA_CLIENT_SECRET" \
-  | python3 -c 'import sys,json; print(json.load(sys.stdin).get("access_token",""))')
+  | "$SIGMA_PYTHON" -c 'import sys,json; print(json.load(sys.stdin).get("access_token",""))')
 
 if [ -z "$_token" ]; then
   echo "get-token.sh: token exchange returned empty (check credentials / SIGMA_BASE_URL region)." >&2

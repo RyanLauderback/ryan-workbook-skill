@@ -11,7 +11,7 @@ source "$(dirname "$0")/_env.sh"
 NAME_FILTER="${1:-}"
 
 # Paginate; Sigma returns up to 1000 per page on /v2/files.
-python3 - "$SIGMA_BASE_URL" "$SIGMA_API_TOKEN" "$NAME_FILTER" <<'PY'
+"$SIGMA_PYTHON" - "$SIGMA_BASE_URL" "$SIGMA_API_TOKEN" "$NAME_FILTER" <<'PY'
 import json, os, sys, urllib.parse, urllib.request
 
 base, tok, name_filter = sys.argv[1], sys.argv[2], sys.argv[3]

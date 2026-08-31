@@ -88,10 +88,32 @@ You shouldn't have to look up internal UUIDs, schema paths, or connection IDs by
 
 Per-user workbook iterations (`workbooks/<name>/`) are gitignored; only `workbooks/_template/` and `workbooks/_exemplars/` are repo-tracked. See `.gitignore`.
 
+## Platform support
+
+macOS, Linux, Windows via WSL, and native Windows are all supported, split
+by layer:
+
+- The pure-Python tools (`validate-spec.py`, `workbook-manifest.py`,
+  `sigma-resolve.py`, `sync-cortex-mirror.py`) run natively on Windows —
+  no bash needed, just `python`/`py -3` on `PATH`.
+- The bash-based `scripts/api/*` layer (auth, discovery, workbook
+  publish) needs a real bash — **Git Bash** (bundled with Git for
+  Windows) or **WSL** — since its auth flow relies on bash-only features
+  (`export -f`, `/dev/tcp`, `/dev/tty`, OS keychain CLIs) with no
+  PowerShell port planned.
+
+CI (`.github/workflows/ci.yml`) runs on `ubuntu-latest`, `macos-latest`,
+and `windows-latest` on every push/PR (and via a manual "Run workflow"
+button under the Actions tab — `workflow_dispatch`), so this claim is
+enforced, not just documented. See `docs/conventions.md` → "Platform
+support" for the full breakdown, and run
+`bash skills/sigma-workbook-conventions/scripts/doctor.sh` first on an
+unfamiliar host.
+
 ## The build loop, end to end
 
 1. **Authenticate.** Interactive CLI: `eval "$(skills/sigma-workbook-conventions/scripts/api/browser-login.sh)"` — no admin-provisioned credential needed, and the path that unblocks `/mcp/v2`. Claude Code web: nothing to do — the platform injects `SIGMA_CLIENT_ID`/`SIGMA_CLIENT_SECRET`/`SIGMA_BASE_URL` as env vars automatically. `skills/sigma-workbook-conventions/scripts/api/*.sh` scripts self-bootstrap on first call (use an already-exported `SIGMA_API_TOKEN`, or, if the client-credentials vars are already exported, mint one via the repo-local `get-token.sh`, caching at a per-user `$SIGMA_TOKEN_CACHE` path). No env-prelude needed from the caller and the same code path runs in CLI and web.
-2. **Discover & inspect.** Claude routes by prompt shape: name/topic → `skills/sigma-workbook-conventions/scripts/api/mcp-search.sh`; URL slug → `skills/sigma-workbook-conventions/scripts/api/find-file-by-urlid.sh`; messy prose → `skills/sigma-workbook-conventions/scripts/sigma-resolve.py`. Then `skills/sigma-workbook-conventions/scripts/api/mcp-describe.sh datamodel-element <dm> <el>` pulls the column types, descriptions, and metrics catalog for the data inventory. Ambiguity surfaces as named candidates to disambiguate, not endpoint errors.
+2. **Discover & inspect.** Claude routes by prompt shape: name/topic → `skills/sigma-workbook-conventions/scripts/api/mcp-search.sh`; URL slug → `skills/sigma-workbook-conventions/scripts/api/find-file-by-urlid.sh`; messy prose → `python3 skills/sigma-workbook-conventions/scripts/sigma-resolve.py`. Then `skills/sigma-workbook-conventions/scripts/api/mcp-describe.sh datamodel-element <dm> <el>` pulls the column types, descriptions, and metrics catalog for the data inventory. Ambiguity surfaces as named candidates to disambiguate, not endpoint errors.
 3. **Plan.** Claude drafts the data inventory, chart inference, controls, and layout sketch (per the plan-first workflow in the conventions skill) and waits for explicit approval.
 4. **Author.** `workbooks/<name>/spec.json` with two-tier sourcing (raw → derived → viz), `name`-on-every-cross-referenced-column, the documented control shapes, and one **top-level** `layout` XML with all `<Page>` siblings nested under it.
 5. **Publish.** `skills/sigma-workbook-conventions/scripts/api/publish-workbook.sh post workbooks/<name>/spec.json` — the wrapper auto-runs `validate-spec.py` first (17 checks), then POSTs to `/v2/workbooks/spec`. Prints `{ workbookId, url, path }` on success. Full check list in `reference/workflows/validate.md`.

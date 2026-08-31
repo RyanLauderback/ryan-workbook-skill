@@ -74,7 +74,7 @@ if ! $QUERY_SET; then
   exit 2
 fi
 
-python3 - "$SIGMA_BASE_URL" "$SIGMA_API_TOKEN" "$QUERY" "$TYPES" "$LIMIT" <<'PY'
+"$SIGMA_PYTHON" - "$SIGMA_BASE_URL" "$SIGMA_API_TOKEN" "$QUERY" "$TYPES" "$LIMIT" <<'PY'
 import json, sys, urllib.error, urllib.parse, urllib.request
 
 base, tok, query, types_csv, limit_s = sys.argv[1:]
