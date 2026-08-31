@@ -14,6 +14,7 @@
     "Containers used heavily for grouping (header bar, KPI row, chart row, detail row) — the page reads as logical blocks, not a flat grid.",
     "Drill-down passthrough columns declared on every chart/KPI/pivot per the explicit-column-declaration rule.",
     "Zero `DivideSafe(...)` references. Safe-divide patterns use `If([D] = 0, Null, [N]/[D])` or `Zn(...)`.",
+    "Conditional aggregates use the native `*If` form (`SumIf`, `CountIf`, `CountDistinctIf`, `AvgIf`, `MinIf`, `MaxIf`) rather than a hand-rolled `Sum(If(...))`/`Count(If(...))` composition.",
     "Layout: ONE top-level `layout` field, single `<?xml ?>` + single `<Page>` (since it's one page). No per-page `layout` field.",
     "Plan-first workflow honored: written plan proposed and approved before POST.",
     "`validate-spec.py` passes pre-POST.",

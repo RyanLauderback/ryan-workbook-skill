@@ -24,7 +24,7 @@ Reference rules:
 Language:
 
 - [Operators](#operators) (arithmetic, boolean, string concat)
-- [Aggregation functions](#aggregation-functions)
+- [Aggregation functions](#aggregation-functions) (incl. [conditional aggregates — the `*If` family](#conditional-aggregates--the-if-family))
 - [Date functions](#date-functions) (incl. [anchoring "today" to `Max([Date])` for demo/synthetic data](#anchoring-today-for-demo--historical--synthetic-data--maxdate-not-today))
 - [Conditional](#conditional)
 - [Text functions](#text-functions)
@@ -309,18 +309,46 @@ above.
 
 ## Aggregation functions
 
+> **Common, verified patterns — not necessarily exhaustive.** These
+> tables document functions this skill has verified, not Sigma's full
+> catalog. If the function you need isn't listed, **look it up** (see
+> "Looking up Sigma functions" below) rather than guessing. Two names
+> have already shipped here as if real and failed silently at render —
+> `DivideSafe` and bare `Percentile` (both compiled to `'Unknown
+> function <Name>'`, invisible to POST/`validate-spec.py`/
+> `verify-workbook.sh`). Treat any unfamiliar name the same way.
+
+Verified against Sigma's own aggregate-functions catalog
+(`https://help.sigmacomputing.com/docs/aggregate-functions`, confirmed
+2026-08-30) — 30 functions total, grouped below as plain aggregates
+and the `*If` conditional family.
+
 | Function | Description |
 |---|---|
 | `Sum([col])` | Sum of values |
 | `Avg([col])` | Average of values |
-| `Count([col])` | Count of non-null values |
-| `CountDistinct([col])` | Count of distinct values |
+| `Count([col])` | Count of non-null, non-empty values |
+| `CountDistinct([col])` | Count of distinct non-null values |
 | `Min([col])` | Minimum value |
 | `Max([col])` | Maximum value |
 | `Median([col])` | Median value |
-| `PercentileCont([col], 0.95)` | Nth percentile (continuous — interpolates between values) |
-| `PercentileDisc([col], 0.95)` | Nth percentile (discrete — returns an actual value from the data) |
-| `Mode([col])` | Most frequent value |
+| `PercentileCont([col], k)` | kth percentile, continuous (interpolates between values); `k` is 0–1 |
+| `PercentileDisc([col], k)` | kth percentile, discrete (returns an actual value from the data); `k` is 0–1 |
+| `StdDev([col])` | Sample standard deviation |
+| `Variance([col])` | Sample variance (spread of distribution) |
+| `VariancePop([col])` | Population variance |
+| `Corr([colA], [colB])` | Pearson correlation coefficient between two columns |
+| `GrandTotal([col])` | Grand total across the whole result set (ignores grouping) |
+| `Subtotal([col])` | Subtotal for a column or group |
+| `PercentOfTotal([col])` | Percentage a value contributes to the specified aggregate total |
+| `SumProduct([colA], [colB], ...)` | Product of row values across the given columns, then summed |
+| `ArrayAgg([col])` | Aggregates non-null row values into a single array |
+| `ArrayAggDistinct([col])` | Aggregates distinct non-null row values into a single array |
+| `ListAgg([col])` | Joins values into a single text string |
+| `ListAggDistinct([col])` | Joins distinct values into a single text string |
+| `RegressionSlope([y], [x])` | Slope of the linear regression line |
+| `RegressionIntercept([y], [x])` | Y-intercept of the linear regression line |
+| `RegressionR2([y], [x])` | Coefficient of determination (R²) of the linear regression line |
 
 > ⚠️ `Percentile(<col>, <k>)` (no `Cont`/`Disc` suffix) does **NOT** exist in
 > Sigma — a hallucination, same failure class as the `DivideSafe` incident
@@ -335,8 +363,76 @@ above.
 > human opening the workbook, surfaces it). Use `PercentileCont`/
 > `PercentileDisc` instead — same argument order (`column, k` where `k` is
 > 0–1). See `reference/history.md` → "2026-08-04" for the full incident.
+>
+> ⚠️ `Mode(<col>)` ("most frequent value") does **NOT** exist in Sigma
+> either — confirmed 2026-08-30 against the same catalog, which has no
+> entry for it (a docs-only correction; unlike `DivideSafe`/`Percentile`,
+> nothing caught this failing live). No native substitute: approximate
+> via `Count`/`CountDistinct` + grouping, ranked by frequency (`Rank`/
+> `RankDense`), then take the top-ranked value.
+
+### Conditional aggregates — the `*If` family
+
+Six aggregate functions take a condition directly, instead of
+composing a plain aggregate with a nested `If(...)`. **Prefer these
+over the `Sum(If(<cond>, <x>, 0))`-style composition** — the native
+form is shorter and idiomatic. Verified against Sigma's own docs for
+each function (`sumif`, `countif`, `countdistinctif`, `avgif`, `minif`,
+`maxif` at `https://help.sigmacomputing.com/docs/`, confirmed
+2026-08-30).
+
+| Function | Signature | Description |
+|---|---|---|
+| `SumIf(<col>, <cond>, ...)` | value, then condition(s) | Sum of `<col>` for rows where all conditions are `True` |
+| `CountIf(<cond>, ...)` | condition(s) only — **no value argument** | Count of rows where all conditions are `True` |
+| `CountDistinctIf(<col>, <cond>, ...)` | value, then condition(s) | Count of distinct non-null `<col>` values where all conditions are `True` |
+| `AvgIf(<col>, <cond>)` | value, then condition | Average of `<col>` for rows where the condition is `True` |
+| `MinIf(<col>, <cond>)` | value, then condition | Minimum `<col>` for rows where the condition is `True` |
+| `MaxIf(<col>, <cond>)` | value, then condition | Maximum `<col>` for rows where the condition is `True` |
+
+Multiple conditions combine with `AND` by default; use `Or` inside a
+single condition for `OR` logic — `SumIf([Sales], [State] = "TX" Or
+[State] = "CA")`. A boolean column can be the condition directly, no
+comparison operator needed — `CountIf([Submitted])`.
+
+**Verified in-repo, not just in Sigma's docs** —
+`examples/data-model-sourced-multi-page-profitability-attrition.json`
+POSTs and renders clean using both shapes: `Zn(SumIf([...NII Row],
+[...Recently Closed]))` (value first, condition second — a boolean
+column here, no `= true` needed) and `CountIf(IsNotNull([...Close
+Date]))` (condition only — unlike every other aggregate here, no field
+argument at all).
+
+Rewrite map from the anti-pattern:
+
+| Anti-pattern | Native form |
+|---|---|
+| `Sum(If(<cond>, <x>, 0))` | `SumIf(<x>, <cond>)` |
+| `Count(If(<cond>, ...))` | `CountIf(<cond>)` |
+| `CountDistinct(If(<cond>, <x>, Null))` | `CountDistinctIf(<x>, <cond>)` |
+| `Avg(If(<cond>, <x>, Null))` | `AvgIf(<x>, <cond>)` |
+| `Min(If(<cond>, <x>, Null))` | `MinIf(<x>, <cond>)` |
+| `Max(If(<cond>, <x>, Null))` | `MaxIf(<x>, <cond>)` |
+
+**Null behavior differs on `Sum`→`SumIf` specifically.**
+`Sum(If(<cond>, <x>, 0))` returns `0` on zero matches; `SumIf(<x>,
+<cond>)` returns **`NULL`** (confirmed against Sigma's docs — see
+"Numeric guards" below). Wrap the rewrite: `Zn(SumIf(<x>, <cond>))`,
+not bare `SumIf(...)` — the in-repo example above already does this.
+The other five pairs don't diverge, *provided* the composed form used
+a `Null` (not `0`) `else`-branch — the only sane way to write them,
+since `0` would corrupt `Avg`/`Min`/`Max`. `CountIf` returns `0` on an
+empty match, same as the composed form; `AvgIf`/`MinIf`/`MaxIf` return
+`NULL`, also matching. `CountDistinctIf`'s empty-match behavior isn't
+documented by Sigma either way — verify before assuming parity, or
+wrap in `Coalesce(..., 0)` defensively.
 
 ## Date functions
+
+> Common, verified patterns — not necessarily exhaustive. See the
+> caveat under "Aggregation functions" above; the same rule applies
+> here: if the date function you need isn't listed, look it up (see
+> "Looking up Sigma functions" below) rather than guessing.
 
 | Function | Example |
 |---|---|
@@ -388,6 +484,9 @@ confirmed the data is live-updated through the present; only then is
 
 ## Conditional
 
+> Common, verified patterns — not necessarily exhaustive. See the
+> caveat under "Aggregation functions" above.
+
 ```
 If(<condition>, <then>, <else>)
 ```
@@ -402,7 +501,22 @@ If([Status] = "Active",  "Active",
 
 **Do not use** `Case` — use `If`.
 
+**Building a conditional *aggregate* (a single sum/count/average/etc.
+over rows matching a condition), not a per-row conditional value?**
+Don't reach for `Sum(If(<cond>, <x>, 0))` — Sigma has a native
+conditional-aggregate family for exactly this (`SumIf`, `CountIf`,
+`CountDistinctIf`, `AvgIf`, `MinIf`, `MaxIf`). See "Aggregation
+functions" above → "Conditional aggregates — the `*If` family" for the
+signatures, verified in-repo usage, and the anti-pattern rewrite map
+(including a null-behavior caveat on the `Sum`→`SumIf` rewrite
+specifically). `If(...)` itself is still correct and necessary for
+per-row conditional values — the `*If` family only replaces the
+`<Aggregate>(If(...))` composition.
+
 ## Text functions
+
+> Common, verified patterns — not necessarily exhaustive. See the
+> caveat under "Aggregation functions" above.
 
 | Function | Description |
 |---|---|

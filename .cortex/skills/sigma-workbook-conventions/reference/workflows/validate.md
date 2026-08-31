@@ -3,7 +3,7 @@
 Validation runs in three phases:
 
 1. **Pre-submit** — `${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/validate-spec.py` catches what's visible
-   in the spec text (17 checks; see the note on JSON/YAML input below).
+   in the spec text (18 checks; see the note on JSON/YAML input below).
 2. **Post-create** — `${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/api/verify-workbook.sh` catches
    unresolved / circular refs in the compiled SQL;
    `${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/api/audit-workbook-schema.sh` catches `error`-typed
@@ -42,7 +42,14 @@ the action/effect vocabulary itself. A 17th (`channel-exclusivity`) was
 added 2026-08-04 after a Wave 3 test session hit the exact channel-reuse
 rejection `reference/conventions.md` had documented since 2026-07-02 but
 flagged as "planned; not yet implemented" — the second real-session
-recurrence of the same failure mode.
+recurrence of the same failure mode. An 18th
+(`conditional-aggregate-antipattern`) was added 2026-08-30 after
+auditing this skill's aggregation-function table against Sigma's own
+docs found the `*If` conditional-aggregate family (`SumIf`, `CountIf`,
+`CountDistinctIf`, `AvgIf`, `MinIf`, `MaxIf`) had never been
+documented — so every session composed `Sum(If(cond, x, 0))` instead,
+having no other path taught to it. WARN-level, since the composed form
+still compiles and renders; it's non-idiomatic, not broken.
 
 | # | Check | What it catches |
 |---|---|---|
@@ -63,6 +70,7 @@ recurrence of the same failure mode.
 | 14 | `description-object-on-kpi-and-table` | Plain-string `description` on `kpi-chart`, `table`, `pivot-table`, or `input-table` elements. POST rejects with `Invalid object: string`. Fix: wrap as `{"text": "..."}` or `{"visibility": "hidden"}`. Chart elements accept the string form. Note: a GET-spec readback of any of these 4 kinds emits `description` as a plain string — a harvested spec must be normalized before it can be re-POSTed. Added 2026-07-02 after `inventory-health` build hit this. See `reference/specification/kpis.md` → "Description must be an object." |
 | 15 | `pivot-missing-rows-and-columns` | Pivot-tables that have `values` but neither `rowsBy` nor `columnsBy` — the pivot compiles cleanly (passes POST + verify) but renders as a single grand-total row. Fix: add at least one `rowsBy` or `columnsBy` entry (`[{"id": "<dim-col-id>"}]`). Added 2026-07-02 after `Product-and-Basket-Performance` shipped two pivots that rendered as grand-total-only in the UI. See `reference/specification/tables.md` → "Shape" (pivot section). |
 | 16 | `channel-exclusivity` | A column id bound to 2+ distinct binding channels on the same chart/map/KPI element (e.g. a region-map's `color.column` and `label[].id` both pointing at the same column). Sigma **rejects at POST** with `Column '<id>' is referenced from both 'X' and 'Y'; a column can only be on one channel at a time` — a hard failure, not a rendering quirk. FAIL-level. Covers `bar-chart`/`line-chart`/`area-chart`/`combo-chart`/`scatter-chart` (`xAxis`, `yAxis`, `color`, `size`), `pie-chart`/`donut-chart` (`value`, `color`, `holeValue`), `region-map`/`point-map`/`geography-map` (region/lat-lon/geography, `color`, `size`, `label`, `tooltip`), and `kpi-chart` (`value`). Fix: duplicate the column (same formula, a distinct id) and bind one id per channel. Added 2026-08-04 after a Wave 3 test session hit this live at POST — the second real-session recurrence since the rule was first documented (`exec-scorecard-v2`, 2026-07-02) without a validator check. See `reference/conventions.md` → "Channel exclusivity." |
+| 17 | `conditional-aggregate-antipattern` | A `formula` string uses the `Sum(If(...))` / `Count(If(...))` / `CountDistinct(If(...))` / `Avg(If(...))` / `Min(If(...))` / `Max(If(...))` composition where Sigma has a native conditional-aggregate form (`SumIf`, `CountIf`, `CountDistinctIf`, `AvgIf`, `MinIf`, `MaxIf`). **WARN-level** — the composed form compiles and renders; it's non-idiomatic, not broken. The message names the native replacement and, for the `Sum`→`SumIf` case specifically, the null-behavior caveat (`SumIf` returns `NULL`, not `0`, on an empty match — often needs `Zn(...)`). Added 2026-08-30 after this skill's own aggregation-function table was found to never document the `*If` family at all. See `reference/specification/formulas.md` → "Conditional aggregates — the `*If` family." |
 
 **What this validator does not cover, even when it exits 0** (printed as a
 footer on every run): qualified `[Source/Column]` refs are not verified —
