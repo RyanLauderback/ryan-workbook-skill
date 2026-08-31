@@ -429,16 +429,12 @@ resolution or visualization quality.
    downstream `Month([Date])` silently breaks.
    `reference/conventions.md` → "Control/column ID collision."
 5. **Function names must be verified, not guessed.** Every function
-   name used in a formula must be a real, verified Sigma function.
-   Prefer the native form when one exists (`SumIf(x, cond)`) over a
-   hand-rolled composition (`Sum(If(cond, x, 0))`) — and look up any
-   unfamiliar function via the Sigma Docs MCP before using it, rather
-   than guessing. Two functions have already shipped in this skill's
-   own tables as if real and then failed silently at render
-   (`DivideSafe`, bare `Percentile`).
+   name in a formula must be a real, verified Sigma function. Prefer
+   the native form (`SumIf(x, cond)`) over a hand-rolled composition
+   (`Sum(If(cond, x, 0))`), and look up anything unfamiliar via the
+   Sigma Docs MCP rather than guessing.
    `reference/conventions.md` → "Function names must be verified, not
-   guessed" and `reference/specification/formulas.md` → "Conditional
-   aggregates — the `*If` family."
+   guessed."
 
 The deeper edge-case checklist (explicit-`name`, rename-cascade,
 bar-chart orientation, summary-bar, two-tier sourcing) lives in

@@ -8,6 +8,7 @@
     "Bar charts with **categorical x-axis** (Segment, Tenure Bracket, Region, Risk Rating) use `orientation: \"horizontal\"` + `xAxis.sort = {by: \"<yAxis-col-id>\", direction: \"descending\"}` per the chart-orientation rule.",
     "Bar/line charts with **time-series x-axis** (e.g. `Close Month`) use vertical orientation (omit `orientation` field).",
     "Zero `DivideSafe(...)` references. Safe-divide patterns use `If([D] = 0, Null, [N]/[D])` or `Zn(...)`.",
+    "Conditional aggregates use the native `*If` form (`SumIf`, `CountIf`, `CountDistinctIf`, `AvgIf`, `MinIf`, `MaxIf`) rather than a hand-rolled `Sum(If(...))`/`Count(If(...))` composition.",
     "Customer demographics (Age, Segment, Risk Rating, Tenure, etc.) joined onto the central fact via `Lookup()` against same-page sibling dim tables — NOT via raw `[D_DATAMODEL/...]` references.",
     "Drill-down passthrough columns declared on every chart/KPI/pivot per the explicit-column-declaration rule (so right-click drill from a bar exposes the full dimension set).",
     "Multi-page layout: ONE top-level `layout` field, single `<?xml ?>` declaration, multiple `<Page>` siblings. No per-page `layout` (silently discarded).",

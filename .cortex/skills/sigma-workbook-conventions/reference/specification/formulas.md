@@ -309,20 +309,14 @@ above.
 
 ## Aggregation functions
 
-> **Common, verified patterns — not necessarily exhaustive.** The
-> tables in this section (Aggregation, Date, Conditional, Text) document
-> the functions this skill has actually verified and used successfully.
-> They are not guaranteed to be Sigma's complete function catalog. If
-> the function you need isn't listed, **look it up** — see "Looking up
-> Sigma functions" below — rather than assuming it doesn't exist, and
-> rather than guessing a plausible-sounding name. Two function names
-> have already shipped in this exact table as if real and then failed
-> silently at render: `DivideSafe` (2026-05-15, see "Numeric guards"
-> below) and bare `Percentile` (2026-08-04, see the warning below). Both
-> compiled to an `'Unknown function <Name>'` string buried in the
-> compiled SQL — invisible to POST, `validate-spec.py`, and
-> `verify-workbook.sh` alike. Treat any function name you're not
-> personally certain of the same way, not just these two.
+> **Common, verified patterns — not necessarily exhaustive.** These
+> tables document functions this skill has verified, not Sigma's full
+> catalog. If the function you need isn't listed, **look it up** (see
+> "Looking up Sigma functions" below) rather than guessing. Two names
+> have already shipped here as if real and failed silently at render —
+> `DivideSafe` and bare `Percentile` (both compiled to `'Unknown
+> function <Name>'`, invisible to POST/`validate-spec.py`/
+> `verify-workbook.sh`). Treat any unfamiliar name the same way.
 
 Verified against Sigma's own aggregate-functions catalog
 (`https://help.sigmacomputing.com/docs/aggregate-functions`, confirmed
@@ -371,17 +365,11 @@ and the `*If` conditional family.
 > 0–1). See `reference/history.md` → "2026-08-04" for the full incident.
 >
 > ⚠️ `Mode(<col>)` ("most frequent value") does **NOT** exist in Sigma
-> either — confirmed 2026-08-30 directly against the same
-> aggregate-functions catalog cited above, which has no entry for it.
-> This function was listed in this table as real prior to this
-> revision; unlike `DivideSafe`/`Percentile`, no compiled-SQL incident
-> caught it in this skill's history — this is a docs-only correction
-> found by independently re-verifying every entry in this table against
-> Sigma's docs, not a retraction of something that failed live. There is
-> no native substitute: approximate the most-frequent-value pattern with
-> `Count`/`CountDistinct` + grouping, ranked by frequency (`Rank`/
-> `RankDense`), then take the top-ranked value — Sigma's own guidance for
-> this exact gap.
+> either — confirmed 2026-08-30 against the same catalog, which has no
+> entry for it (a docs-only correction; unlike `DivideSafe`/`Percentile`,
+> nothing caught this failing live). No native substitute: approximate
+> via `Count`/`CountDistinct` + grouping, ranked by frequency (`Rank`/
+> `RankDense`), then take the top-ranked value.
 
 ### Conditional aggregates — the `*If` family
 
@@ -402,75 +390,42 @@ each function (`sumif`, `countif`, `countdistinctif`, `avgif`, `minif`,
 | `MinIf(<col>, <cond>)` | value, then condition | Minimum `<col>` for rows where the condition is `True` |
 | `MaxIf(<col>, <cond>)` | value, then condition | Maximum `<col>` for rows where the condition is `True` |
 
-Multiple conditions on `SumIf`/`CountIf`/`CountDistinctIf` combine with
-`AND` by default; use an explicit `Or` inside a single condition
-argument for `OR` logic — `SumIf([Sales], [State] = "TX" Or [State] =
-"CA")`. A boolean column can be passed as the condition directly, with
-no comparison operator — `CountIf([Submitted])` is equivalent to
-`CountIf([Submitted] = True)`.
+Multiple conditions combine with `AND` by default; use `Or` inside a
+single condition for `OR` logic — `SumIf([Sales], [State] = "TX" Or
+[State] = "CA")`. A boolean column can be the condition directly, no
+comparison operator needed — `CountIf([Submitted])`.
 
-**Verified in this skill's own examples**, not just Sigma's docs —
+**Verified in-repo, not just in Sigma's docs** —
 `examples/data-model-sourced-multi-page-profitability-attrition.json`
-is a spec that POSTs and renders clean, and uses both shapes:
+POSTs and renders clean using both shapes: `Zn(SumIf([...NII Row],
+[...Recently Closed]))` (value first, condition second — a boolean
+column here, no `= true` needed) and `CountIf(IsNotNull([...Close
+Date]))` (condition only — unlike every other aggregate here, no field
+argument at all).
 
-```
-Zn(SumIf([Customer Financials Enriched P3/NII Row], [Customer Financials Enriched P3/Recently Closed]))
-```
-`SumIf(<value>, <condition>)` — value first, condition (here a boolean
-column, no explicit `= true`) second. (Line ~1384 of that exemplar.)
-
-```
-CountIf(IsNotNull([Customer Financials Enriched P3/Close Date]))
-```
-`CountIf(<condition>)` — condition only, **no field argument** —
-unlike every other aggregate in this file. (Line ~1464.)
-
-**The anti-pattern this replaces.** Before this native family was
-documented here, this skill's own text only ever taught expressing a
-conditional aggregate by composing a plain aggregate with a nested
-`If(...)` — so that's what got generated, every time. Both forms
-compile and render, but the composed form is not idiomatic, and (for
-`Sum` specifically) the two forms have different null behavior on an
-empty match. Rewrite map:
+Rewrite map from the anti-pattern:
 
 | Anti-pattern | Native form |
 |---|---|
 | `Sum(If(<cond>, <x>, 0))` | `SumIf(<x>, <cond>)` |
-| `Count(If(<cond>, ...))` (any shape — the field argument is discarded either way) | `CountIf(<cond>)` |
+| `Count(If(<cond>, ...))` | `CountIf(<cond>)` |
 | `CountDistinct(If(<cond>, <x>, Null))` | `CountDistinctIf(<x>, <cond>)` |
 | `Avg(If(<cond>, <x>, Null))` | `AvgIf(<x>, <cond>)` |
 | `Min(If(<cond>, <x>, Null))` | `MinIf(<x>, <cond>)` |
 | `Max(If(<cond>, <x>, Null))` | `MaxIf(<x>, <cond>)` |
 
-**Null behavior differs on the `Sum`/`SumIf` rewrite specifically —
-read before blindly substituting.** `Sum(If(<cond>, <x>, 0))` returns
-`0` for a group/table where nothing matches `<cond>` (the `If`'s
-`else` branch supplies `0` for every non-matching row, and `Sum` of an
-all-zero input is `0`). `SumIf(<x>, <cond>)` returns **`NULL`** in that
-same all-non-matching case — confirmed directly against Sigma's own
-`SumIf` docs, and consistent with the general all-null-aggregate
-behavior this file already documents under "Numeric guards" below.
-**A faithful rewrite therefore usually needs `Zn(...)` around the
-`SumIf` call** — `Zn(SumIf(<x>, <cond>))`, not bare `SumIf(<x>,
-<cond>)` — to preserve the original's 0-not-null behavior. This is
-exactly the pattern the in-repo verified example above already uses
-(`Zn(SumIf(...))`), not a hypothetical caveat.
-
-The other five anti-pattern → native pairs don't have this same
-divergence, **provided** the composed form used a `Null` (not `0`)
-`else`-branch — which is the only sensible way to write
-`Count`/`CountDistinct`/`Avg`/`Min`/`Max` versions of this composition
-(a `0` `else`-branch would corrupt an `Avg`/`Min`/`Max` result, unlike
-`Sum` where it's a natural zero-fill). `CountIf` returns `0` on an
-empty match (confirmed via Sigma's docs — counting functions return a
-real count, never `Null`, even when that count is zero), matching
-`Count(If(<cond>, 1, Null))`'s own `0`-on-empty behavior. `AvgIf`/
-`MinIf`/`MaxIf` return `NULL` on an empty match, matching the composed
-form's `NULL`-on-empty behavior when it uses a `Null` `else`-branch.
-`CountDistinctIf`'s empty-match behavior is **not explicitly
-documented** by Sigma either way — verify before assuming parity, and
-wrap in `Coalesce(..., 0)` defensively if a non-null result is
-required.
+**Null behavior differs on `Sum`→`SumIf` specifically.**
+`Sum(If(<cond>, <x>, 0))` returns `0` on zero matches; `SumIf(<x>,
+<cond>)` returns **`NULL`** (confirmed against Sigma's docs — see
+"Numeric guards" below). Wrap the rewrite: `Zn(SumIf(<x>, <cond>))`,
+not bare `SumIf(...)` — the in-repo example above already does this.
+The other five pairs don't diverge, *provided* the composed form used
+a `Null` (not `0`) `else`-branch — the only sane way to write them,
+since `0` would corrupt `Avg`/`Min`/`Max`. `CountIf` returns `0` on an
+empty match, same as the composed form; `AvgIf`/`MinIf`/`MaxIf` return
+`NULL`, also matching. `CountDistinctIf`'s empty-match behavior isn't
+documented by Sigma either way — verify before assuming parity, or
+wrap in `Coalesce(..., 0)` defensively.
 
 ## Date functions
 
