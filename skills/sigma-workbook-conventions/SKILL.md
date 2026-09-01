@@ -28,10 +28,11 @@ This skill is reference-only — no scripts. It assumes:
   its `get-token.sh`.
 - Script paths below use `${CLAUDE_PLUGIN_ROOT}` (the Claude Code plugin
   convention — resolves to wherever this plugin is installed). Under
-  Cortex Code or any non-Claude-Code agent, substitute the actual skill
-  root instead: this repo's `skills/sigma-workbook-conventions/` when
-  installed via `.cortex-plugin`, or this repo's root when running via
-  the `.claude/skills/` stub described below.
+  Cortex Code, Claude Cowork, or any other non-Claude-Code agent,
+  substitute the actual skill root instead: this repo's
+  `skills/sigma-workbook-conventions/` when installed via `.cortex-plugin`
+  or unzipped from the Cowork skill ZIP, or this repo's root when running
+  via the `.claude/skills/` stub described below.
 - `sigma-data-models` is available for endpoint mechanics and field semantics.
 - The local mirror at `vendor/sigma-agent-skills/` is available to consult when a
   field-level question isn't answered here.
@@ -61,6 +62,14 @@ Before asking anything, Claude resolves auth:
    admin-provisioned credential needed, and the only auth path `/mcp/v2`
    accepts (see `reference/workflows/discover.md` → "MCP status") — then
    `${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/api/whoami.sh`.
+
+   **In a headless environment (no tty — e.g. Claude Cowork), `browser-login.sh`
+   auto-detects this and switches to a two-call pattern instead of the
+   single interactive call above:** `--start` prints an authorize URL to
+   relay into chat and exits; the user signs in, approves, and pastes back
+   the failed-redirect URL; `--finish "<pasted-url>"` completes the
+   exchange. Full flow, worked example, and the egress prerequisite (an
+   org-admin allowlist) live in `reference/workflows/cowork.md`.
 
 Why both `_env.sh`/`browser-login.sh` and `whoami.sh`: passive bootstrap
 succeeds even when credentials are wrong, as long as the variables are

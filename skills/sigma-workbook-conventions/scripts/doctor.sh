@@ -101,6 +101,31 @@ else
   warn "SIGMA_* not exported — run 'eval \"\$(\"$script_dir\"/api/browser-login.sh)\"' to sign in (no admin-provisioned credential needed; Claude Code web sets SIGMA_CLIENT_ID/SIGMA_CLIENT_SECRET/SIGMA_BASE_URL automatically — nothing to configure there)"
 fi
 
+# Egress preflight -- Claude Cowork runs shell commands behind a forward
+# proxy with an org-controlled domain allowlist; a blocked host fails
+# closed with 403 + `X-Proxy-Error: blocked-by-allowlist` (confirmed live in
+# a real Cowork session — see reference/workflows/cowork.md). Catching that
+# signature here turns a mid-build mystery 403 into a first-10-seconds
+# actionable message. Skipped entirely (no false failure) when
+# SIGMA_BASE_URL isn't set -- that's already covered by the warn above.
+if [ -n "${SIGMA_BASE_URL:-}" ]; then
+  echo ""
+  echo "== Network egress =="
+  _doctor_egress=$(curl -sS -m 10 -D - -o /dev/null "$SIGMA_BASE_URL" 2>&1)
+  _doctor_egress_rc=$?
+  if [ "$_doctor_egress_rc" -ne 0 ]; then
+    bad "Could not reach $SIGMA_BASE_URL (curl exit $_doctor_egress_rc) — looks like a host-unreachable/DNS/firewall problem, not Cowork's allowlist (that fails with a 403 response, not a connection error). Check connectivity/DNS/proxy settings."
+  else
+    _doctor_status=$(printf '%s' "$_doctor_egress" | awk 'NR==1{print $2}' | tr -d '\r')
+    if [ "$_doctor_status" = "403" ] && printf '%s' "$_doctor_egress" | tr -d '\r' | grep -qi '^x-proxy-error:[[:space:]]*blocked-by-allowlist'; then
+      bad "Network egress to $SIGMA_BASE_URL is blocked by Cowork's org-level allowlist (403, X-Proxy-Error: blocked-by-allowlist). A Team/Enterprise org Owner must add this host in Admin settings → Capabilities. See reference/workflows/cowork.md for the full host list."
+    else
+      ok "Reached $SIGMA_BASE_URL (HTTP $_doctor_status)"
+    fi
+  fi
+  unset _doctor_egress _doctor_egress_rc _doctor_status
+fi
+
 if [ "$fail" -eq 0 ]; then
   echo ""
   echo "All required checks passed. Try: bash \"$script_dir/api/whoami.sh\""

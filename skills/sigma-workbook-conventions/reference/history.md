@@ -55,6 +55,7 @@ to flag "this rule was once unverified and bit us — treat it as load-bearing."
 - [2026-08-13 — Container span should match children's local total](#2026-08-13--container-span-should-match-childrens-local-total)
 - [2026-08-13 (continued) — `backgroundScale` on `pivot-table` retested live: POST-verified, GET-spec no longer 500s](#2026-08-13-continued--backgroundscale-on-pivot-table-retested-live-post-verified-get-spec-no-longer-500s)
 - [2026-08-13 (continued) — `summary` does not require `groupings`](#2026-08-13-continued--summary-does-not-require-groupings)
+- [2026-09-01 — Cowork compatibility investigated; Build MCP alternative rejected; sandboxed-shell + egress-allowlist model confirmed live](#2026-09-01--cowork-compatibility-investigated-build-mcp-alternative-rejected-sandboxed-shell--egress-allowlist-model-confirmed-live)
 
 ## 2026-05-11 — Per-page `layout` field silently discarded
 
@@ -2407,3 +2408,70 @@ citation to this test so a future reader doesn't have to infer it from
 `conventions.md`'s reframing alone. This closes the gap between the two
 files rather than reversing either file's underlying claim about what
 `summary` itself requires.
+
+## 2026-09-01 — Cowork compatibility investigated; Build MCP alternative rejected; sandboxed-shell + egress-allowlist model confirmed live
+
+Planning to run this skill inside **Claude Cowork** (clone repo → open a
+Cowork session pointed at the folder → `start build mode`) surfaced a
+real host-compatibility gap: `browser-login.sh`'s interactive flow blocks
+on `read` from a tty that Cowork's sandboxed shell doesn't have, binds a
+loopback listener that can never receive Cowork's own browser's redirect
+(the user's browser runs on their own machine, not in the sandbox), and
+persists refresh tokens to an OS keychain that doesn't exist there. Env
+vars also don't survive between separate Cowork bash tool calls, so
+without a fix every single script invocation would otherwise demand a
+fresh browser sign-in.
+
+**Alternative considered and rejected.** The "Sigma Build MCP" — a
+different, internal-staging-only tool that replaces JSON-spec authoring
+with a Python SDK program — would sidestep the browser/keychain problem
+entirely by not authoring JSON specs at all. Rejected: it's staging-only,
+not something a customer org can adopt, and switching to it would
+obsolete most of this skill's `reference/` corpus for the wrong reason
+(working around a host limitation, not because the JSON-spec approach
+itself is broken). The existing REST + browser-OAuth + JSON-spec skill
+is what gets ported to Cowork, not replaced.
+
+**Confirmed live** in a real Cowork session (repo owner): the sandbox
+runs shell commands in an isolated environment on Anthropic's servers,
+separate from the user's own computer and network, with outbound
+traffic routed through a forward proxy enforcing an org-admin domain
+allowlist. A blocked host returns HTTP `403` with response header
+`X-Proxy-Error: blocked-by-allowlist` — confirmed hostname-based (a bare
+IP is blocked too, so pinning an IP is not a workaround). In the test
+org, `api.sigmacomputing.com` and `app.sigmacomputing.com` were
+**already** allowlisted and returned genuine Sigma responses (`401` with
+`www-authenticate` on `/v2/whoami`; a real `invalid_request` from
+`/v2/auth/token`) — proof the REST path is viable end-to-end once an org
+has allowlisted the right host, not just a theory. Also confirmed: a
+connected Sigma MCP connector authenticates and calls Sigma from
+Anthropic's own backend, never through this shell proxy — a working
+connector does not imply shell-level `curl`/`bash` calls will work, and
+vice versa. These are independent gates, separate from the pre-existing
+`discover.md` warning about an MCP connector pointing at the wrong
+*org* — that one is an identity concern, this one is a network-path
+concern.
+
+**Fix.** `browser-login.sh` gained a headless-auto-detected two-phase
+mode: `--start` prints an authorize URL and exits (no blocking `read`,
+no loopback listener); `--finish "<pasted-callback-url>"` completes the
+exchange from a separate call. New `_state.sh` added a third
+credential-persistence tier — a `0600` file under `$SIGMA_STATE_DIR`,
+hard-guarded against ever resolving inside the workspace or the git repo
+— for when neither `security` nor `secret-tool` exists; `refresh-token.sh`
+reads the same tier so repeat calls keep working with no further browser
+round-trip. `doctor.sh` gained an egress preflight recognizing the
+`403`/`X-Proxy-Error: blocked-by-allowlist` signature and pointing at the
+Admin settings → Capabilities allowlist instead of a raw curl error. New
+`reference/workflows/cowork.md` documents the host differences, the
+two-phase flow with a worked example, the full org-admin host list (13
+regional API hosts + `help.sigmacomputing.com`), the
+authorization-server-host caveat (discovered dynamically at runtime, not
+guaranteed to match the API host), and the independent-gates note above.
+`SKILL.md`, `README.md`, and `CLAUDE.md` all cross-reference it. Packaging
+(`skills/sigma-workbook-conventions/scripts/package-skill.sh`, building the
+uploadable skill ZIP for `claude.ai/customize/skills`) ships alongside,
+since Cowork does not auto-discover `.claude/skills/` from a mounted folder
+the way Claude Code does. Kept skill-bundled rather than at the repo root —
+same rationale as `sync-cortex-mirror.py`: a per-skill distribution tool
+should travel with the skill, not depend on this repo's own layout.

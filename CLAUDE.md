@@ -108,6 +108,16 @@ file to create and no interactive browser to redirect to in that execution
 context, so `_env.sh` detects the exported vars and falls through silently to
 the repo-local `skills/sigma-workbook-conventions/scripts/api/get-token.sh` `client_credentials` exchange.
 
+**Claude Cowork runs a sandboxed shell with no tty and no OS keychain**, so
+`browser-login.sh` auto-detects headless mode and splits into two calls:
+`--start` prints an authorize URL to relay into chat and exits; the user
+signs in, approves, and pastes back the failed-redirect URL; `--finish
+"<pasted-url>"` completes the exchange and persists the refresh token to a
+`0600` file (no keychain to write to in the sandbox). Cowork also runs
+outbound traffic through an org-admin-controlled domain allowlist, which
+must include the org's Sigma API host before any of this works. Full flow,
+worked example, and the host list: `skills/sigma-workbook-conventions/reference/workflows/cowork.md`.
+
 **In all cases: never echo `$SIGMA_API_TOKEN`, `$SIGMA_CLIENT_SECRET`, or any
 other secret.** Don't write secrets to files inside the workspace. Pass
 tokens only via `Authorization` headers.

@@ -14,14 +14,44 @@
 #   4. captures the redirect on a one-shot local loopback listener (falls back
 #      to pasting the callback URL back if python3 isn't available, or the
 #      listener times out), verifying the CSRF state,
-#   5. exchanges the code, stores the refresh token in the OS keychain,
+#   5. exchanges the code, stores the refresh token via _state.sh's cred_set
+#      (OS keychain where one exists, a 0600 state file otherwise),
 #   6. prints `export SIGMA_API_TOKEN=<token>` on stdout.
 #
-# Reads (env):
-#   SIGMA_BASE_URL   e.g. https://aws-api.sigmacomputing.com (required) --
-#                    errors with a clear message if unset.
+# Modes (see reference/workflows/cowork.md for the full story):
+#   browser-login.sh                 Interactive (default). On a host with a
+#                                     tty/controlling terminal, this is the
+#                                     flow above, byte-identical to before.
+#                                     On a headless host (no tty, e.g. Claude
+#                                     Cowork's sandboxed bash tool) this
+#                                     AUTO-SWITCHES to the --start behavior
+#                                     below -- the user never has to know
+#                                     --start/--finish exist.
+#   browser-login.sh --start         Force the headless two-phase flow: run
+#                                     discovery/registration/PKCE, persist
+#                                     the in-flight state, print the
+#                                     authorize URL to STDOUT (for an agent
+#                                     to relay into chat) and exit 0. Does
+#                                     NOT open a browser or start a listener.
+#                                     Do NOT wrap this in eval -- stdout here
+#                                     is a URL to display, not a token to
+#                                     source.
+#   browser-login.sh --finish <url>  Second phase: given the callback URL
+#                                     the user pasted back after approving in
+#                                     their own browser, load the state
+#                                     --start persisted, verify CSRF, exchange
+#                                     the code, persist the refresh token, and
+#                                     print `export SIGMA_API_TOKEN=...` like
+#                                     the interactive flow. Single-use -- the
+#                                     saved state is cleared after this runs.
 #
-# Prints (stdout, meant to be eval'd):
+# Reads (env):
+#   SIGMA_BASE_URL   e.g. https://aws-api.sigmacomputing.com (required for
+#                    the interactive/--start discovery path; NOT required for
+#                    --finish, which only replays state --start already
+#                    discovered and validated).
+#
+# Prints (stdout, meant to be eval'd -- except --start/headless, see above):
 #   export SIGMA_API_TOKEN=<token>
 # All prompts/progress go to stderr, so `eval "$(browser-login.sh)"` works.
 #
@@ -35,13 +65,166 @@
 
 set -euo pipefail
 
+# _state.sh (resolved relative to this script's own location, so it works
+# regardless of the caller's cwd) provides:
+#   state_write/state_read/state_clear  -- the 0600 file tier (Cowork/sandbox)
+#   cred_get/cred_set/cred_tier_label   -- the unified 3-tier accessor
+#   is_headless                          -- no tty on stdin, no controlling
+#                                            terminal (the Cowork bash-tool case)
+source "$(dirname "${BASH_SOURCE[0]}")/_state.sh"
+
+MODE="${1:-}"
+
+log() { printf '%s\n' "$*" >&2; }
+
+# Every endpoint we discover must live on a Sigma host -- never open a browser at,
+# or POST credentials to, an authorization server a spoofed discovery doc names.
+assert_sigma_host() {
+  local url="$1" host
+  # The authority ends at the first '/', '?', or '#'; strip any userinfo and port
+  # so the check sees exactly the host curl will connect to. A naive "everything
+  # up to the first /" parse would let https://evil.com#.sigmacomputing.com (curl
+  # connects to evil.com) slip past the *.sigmacomputing.com glob.
+  host=$(printf '%s' "$url" | sed -E 's#^https?://##; s#[/?#].*##; s#^[^@]*@##; s#:[0-9]+$##')
+  case "$host" in
+    *.sigmacomputing.com|sigmacomputing.com) ;;
+    *) echo "Error: refusing OAuth endpoint on non-Sigma host: ${host:-<none>}" >&2; exit 1 ;;
+  esac
+}
+
+urlenc() { jq -rn --arg v "$1" '$v|@uri'; }
+
+# Pull code + state out of a callback URL. Stop at '&' AND '#' so a trailing
+# fragment isn't swallowed into the value, then percent-decode -- the
+# address-bar/query value is URL-encoded and curl --data-urlencode
+# re-encodes on the way out, so without this a code carrying a %XX escape
+# would be double-encoded and rejected.
+# The pattern must be quoted -- bash parses the unquoted form `${1//%/...}` as
+# the anchored-suffix substitution `${1/%.../...}` (empty pattern anchored at
+# the end), which unconditionally appends the replacement instead of
+# replacing every literal `%`. Verified live: unquoted, this silently
+# corrupts every decoded value with a trailing NUL byte and never actually
+# decodes a real %XX escape.
+urldec() { printf '%b' "${1//'%'/\\x}"; }
+qs_param() { printf '%s' "$1" | sed -n "s/.*[?&]$2=\([^&#]*\).*/\1/p"; }
+
+# Persist the refresh token (never to a workspace file) so a later refresh
+# needs no browser round-trip. client_id + token_url ride along so the
+# refresh is self-contained (see scripts/api/refresh-token.sh). Routed
+# through _state.sh's cred_set, which picks macOS keychain / libsecret / a
+# 0600 state file transparently -- this is the one piece of behavior that is
+# NOT meant to stay identical to the pre-Cowork script, on purpose.
+persist_refresh() { # persist_refresh <refresh_token> <client_id> <token_url>
+  local refresh="$1" client_id="$2" token_url="$3"
+  if [ -n "$refresh" ]; then
+    if cred_set refresh-token "$refresh"; then
+      cred_set client-id "$client_id" || true
+      cred_set token-url "$token_url" || true
+      log "Stored refresh token via $(cred_tier_label)."
+    else
+      log "Warning: could not persist the refresh token via $(cred_tier_label); refresh token NOT persisted."
+    fi
+  else
+    log "Note: no refresh_token returned; sign in again when the access token expires (~1h)."
+  fi
+}
+
+# ---------------------------------------------------------------------------
+# --finish: second phase of the headless flow. Loads the state --start
+# persisted, exchanges the pasted-back callback URL for tokens, and exits.
+# Does not touch SIGMA_BASE_URL or re-run discovery/registration/PKCE.
+# ---------------------------------------------------------------------------
+if [ "$MODE" = "--finish" ]; then
+  CALLBACK="${2:-}"
+  if [ -z "$CALLBACK" ]; then
+    echo "Error: --finish requires the pasted callback URL as an argument." >&2
+    echo "  Usage: browser-login.sh --finish '<callback-url>'" >&2
+    exit 1
+  fi
+
+  for bin in curl jq; do
+    command -v "$bin" >/dev/null 2>&1 || { echo "Error: $bin is required" >&2; exit 1; }
+  done
+
+  VERIFIER=$(state_read oauth-verifier)
+  STATE=$(state_read oauth-csrf-state)
+  CLIENT_ID=$(state_read oauth-client-id)
+  TOKEN_URL=$(state_read oauth-token-url)
+  REDIRECT_URI=$(state_read oauth-redirect-uri)
+  if [ -z "$VERIFIER" ] || [ -z "$STATE" ] || [ -z "$CLIENT_ID" ] || [ -z "$TOKEN_URL" ] || [ -z "$REDIRECT_URI" ]; then
+    echo "Error: no pending sign-in found." >&2
+    echo "  Run 'browser-login.sh --start' first -- or the saved state expired," >&2
+    echo "  was already redeemed (it's single-use), or was cleared." >&2
+    exit 1
+  fi
+
+  # Defense in depth: TOKEN_URL came out of storage, not fresh discovery --
+  # never POST to anything but a Sigma host even if that value were tampered with.
+  assert_sigma_host "$TOKEN_URL"
+
+  CODE=$(urldec "$(qs_param "$CALLBACK" code)")
+  RET_STATE=$(urldec "$(qs_param "$CALLBACK" state)")
+  [ -n "$CODE" ] || { echo "Error: no ?code= found in the given callback URL." >&2; exit 1; }
+  [ "$RET_STATE" = "$STATE" ] || { echo "Error: state mismatch (possible CSRF) -- aborting." >&2; exit 1; }
+
+  # --- E. Exchange the authorization code for tokens. ---
+  TOKENS=$(curl -sS -X POST "$TOKEN_URL" \
+    -H "Content-Type: application/x-www-form-urlencoded" \
+    --data-urlencode "grant_type=authorization_code" \
+    --data-urlencode "code=$CODE" \
+    --data-urlencode "redirect_uri=$REDIRECT_URI" \
+    --data-urlencode "code_verifier=$VERIFIER" \
+    --data-urlencode "client_id=$CLIENT_ID")
+  ACCESS=$(printf '%s' "$TOKENS" | jq -r '.access_token // empty')
+  REFRESH=$(printf '%s' "$TOKENS" | jq -r '.refresh_token // empty')
+  if [ -z "$ACCESS" ]; then
+    echo "Error: token exchange failed:" >&2
+    printf '%s\n' "$TOKENS" | jq . >&2 2>/dev/null || printf '%s\n' "$TOKENS" >&2
+    exit 1
+  fi
+
+  # The token will be eval'd by the caller. Reject anything outside the RFC 6750
+  # bearer-token alphabet so a spoofed token endpoint cannot smuggle shell into eval.
+  if ! [[ "$ACCESS" =~ ^[A-Za-z0-9._~+/=-]+$ ]]; then
+    echo "Error: token contains unexpected characters; refusing to emit." >&2
+    exit 1
+  fi
+
+  persist_refresh "$REFRESH" "$CLIENT_ID" "$TOKEN_URL"
+
+  # Single-use -- don't let a stale verifier/state be replayed.
+  state_clear oauth-verifier
+  state_clear oauth-csrf-state
+  state_clear oauth-client-id
+  state_clear oauth-token-url
+  state_clear oauth-redirect-uri
+
+  printf 'export SIGMA_API_TOKEN=%q\n' "$ACCESS"
+  exit 0
+fi
+
+if [ -n "$MODE" ] && [ "$MODE" != "--start" ]; then
+  echo "Error: unknown argument '$MODE'." >&2
+  echo "  Usage: browser-login.sh [--start | --finish <callback-url>]" >&2
+  exit 1
+fi
+
+# Headless: no tty on stdin, no controlling terminal -- the Cowork bash-tool
+# case, where nothing can block on `read` or receive a browser redirect on a
+# loopback listener. --start forces this path explicitly; bare invocation
+# auto-detects it so a Cowork user never has to know --start/--finish exist.
+HEADLESS=false
+if [ "$MODE" = "--start" ]; then
+  HEADLESS=true
+elif is_headless; then
+  HEADLESS=true
+fi
+
 : "${SIGMA_BASE_URL:?SIGMA_BASE_URL is not set. Export it (see https://help.sigmacomputing.com/docs/region-warehouse-and-feature-support for common regional base URLs) then re-run.}"
 
 for bin in curl jq openssl; do
   command -v "$bin" >/dev/null 2>&1 || { echo "Error: $bin is required" >&2; exit 1; }
 done
-
-log() { printf '%s\n' "$*" >&2; }
 
 # Pin SIGMA_BASE_URL to a known Sigma cloud host. The script's stdout is eval'd,
 # so a hostile discovery/token response could otherwise become RCE on the caller.
@@ -61,23 +244,6 @@ case "$SIGMA_BASE_URL" in
   https://api.sa.gcp.sigmacomputing.com) ;;
   *) echo "Error: SIGMA_BASE_URL must be one of the published Sigma API hosts (see https://help.sigmacomputing.com/docs/region-warehouse-and-feature-support)." >&2; exit 1 ;;
 esac
-
-# Every endpoint we discover must live on a Sigma host -- never open a browser at,
-# or POST credentials to, an authorization server a spoofed discovery doc names.
-assert_sigma_host() {
-  local url="$1" host
-  # The authority ends at the first '/', '?', or '#'; strip any userinfo and port
-  # so the check sees exactly the host curl will connect to. A naive "everything
-  # up to the first /" parse would let https://evil.com#.sigmacomputing.com (curl
-  # connects to evil.com) slip past the *.sigmacomputing.com glob.
-  host=$(printf '%s' "$url" | sed -E 's#^https?://##; s#[/?#].*##; s#^[^@]*@##; s#:[0-9]+$##')
-  case "$host" in
-    *.sigmacomputing.com|sigmacomputing.com) ;;
-    *) echo "Error: refusing OAuth endpoint on non-Sigma host: ${host:-<none>}" >&2; exit 1 ;;
-  esac
-}
-
-urlenc() { jq -rn --arg v "$1" '$v|@uri'; }
 
 # --- A. Discover the OAuth endpoints from an unauthenticated /v2/whoami 401. ---
 WWW_AUTH=$(curl -sS -D - -o /dev/null "$SIGMA_BASE_URL/v2/whoami" | tr -d '\r' | grep -i '^www-authenticate:' || true)
@@ -165,25 +331,39 @@ VERIFIER=$(openssl rand -base64 96 | tr -d '\n=+/' | cut -c1-64)
 CHALLENGE=$(printf '%s' "$VERIFIER" | openssl dgst -binary -sha256 | openssl base64 | tr '+/' '-_' | tr -d '=\n')
 STATE=$(openssl rand -base64 24 | tr '+/' '-_' | tr -d '=\n')
 
-# --- D. Authorize in the browser, capturing the redirect automatically. ---
 AUTH_REQ="${AUTHORIZE_URL}?response_type=code&client_id=$(urlenc "$CLIENT_ID")&redirect_uri=$(urlenc "$REDIRECT_URI")&state=$(urlenc "$STATE")&code_challenge=${CHALLENGE}&code_challenge_method=S256&scope=$(urlenc "$SCOPE")"
 
-# Pull code + state out of a callback URL (belt-and-suspenders for the fallback
-# path below; the listener does its own parsing to build a same-origin
-# response, but this is what actually feeds the token exchange). Stop at '&'
-# AND '#' so a trailing fragment isn't swallowed into the value, then
-# percent-decode -- the address-bar/query value is URL-encoded and curl
-# --data-urlencode re-encodes on the way out, so without this a code carrying
-# a %XX escape would be double-encoded and rejected.
-# The pattern must be quoted -- bash parses the unquoted form `${1//%/...}` as
-# the anchored-suffix substitution `${1/%.../...}` (empty pattern anchored at
-# the end), which unconditionally appends the replacement instead of
-# replacing every literal `%`. Verified live: unquoted, this silently
-# corrupts every decoded value with a trailing NUL byte and never actually
-# decodes a real %XX escape.
-urldec() { printf '%b' "${1//'%'/\\x}"; }
-qs_param() { printf '%s' "$1" | sed -n "s/.*[?&]$2=\([^&#]*\).*/\1/p"; }
+if $HEADLESS; then
+  # --- Headless two-phase mode: persist the in-flight state instead of
+  # --- opening a browser or starting the loopback listener (neither could
+  # --- ever succeed here -- see reference/workflows/cowork.md). The
+  # --- companion --finish call redeems this once the user pastes back the
+  # --- failed-redirect URL.
+  state_write oauth-verifier "$VERIFIER"
+  state_write oauth-csrf-state "$STATE"
+  state_write oauth-client-id "$CLIENT_ID"
+  state_write oauth-token-url "$TOKEN_URL"
+  state_write oauth-redirect-uri "$REDIRECT_URI"
 
+  log ""
+  log "Sign-in required -- open this URL, sign in, and approve:"
+  log ""
+  log "  $AUTH_REQ"
+  log ""
+  log "Your browser will then try to load an address that fails to connect --"
+  log "that is expected (nothing is listening there in this environment)."
+  log "Copy the FULL failed URL and run:"
+  log ""
+  log "  browser-login.sh --finish '<that-url>'"
+  log ""
+  # Deliberately stdout, not stderr: this is a URL for the calling agent to
+  # relay into chat, not a token to eval. Do NOT wrap this call in eval.
+  printf '%s\n' "$AUTH_REQ"
+  exit 0
+fi
+
+# --- D. Authorize in the browser, capturing the redirect automatically. ---
+# (Interactive-only from here down -- unreachable when $HEADLESS is true.)
 CODE=""
 RET_STATE=""
 LISTENER_PID=""
@@ -334,28 +514,7 @@ if ! [[ "$ACCESS" =~ ^[A-Za-z0-9._~+/=-]+$ ]]; then
 fi
 
 # --- F. Persist the refresh token (never to a workspace file) so a later
-# --- refresh needs no browser round-trip. client_id + token_url ride along so
-# --- the refresh is self-contained (see scripts/api/refresh-token.sh). ---
-if [ -n "$REFRESH" ]; then
-  if command -v security >/dev/null 2>&1; then
-    if security add-generic-password -U -a "$USER" -s "sigma-api:refresh-token" -w "$REFRESH" 2>/dev/null; then
-      security add-generic-password -U -a "$USER" -s "sigma-api:client-id" -w "$CLIENT_ID" >/dev/null 2>&1 || true
-      security add-generic-password -U -a "$USER" -s "sigma-api:token-url" -w "$TOKEN_URL" >/dev/null 2>&1 || true
-      log "Stored refresh token in the macOS keychain (service 'sigma-api:refresh-token')."
-    else
-      log "Warning: could not write to the macOS keychain; refresh token NOT persisted."
-    fi
-  elif command -v secret-tool >/dev/null 2>&1; then
-    if printf '%s' "$REFRESH" | secret-tool store --label="sigma-api refresh token" service sigma-api key refresh-token; then
-      log "Stored refresh token via libsecret (service 'sigma-api', key 'refresh-token')."
-    else
-      log "Warning: could not write to libsecret; refresh token NOT persisted."
-    fi
-  else
-    log "Note: no OS keychain tool (security/secret-tool) found; refresh token NOT persisted."
-  fi
-else
-  log "Note: no refresh_token returned; sign in again when the access token expires (~1h)."
-fi
+# --- refresh needs no browser round-trip. ---
+persist_refresh "$REFRESH" "$CLIENT_ID" "$TOKEN_URL"
 
 printf 'export SIGMA_API_TOKEN=%q\n' "$ACCESS"
