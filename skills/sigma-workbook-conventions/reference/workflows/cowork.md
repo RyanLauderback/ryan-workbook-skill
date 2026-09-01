@@ -9,7 +9,6 @@ user who says they're running this skill from Cowork.
 
 - [What's different about Cowork as a host](#whats-different-about-cowork-as-a-host)
 - [Two-phase browser sign-in](#two-phase-browser-sign-in)
-- [The kickoff gate depends on `AskUserQuestion` being present](#the-kickoff-gate-depends-on-askuserquestion-being-present)
 - [Egress prerequisite (org-admin action)](#egress-prerequisite-org-admin-action)
 - [Independent gates: Sigma MCP connector vs. shell egress](#independent-gates-sigma-mcp-connector-vs-shell-egress)
 - [Delivery: ZIP vs. mounted clone](#delivery-zip-vs-mounted-clone)
@@ -122,27 +121,6 @@ automatic again: `_env.sh` falls back to `refresh-token.sh`, which reads
 the file-tier credentials and mints a new access token with no further
 browser round-trip — same mechanism as a returning CLI session, just
 reading from the file tier instead of the keychain.
-
-## The kickoff gate depends on `AskUserQuestion` being present
-
-If the 2-question kickoff gate (`SKILL.md` → "The 2-question kickoff")
-or the plan-approval gate seem to be skipped or merged into the rest of
-the flow in a Cowork session, check first whether `AskUserQuestion` (or
-an equivalently blocking question tool) is actually available in that
-session's toolset — this skill's authorization model assumes it is, and
-a confirmed prior incident (`reference/history.md` → "2026-08-10") shows
-what happens when it's absent: an agent has no mechanical way to force a
-pause after asking, and can barrel forward on a fabricated or assumed
-answer instead of the user's real one. This is a real risk in Cowork
-specifically if that surface doesn't expose the same tool, or exposes an
-equivalent one under a different name.
-
-The fix is not specific to Cowork — `reference/conventions.md` → "Recon
-scope boundary + hard stop on permission questions" (Rule B) and
-`SKILL.md`'s kickoff section both now state directly: when no blocking
-question tool is available, ask in plain text and **end the turn**
-immediately after. If a Cowork session appears to skip a gate, that's
-the first thing to check — not a sign the gate itself doesn't apply.
 
 ## Egress prerequisite (org-admin action)
 

@@ -70,11 +70,6 @@ Before asking anything, Claude resolves auth:
    the failed-redirect URL; `--finish "<pasted-url>"` completes the
    exchange. Full flow, worked example, and the egress prerequisite (an
    org-admin allowlist) live in `reference/workflows/cowork.md`.
-   **After relaying the `--start` URL, end your turn and wait for the
-   user's actual reply** — same hard-stop discipline as the kickoff gate
-   below and `reference/conventions.md` → "Recon scope boundary + hard
-   stop on permission questions." Do not fabricate or guess the callback
-   URL, and do not call `--finish` on anything but a real pasted reply.
 
 Why both `_env.sh`/`browser-login.sh` and `whoami.sh`: passive bootstrap
 succeeds even when credentials are wrong, as long as the variables are
@@ -148,24 +143,7 @@ have to re-ask. If the user doesn't name a destination here, the plan must
 surface it as an Open Decision before POST — destination is never silently
 defaulted.
 
-**If `AskUserQuestion` (or an equivalent tool that mechanically blocks for
-a real reply) is not available in this session's toolset, ask Q1 and Q2 as
-plain conversational text and end your turn immediately after asking.**
-This is the same rule as plan approval and the recon check-in — see
-`reference/conventions.md` → "Recon scope boundary + hard stop on
-permission questions," whose enumeration explicitly names this gate too.
-Do not proceed into Recon or Plan in the same turn, and do not fabricate
-or guess the user's answers. Silence is not consent. (Confirmed missing
-from this section entirely until a 2026-09-01 Cowork compatibility test
-surfaced the gap — see `reference/history.md`.)
-
 ### Worked example — what a build-mode kickoff looks like
-
-The flow below assumes `AskUserQuestion` is available and actually blocks
-for the user's reply — that's what "Q1 → ..." depicts, not something that
-happens automatically. When it isn't available, the equivalent moment is
-a real turn boundary: ask in text, then stop, exactly as the paragraph
-above requires.
 
 ```
 User: start build mode
