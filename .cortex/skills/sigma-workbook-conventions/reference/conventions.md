@@ -60,13 +60,18 @@ this empirically: an agent wrote a full plan, ended it with "Approve
 to proceed to build, or push back," received no response from anyone,
 and — in the same continued run — went ahead and built and published
 the workbook anyway. No tool-level enforcement prevents this; only the
-agent's own discipline does. **Any time you ask a permission
-question** — plan approval, or the recon check-in in A — **and you
-have no way to mechanically block for a real response** (no
-`AskUserQuestion` or equivalent available), **you must end your turn
-immediately after asking.** Do not continue in the same turn under any
-framing ("I'll proceed with reasonable defaults," "since there's no
-pushback..."). Silence is not consent.
+agent's own discipline does. **This rule applies to every permission
+or input question this skill asks you to pose to the user — not a
+closed list.** Named examples so far: plan approval, the recon
+check-in in A, and the 2-question kickoff gate (`SKILL.md` → "The
+2-question kickoff"). **Any time you ask one of these — or anything
+else this skill directs you to ask — and you have no way to
+mechanically block for a real response** (no `AskUserQuestion` or
+equivalent available), **you must end your turn immediately after
+asking.** Do not continue in the same turn under any framing ("I'll
+proceed with reasonable defaults," "since there's no pushback..."). Do
+not fabricate or guess what the user would have said. Silence is not
+consent.
 
 **Why this happened.** The incident traced to a subagent-driven E2E
 test where `AskUserQuestion` was not available in that session's
@@ -76,6 +81,22 @@ enforcement mechanism unless the agent treats ending its turn as the
 actual gate. See `reference/history.md` → "2026-08-10 — E2E test finds
 the plan-approval gate is unenforced without an interactive question
 tool" for the full incident.
+
+**Correction (2026-09-01):** despite that diagnosis explicitly naming
+the kickoff gate as sharing the same assumption, the rule text above
+enumerated only plan approval and the recon check-in — a closed list
+that silently left the kickoff gate uncovered. A controlled local test
+during Claude Cowork compatibility work (a fresh agent, instructed to
+treat `AskUserQuestion` as unavailable and asked to follow SKILL.md's
+kickoff section literally) confirmed the gap: nothing in `SKILL.md`
+told it to hard-stop after asking the 2 kickoff questions in plain
+text, only the worked example's unbroken ask→answer→recon narration to
+pattern-match against. Rule B is now written open-ended for exactly
+this reason — a future third or fourth gate should never again depend
+on someone remembering to re-enumerate it here. `SKILL.md`'s kickoff
+section now states the fallback directly rather than relying on a
+reader to generalize this rule to it. See `reference/history.md` →
+"2026-09-01" for the full test.
 
 ---
 

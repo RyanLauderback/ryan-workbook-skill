@@ -56,6 +56,7 @@ to flag "this rule was once unverified and bit us — treat it as load-bearing."
 - [2026-08-13 (continued) — `backgroundScale` on `pivot-table` retested live: POST-verified, GET-spec no longer 500s](#2026-08-13-continued--backgroundscale-on-pivot-table-retested-live-post-verified-get-spec-no-longer-500s)
 - [2026-08-13 (continued) — `summary` does not require `groupings`](#2026-08-13-continued--summary-does-not-require-groupings)
 - [2026-09-01 — Cowork compatibility investigated; Build MCP alternative rejected; sandboxed-shell + egress-allowlist model confirmed live](#2026-09-01--cowork-compatibility-investigated-build-mcp-alternative-rejected-sandboxed-shell--egress-allowlist-model-confirmed-live)
+- [2026-09-01 (continued) — Kickoff gate found unenforced when `AskUserQuestion` is unavailable, same root cause as the 2026-08-10 incident](#2026-09-01-continued--kickoff-gate-found-unenforced-when-askuserquestion-is-unavailable-same-root-cause-as-the-2026-08-10-incident)
 
 ## 2026-05-11 — Per-page `layout` field silently discarded
 
@@ -2475,3 +2476,52 @@ since Cowork does not auto-discover `.claude/skills/` from a mounted folder
 the way Claude Code does. Kept skill-bundled rather than at the repo root —
 same rationale as `sync-cortex-mirror.py`: a per-skill distribution tool
 should travel with the skill, not depend on this repo's own layout.
+
+## 2026-09-01 (continued) — Kickoff gate found unenforced when `AskUserQuestion` is unavailable, same root cause as the 2026-08-10 incident
+
+A real Cowork test session (repo owner, on the `cowork-compatibility`
+branch above) reported the 2-question kickoff gate "not being
+appropriately enforced" — the startup sequence differed from what
+`SKILL.md` documents. A local reproduction confirmed a real, pre-existing
+gap rather than anything introduced by the Cowork work itself.
+
+**Reproduction.** A fresh agent was given only this repo's CLAUDE.md/
+SKILL.md, told the user's first message was "start build mode," and
+instructed to treat `AskUserQuestion` as unavailable for the test — the
+same condition the 2026-08-10 incident traced its root cause to (see
+above). Asked to follow the current `SKILL.md` text literally: it found
+nothing telling it to hard-stop after asking the 2 kickoff questions in
+plain text when the tool is missing. The only relevant text was
+`reference/conventions.md`'s Rule B ("Asking is not gating unless you
+actually stop") — but that rule's enumeration was closed to "plan
+approval, or the recon check-in in A," never naming the kickoff gate,
+even though the same rule's own "Why this happened" paragraph already
+said "the skill's kickoff and plan-approval gates both assume
+[`AskUserQuestion`] is always present." The diagnosis from 2026-08-10 was
+correct; the fix applied afterward just never closed the loop on the
+gate it explicitly named as also affected.
+
+The worked example immediately below Q1/Q2 in `SKILL.md` made this worse
+in practice: it depicts `AskUserQuestion` called → answers received →
+recon/plan begun as one unbroken narration, with no visible turn
+boundary — exactly the shape an agent substituting plain text for a
+missing tool would pattern-match, reproducing the 2026-08-10 failure one
+gate earlier.
+
+**Why Cowork surfaces this now.** Whether Cowork's toolset lacks
+`AskUserQuestion` outright, or exposes an equivalently-shaped tool under
+a different name, wasn't independently confirmed in this pass — but
+either case hits the same gap, and the repo owner's live report is
+consistent with it.
+
+**Fix.** `reference/conventions.md` Rule B is now written open-ended
+("every permission or input question this skill asks you to pose —
+not a closed list") rather than re-enumerated, so a future gate can't
+silently fall outside it the same way. `SKILL.md` → "The 2-question
+kickoff" now states the hard-stop fallback directly rather than relying
+on a reader to generalize Rule B to it, and the worked example is
+prefaced with a note that it depicts the tool-available path, not
+something that happens automatically. The same "end your turn, don't
+fabricate a reply" instruction was also added to the headless
+`browser-login.sh --start` step in `SKILL.md`'s auth-resolution section,
+proactively, since it has the identical ask-and-wait shape.
