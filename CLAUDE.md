@@ -5,15 +5,19 @@ This workspace builds Sigma Computing dashboards/workbooks via Claude Code using
 ## Session kickoff
 
 The skill opens on the user's first build-related message (explicit trigger:
-`start build mode`) by resolving auth automatically — `eval
+`start build mode`) with a **4-item kickoff gate**. Item 1 (auth) resolves
+automatically in the common case — `eval
 "$(skills/sigma-workbook-conventions/scripts/api/browser-login.sh)"`, or skipping straight past that if a
 token or client-credentials vars are already exported (a returning
 browser-login session, or Claude Code web's injected vars) — then
 `skills/sigma-workbook-conventions/scripts/api/whoami.sh` actively validates auth against the live API before
-recon starts. A 2-question `AskUserQuestion` gate (data source, what/where
-to build) follows, capturing the raw inputs the planner needs. Then Recon
-→ Plan → User approval → POST → GET → Visual verify. **Plan approval is the
-only authorization for state-changing API calls.**
+recon starts. Item 1 only surfaces as an explicit, answerable question
+when headless two-phase sign-in is actually needed (e.g. Claude Cowork);
+otherwise it's silent. Items 2–4 (data source, destination, workbook
+description) are then asked together in a single `AskUserQuestion` call,
+capturing the raw inputs the planner needs. Then Recon → Plan → User
+approval → POST → GET → Visual verify. **Plan approval is the only
+authorization for state-changing API calls.**
 
 **Recon is bounded to what the user named** — searching the broader
 workspace for a reference implementation (e.g., hunting for an existing
@@ -31,7 +35,7 @@ convention is a **`local-` filename prefix** on added files (e.g.
 separable from canonical content. See SKILL.md → "Optional: session-local
 enrichment via `local-` prefix."
 
-Full 3-question text and workflow details live in
+Full kickoff-gate text and workflow details live in
 `skills/sigma-workbook-conventions/SKILL.md` → "Session kickoff."
 
 ## Skills loaded here

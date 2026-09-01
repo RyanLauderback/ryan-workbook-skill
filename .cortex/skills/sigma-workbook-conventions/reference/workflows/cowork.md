@@ -9,6 +9,7 @@ user who says they're running this skill from Cowork.
 
 - [What's different about Cowork as a host](#whats-different-about-cowork-as-a-host)
 - [Two-phase browser sign-in](#two-phase-browser-sign-in)
+- [The kickoff gate depends on `AskUserQuestion` being present](#the-kickoff-gate-depends-on-askuserquestion-being-present)
 - [Egress prerequisite (org-admin action)](#egress-prerequisite-org-admin-action)
 - [Independent gates: Sigma MCP connector vs. shell egress](#independent-gates-sigma-mcp-connector-vs-shell-egress)
 - [Delivery: ZIP vs. mounted clone](#delivery-zip-vs-mounted-clone)
@@ -55,7 +56,7 @@ switching to a different authoring mechanism.
 tty — see `_state.sh`'s `is_headless()`) and switches from the single
 interactive call CLI users get into a two-call pattern. This is the only
 part of the auth flow that differs; everything downstream (`whoami.sh`,
-the 2-question kickoff gate, Recon → Plan → POST → GET → Visual verify)
+the kickoff gate's items 2–4, Recon → Plan → POST → GET → Visual verify)
 is unchanged.
 
 - **`browser-login.sh --start`** (or a plain no-arg call — headless is
@@ -112,8 +113,10 @@ Claude: [runs browser-login.sh --finish 'https://127.0.0.1:54321/oauth/callback?
            tier under $SIGMA_STATE_DIR, prints `export SIGMA_API_TOKEN=...`
         [runs whoami.sh to confirm against the live API]
         -> "Authenticated to api.sigmacomputing.com. Recent files: ..."
-        [proceeds to the 2-question kickoff gate exactly as in
-         SKILL.md -> "Session kickoff"]
+        [item 1 of the kickoff gate is now resolved; proceeds to items
+         2-4 (data source, destination, workbook description) exactly
+         as in SKILL.md -> "Items 2-4 — data source, destination,
+         workbook description"]
 ```
 
 On any later call in the same Cowork session, auth resolution is
@@ -121,6 +124,31 @@ automatic again: `_env.sh` falls back to `refresh-token.sh`, which reads
 the file-tier credentials and mints a new access token with no further
 browser round-trip — same mechanism as a returning CLI session, just
 reading from the file tier instead of the keychain.
+
+## The kickoff gate depends on `AskUserQuestion` being present
+
+If the kickoff gate (`SKILL.md` → "The kickoff gate — 4 items") or the
+plan-approval gate seem to be skipped or merged into the rest of the
+flow in a Cowork session, check first whether `AskUserQuestion` (or an
+equivalently blocking question tool) is actually available in that
+session's toolset — this skill's authorization model assumes it is, and
+a confirmed prior incident (`reference/history.md` → "2026-08-10") shows
+what happens when it's absent: an agent has no mechanical way to force a
+pause after asking, and can barrel forward on a fabricated or assumed
+answer instead of the user's real one. This is a real risk in Cowork
+specifically if that surface doesn't expose the same tool, or exposes an
+equivalent one under a different name — a live Cowork report and a
+follow-up local reproduction (`reference/history.md` → "2026-09-01
+(continued)") confirmed exactly this gap for item 1 (auth) and items
+2–4 alike.
+
+The fix is not specific to Cowork — `reference/conventions.md` → "Recon
+scope boundary + hard stop on permission questions" (Rule B) and
+`SKILL.md`'s kickoff-gate section both now state directly: when no
+blocking question tool is available, ask in plain text and **end the
+turn** immediately after, for every item of the gate, item 1 (auth)
+included. If a Cowork session appears to skip a gate, that's the first
+thing to check — not a sign the gate itself doesn't apply.
 
 ## Egress prerequisite (org-admin action)
 
@@ -228,6 +256,5 @@ specifically recognizes the `403` / `X-Proxy-Error: blocked-by-allowlist`
 signature and prints the Admin-settings remediation above, instead of a
 raw curl error, so a misconfigured org fails in the first few seconds
 with an actionable message rather than mid-build. Then follow
-`SKILL.md` → "Auth resolution (automatic — not a question)" for the
-full auth-resolution ladder, of which the two-phase flow above is just
-the headless branch.
+`SKILL.md` → "Item 1 — Auth (conditional)" for the full auth-resolution
+ladder, of which the two-phase flow above is just the headless branch.

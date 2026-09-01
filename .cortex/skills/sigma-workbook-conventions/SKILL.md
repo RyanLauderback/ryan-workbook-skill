@@ -39,14 +39,27 @@ This skill is reference-only — no scripts. It assumes:
 
 ## Session kickoff
 
-Sessions start with an automatic auth-resolution step followed by a
-2-question `AskUserQuestion` gate. The user can trigger the kickoff
-explicitly with `start build mode`, or it fires implicitly on any prompt
-that asks to build/edit/POST a Sigma workbook. The gate captures the raw
-inputs the planner needs; the plan-first workflow (below) is what
-authorizes any state-changing API call.
+Sessions start with the **kickoff gate** — 4 items, only the last 3 of
+which are always asked as an explicit question. The user can trigger
+the kickoff explicitly with `start build mode`, or it fires implicitly
+on any prompt that asks to build/edit/POST a Sigma workbook. The gate
+captures the raw inputs the planner needs; the plan-first workflow
+(below) is what authorizes any state-changing API call.
 
-### Auth resolution (automatic — not a question)
+### The kickoff gate — 4 items
+
+1. **Auth** — conditional. Only surfaces as an explicit, answerable gate
+   item when headless two-phase sign-in is actually needed. When auth
+   resolves silently, this item asks nothing.
+2. **Data source** — what the workbook builds against.
+3. **Destination** — the folder the workbook should be saved to.
+4. **Workbook description** — what to build, free text.
+
+Items 2–4 are asked together, in a single `AskUserQuestion` call (3
+questions — within the tool's documented max of 4 per call), once item
+1 has resolved — either silently, or via its own question-and-reply.
+
+### Item 1 — Auth (conditional)
 
 Before asking anything, Claude resolves auth:
 
@@ -57,19 +70,45 @@ Before asking anything, Claude resolves auth:
    (a returning `browser-login.sh`/`refresh-token.sh` session), or
    `SIGMA_CLIENT_ID`/`SIGMA_CLIENT_SECRET` already exported (Claude Code web
    injects these automatically — no human sets them up). If either is true,
-   skip straight to `${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/api/whoami.sh`.
+   skip straight to `${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/api/whoami.sh` —
+   item 1 stays silent; there's nothing to ask.
 3. Otherwise, run `eval "$(${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/api/browser-login.sh)"` — no
    admin-provisioned credential needed, and the only auth path `/mcp/v2`
    accepts (see `reference/workflows/discover.md` → "MCP status") — then
    `${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/api/whoami.sh`.
 
-   **In a headless environment (no tty — e.g. Claude Cowork), `browser-login.sh`
-   auto-detects this and switches to a two-call pattern instead of the
-   single interactive call above:** `--start` prints an authorize URL to
-   relay into chat and exits; the user signs in, approves, and pastes back
-   the failed-redirect URL; `--finish "<pasted-url>"` completes the
-   exchange. Full flow, worked example, and the egress prerequisite (an
-   org-admin allowlist) live in `reference/workflows/cowork.md`.
+**In a headless environment (no tty — e.g. Claude Cowork), `browser-login.sh`
+auto-detects this and switches to a two-call pattern instead of the
+single interactive call above — and this is where item 1 becomes a
+real, answerable gate item, not silent bookkeeping:** `--start` prints
+an authorize URL to relay into chat and exits; the user signs in,
+approves, and pastes back the failed-redirect URL; `--finish
+"<pasted-url>"` completes the exchange. Full flow, worked example, and
+the egress prerequisite (an org-admin allowlist) live in
+`reference/workflows/cowork.md`.
+
+**When headless two-phase sign-in fires, ask item 1 as a real gate
+item** — relay the `--start` URL, then ask for the callback:
+
+- **When `AskUserQuestion` is available**, frame it as a question whose
+  real expected answer is the pasted-back OAuth callback URL: use the
+  tool's always-available "Other" free-text option for that actual
+  answer, with 2 labeled placeholder options so the question still
+  renders sensibly in a picker UI — e.g. "I approved and have the
+  callback URL" and "I hit an error signing in."
+- **When `AskUserQuestion` isn't available**, fall back to asking in
+  plain conversational text and end your turn immediately after
+  asking. Do not fabricate or guess the callback URL.
+
+Either way, this is the same hard-stop discipline every permission/input
+question this skill poses is held to — see `reference/conventions.md` →
+"Recon scope boundary + hard stop on permission questions" (Rule B),
+whose enumeration is open-ended and explicitly includes this gate.
+
+**When auth resolves silently — `SIGMA_API_TOKEN`/client-creds already
+usable, or the interactive CLI browser-popup flow completes without
+needing a pasted-back URL — item 1 does not surface at all.** There's
+nothing to ask; proceed straight to items 2–4.
 
 Why both `_env.sh`/`browser-login.sh` and `whoami.sh`: passive bootstrap
 succeeds even when credentials are wrong, as long as the variables are
@@ -112,11 +151,12 @@ with no second browser round-trip. Set
 `SIGMA_TOKEN_FETCHER=${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/api/refresh-token.sh`
 explicitly only if you want to skip that auto-detection.
 
-### The 2-question kickoff
+### Items 2–4 — data source, destination, workbook description
 
-Once auth is resolved, `AskUserQuestion` asks two questions:
+Once item 1 has resolved (silently, or via its own question and reply),
+`AskUserQuestion` asks three questions together:
 
-**Q1: What data source will you build against?**
+**Item 2: What data source will you build against?**
 - **Data model** (recommended) — URL/slug (`Customer-Financials-461QUZu2VPny8KxImgSmfF`)
   or name. Prefer this when one plausibly covers the request: confirmed
   live (2026-08-07, `reference/history.md`) that a data model's full
@@ -134,30 +174,81 @@ Once auth is resolved, `AskUserQuestion` asks two questions:
   → "Routing: raw warehouse tables."
 - Mixed prose (the resolver handles it)
 
-**Q2: What would you like to build, and where would you like the workbook placed in Sigma?**
+**Item 3: Where should the workbook be saved?**
+
+The destination folder URL/slug/name, captured at the kickoff layer so
+the planner doesn't have to re-ask. Still allowed to come back "no
+preference yet" — in that case the plan must surface it as an Open
+Decision before POST; destination is never silently defaulted.
+
+**Item 4: What would you like to build?**
 
 Free-text. Captured verbatim as the prompt-of-record and written to
-`workbooks/<name>/prompts/<timestamp>.md`. The "where" portion captures the
-destination folder URL/slug/name at the kickoff layer, so the planner doesn't
-have to re-ask. If the user doesn't name a destination here, the plan must
-surface it as an Open Decision before POST — destination is never silently
-defaulted.
+`workbooks/<name>/prompts/<timestamp>.md`.
+
+**If `AskUserQuestion` isn't available for items 2–4 either, ask them as
+plain conversational text and end your turn immediately after asking**
+— the same rule as item 1's fallback above, plan approval, and the
+recon check-in. See `reference/conventions.md` → "Recon scope boundary +
+hard stop on permission questions."
 
 ### Worked example — what a build-mode kickoff looks like
+
+Both examples below assume `AskUserQuestion` is available and actually
+blocks for the user's reply — that's what "Item 2 → ..." depicts, not
+something that happens automatically. When it isn't available, the
+equivalent moment is a real turn boundary: ask in text, then stop,
+exactly as the fallback paragraphs above require.
+
+**(a) Headless environment — item 1 surfaces:**
+
+```
+User: start build mode
+
+Claude: [confirms SIGMA_BASE_URL is set; no SIGMA_API_TOKEN or
+         client-creds exported yet, so auth resolution falls to
+         browser-login.sh]
+        [browser-login.sh detects no tty -> headless mode, runs --start]
+        [item 1 surfaces: relays the authorize URL, then asks for the
+         callback via AskUserQuestion, framed with the "Other" free-text
+         slot as the real answer]
+        [ends the turn — there is no way to proceed without the user's
+         reply]
+
+User: [opens the URL, signs in, approves, pastes the callback URL back
+       via the "Other" field]
+
+Claude: [browser-login.sh --finish "<pasted-url>"]
+        [${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/api/whoami.sh]
+        → "Authenticated to api.sigmacomputing.com. Recent files: ..."
+        [item 1 resolved; calls AskUserQuestion with items 2-4]
+
+  Item 2 → "Customer-Financials-461QUZu2VPny8KxImgSmfF data model"
+  Item 3 → "Claude-Testing-3Kzaga67BMlB7vVJQksjlX folder"
+  Item 4 → "customer profitability + attrition workbook"
+
+Claude: [writes the verbatim prompt to workbooks/<name>/prompts/<ts>.md]
+        [resolves URL slugs via mcp-search.sh, falling back to find-file-by-urlid.sh]
+        [enters Recon — GET /v2/dataModels/{id}/spec on the data model]
+        [drafts the Plan, surfaces for user approval]
+```
+
+**(b) Non-headless environment — item 1 stays silent:**
 
 ```
 User: start build mode
 
 Claude: [confirms SIGMA_BASE_URL is set]
         [SIGMA_API_TOKEN already exported from a prior browser-login.sh
-         session, so auth resolution skips straight to whoami.sh]
+         session, so auth resolution skips straight to whoami.sh —
+         item 1 has nothing to ask]
         [${CLAUDE_PLUGIN_ROOT}/skills/sigma-workbook-conventions/scripts/api/whoami.sh]
         → "Authenticated to api.sigmacomputing.com. Recent files: ..."
-        [calls AskUserQuestion with Q1, Q2 above]
+        [calls AskUserQuestion with items 2-4]
 
-  Q1 → "Customer-Financials-461QUZu2VPny8KxImgSmfF data model"
-  Q2 → "customer profitability + attrition workbook in
-        Claude-Testing-3Kzaga67BMlB7vVJQksjlX folder"
+  Item 2 → "Customer-Financials-461QUZu2VPny8KxImgSmfF data model"
+  Item 3 → "Claude-Testing-3Kzaga67BMlB7vVJQksjlX folder"
+  Item 4 → "customer profitability + attrition workbook"
 
 Claude: [writes the verbatim prompt to workbooks/<name>/prompts/<ts>.md]
         [resolves URL slugs via mcp-search.sh, falling back to find-file-by-urlid.sh]

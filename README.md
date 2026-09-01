@@ -51,7 +51,7 @@ On first open, Claude Code reads `.claude/settings.json` and **automatically ins
 
 ## Starting a session
 
-Once Claude Code is open, describe what you want to build. Explicit trigger: **`start build mode`** — Claude resolves auth automatically (browser sign-in, or reusing already-exported credentials), warms the OAuth token, and runs `whoami` to confirm auth before recon, then opens a 2-question gate (data source / what to build + where in Sigma). Then: Recon → Plan → Approval → Build → Verify.
+Once Claude Code is open, describe what you want to build. Explicit trigger: **`start build mode`** — Claude runs a 4-item kickoff gate: auth (browser sign-in, or reusing already-exported credentials, warming the OAuth token and running `whoami` to confirm before recon — this only becomes an explicit question when headless two-phase sign-in is actually needed, e.g. Cowork), then data source / destination folder / what to build, asked together in a single `AskUserQuestion` call. Then: Recon → Plan → Approval → Build → Verify.
 
 Opt-in session-local enrichment (Tableau migration notes, account-specific patterns) uses a **`local-`** filename prefix on skill files to stay visually separable from canonical content — see the skill's SKILL.md for the convention.
 
