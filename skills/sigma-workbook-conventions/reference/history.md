@@ -55,6 +55,8 @@ to flag "this rule was once unverified and bit us — treat it as load-bearing."
 - [2026-08-13 — Container span should match children's local total](#2026-08-13--container-span-should-match-childrens-local-total)
 - [2026-08-13 (continued) — `backgroundScale` on `pivot-table` retested live: POST-verified, GET-spec no longer 500s](#2026-08-13-continued--backgroundscale-on-pivot-table-retested-live-post-verified-get-spec-no-longer-500s)
 - [2026-08-13 (continued) — `summary` does not require `groupings`](#2026-08-13-continued--summary-does-not-require-groupings)
+- [2026-09-01 — Cowork compatibility investigated; Build MCP alternative rejected; sandboxed-shell + egress-allowlist model confirmed live](#2026-09-01--cowork-compatibility-investigated-build-mcp-alternative-rejected-sandboxed-shell--egress-allowlist-model-confirmed-live)
+- [2026-09-01 (continued) — Kickoff gate found unenforced when `AskUserQuestion` is unavailable; restructured into 4 explicit items with auth as a conditional one](#2026-09-01-continued--kickoff-gate-found-unenforced-when-askuserquestion-is-unavailable-restructured-into-4-explicit-items-with-auth-as-a-conditional-one)
 
 ## 2026-05-11 — Per-page `layout` field silently discarded
 
@@ -2407,3 +2409,153 @@ citation to this test so a future reader doesn't have to infer it from
 `conventions.md`'s reframing alone. This closes the gap between the two
 files rather than reversing either file's underlying claim about what
 `summary` itself requires.
+
+## 2026-09-01 — Cowork compatibility investigated; Build MCP alternative rejected; sandboxed-shell + egress-allowlist model confirmed live
+
+Planning to run this skill inside **Claude Cowork** (clone repo → open a
+Cowork session pointed at the folder → `start build mode`) surfaced a
+real host-compatibility gap: `browser-login.sh`'s interactive flow blocks
+on `read` from a tty that Cowork's sandboxed shell doesn't have, binds a
+loopback listener that can never receive Cowork's own browser's redirect
+(the user's browser runs on their own machine, not in the sandbox), and
+persists refresh tokens to an OS keychain that doesn't exist there. Env
+vars also don't survive between separate Cowork bash tool calls, so
+without a fix every single script invocation would otherwise demand a
+fresh browser sign-in.
+
+**Alternative considered and rejected.** The "Sigma Build MCP" — a
+different, internal-staging-only tool that replaces JSON-spec authoring
+with a Python SDK program — would sidestep the browser/keychain problem
+entirely by not authoring JSON specs at all. Rejected: it's staging-only,
+not something a customer org can adopt, and switching to it would
+obsolete most of this skill's `reference/` corpus for the wrong reason
+(working around a host limitation, not because the JSON-spec approach
+itself is broken). The existing REST + browser-OAuth + JSON-spec skill
+is what gets ported to Cowork, not replaced.
+
+**Confirmed live** in a real Cowork session (repo owner): the sandbox
+runs shell commands in an isolated environment on Anthropic's servers,
+separate from the user's own computer and network, with outbound
+traffic routed through a forward proxy enforcing an org-admin domain
+allowlist. A blocked host returns HTTP `403` with response header
+`X-Proxy-Error: blocked-by-allowlist` — confirmed hostname-based (a bare
+IP is blocked too, so pinning an IP is not a workaround). In the test
+org, `api.sigmacomputing.com` and `app.sigmacomputing.com` were
+**already** allowlisted and returned genuine Sigma responses (`401` with
+`www-authenticate` on `/v2/whoami`; a real `invalid_request` from
+`/v2/auth/token`) — proof the REST path is viable end-to-end once an org
+has allowlisted the right host, not just a theory. Also confirmed: a
+connected Sigma MCP connector authenticates and calls Sigma from
+Anthropic's own backend, never through this shell proxy — a working
+connector does not imply shell-level `curl`/`bash` calls will work, and
+vice versa. These are independent gates, separate from the pre-existing
+`discover.md` warning about an MCP connector pointing at the wrong
+*org* — that one is an identity concern, this one is a network-path
+concern.
+
+**Fix.** `browser-login.sh` gained a headless-auto-detected two-phase
+mode: `--start` prints an authorize URL and exits (no blocking `read`,
+no loopback listener); `--finish "<pasted-callback-url>"` completes the
+exchange from a separate call. New `_state.sh` added a third
+credential-persistence tier — a `0600` file under `$SIGMA_STATE_DIR`,
+hard-guarded against ever resolving inside the workspace or the git repo
+— for when neither `security` nor `secret-tool` exists; `refresh-token.sh`
+reads the same tier so repeat calls keep working with no further browser
+round-trip. `doctor.sh` gained an egress preflight recognizing the
+`403`/`X-Proxy-Error: blocked-by-allowlist` signature and pointing at the
+Admin settings → Capabilities allowlist instead of a raw curl error. New
+`reference/workflows/cowork.md` documents the host differences, the
+two-phase flow with a worked example, the full org-admin host list (13
+regional API hosts + `help.sigmacomputing.com`), the
+authorization-server-host caveat (discovered dynamically at runtime, not
+guaranteed to match the API host), and the independent-gates note above.
+`SKILL.md`, `README.md`, and `CLAUDE.md` all cross-reference it. Packaging
+(`skills/sigma-workbook-conventions/scripts/package-skill.sh`, building the
+uploadable skill ZIP for `claude.ai/customize/skills`) ships alongside,
+since Cowork does not auto-discover `.claude/skills/` from a mounted folder
+the way Claude Code does. Kept skill-bundled rather than at the repo root —
+same rationale as `sync-cortex-mirror.py`: a per-skill distribution tool
+should travel with the skill, not depend on this repo's own layout.
+
+## 2026-09-01 (continued) — Kickoff gate found unenforced when `AskUserQuestion` is unavailable; restructured into 4 explicit items with auth as a conditional one
+
+A real Cowork test session (repo owner, on the `cowork-compatibility`
+branch above) reported the 2-question kickoff gate "not being
+appropriately enforced" — the startup sequence differed from what
+`SKILL.md` documented. A local reproduction confirmed a real,
+pre-existing gap rather than anything introduced by the Cowork work
+itself.
+
+**Reproduction.** A fresh agent was given only this repo's CLAUDE.md/
+SKILL.md, told the user's first message was "start build mode," and
+instructed to treat `AskUserQuestion` as unavailable for the test — the
+same condition the 2026-08-10 incident traced its root cause to (see
+above). Asked to follow the then-current `SKILL.md` text literally, it
+found nothing telling it to hard-stop after asking the 2 kickoff
+questions in plain text when the tool is missing. The only relevant text
+was `reference/conventions.md`'s Rule B ("Asking is not gating unless
+you actually stop") — but that rule's enumeration was closed to "plan
+approval, or the recon check-in in A," never naming the kickoff gate,
+even though the same rule's own "Why this happened" paragraph already
+said "the skill's kickoff and plan-approval gates both assume
+[`AskUserQuestion`] is always present." The diagnosis from 2026-08-10 was
+correct; the fix applied afterward never closed the loop on the gate it
+explicitly named as also affected.
+
+The worked example immediately below Q1/Q2 in `SKILL.md` made this worse
+in practice: it depicted `AskUserQuestion` called → answers received →
+recon/plan begun as one unbroken narration, with no visible turn
+boundary — exactly the shape an agent substituting plain text for a
+missing tool would pattern-match, reproducing the 2026-08-10 failure one
+gate earlier.
+
+**Why Cowork surfaces this now.** Whether Cowork's toolset lacks
+`AskUserQuestion` outright, or exposes an equivalently-shaped tool under
+a different name, wasn't independently confirmed in this pass — but
+either case hits the same gap, and the repo owner's live report is
+consistent with it.
+
+**Fix, part 1 — Rule B made open-ended.** `reference/conventions.md`
+Rule B is now written open-ended ("every permission or input question
+this skill directs you to pose — not an exhaustive list") rather than a
+closed enumeration, so a future gate can't silently fall outside it the
+same way again.
+
+**Fix, part 2 — the kickoff gate itself restructured around 4 explicit
+items, auth included.** The point fix above (stated directly in `SKILL.md`
+rather than left to a reader generalizing Rule B) was judged
+insufficient on its own: auth is exactly the kind of question this gap
+was about, and it was still living outside the gate's own enumeration as
+an "automatic — not a question" step. `SKILL.md`'s kickoff section is now
+4 items — (1) auth, conditional on headless two-phase sign-in actually
+being needed; (2) data source; (3) destination; (4) workbook description
+— with items 2–4 asked together in one `AskUserQuestion` call, same as
+before under a new name. Item 1, when it does surface, is framed as an
+`AskUserQuestion` whose real expected answer is the pasted-back OAuth
+callback URL (via the tool's "Other" free-text option, with 2 labeled
+placeholders so it still renders in a picker UI), falling back to plain
+text + an immediate end-of-turn when the tool isn't available — the
+identical fallback items 2–4 already had. The worked example is now two
+paths (headless: item 1 surfaces, turn ends, user replies, then the
+3-question call; non-headless: item 1 silent, straight to the
+3-question call), each prefaced with a caveat that it depicts the
+tool-available path, not automatic behavior.
+
+**This is not a reversal of the earlier 3→2-question collapse.** The
+2026-08-12 (continued) entry above collapsed a 3-question kickoff
+(auth / data source / build target) down to 2 questions on `c90dc70`,
+specifically because auth resolved automatically in every environment
+this skill ran in at the time — there was no reason to make a human
+answer an auth question that had no real content most of the time.
+That's still true for the CLI and Claude Code web paths today. What's
+different is that headless/Cowork auth reintroduces a real case where
+auth sometimes needs an explicit answer (the pasted-back callback URL,
+which nothing else can supply) — so item 1 exists as a *conditional*
+gate item that stays silent in the common case, rather than reviving an
+always-asked auth question for everyone.
+
+**Also fixed:** `reference/workflows/cowork.md` gained a new section,
+"The kickoff gate depends on `AskUserQuestion` being present," pointing
+new Cowork users at this incident as the first thing to check if a gate
+looks skipped, and its worked example and cross-references were updated
+to the new gate name/shape. `.cortex` mirror regenerated.

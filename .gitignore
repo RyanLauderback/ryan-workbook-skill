@@ -47,3 +47,7 @@ docs/twells89-review.md
 # refresh token lives in the OS keychain, not a file. The prior
 # `.sigma-token` entry here didn't match anything either script actually
 # writes and has been removed.
+
+# Packaged skill ZIPs (skills/sigma-workbook-conventions/scripts/package-skill.sh output)
+dist/
+_PACKAGED_FROM.txt

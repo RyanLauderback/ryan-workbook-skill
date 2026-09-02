@@ -20,28 +20,34 @@ silently fail to render. Trusting HTTP 200 alone produces broken dashboards.
 
 ## Session start (build mode)
 
-Before the per-attempt protocol runs, a build-mode session resolves auth
-automatically, then opens a 2-question `AskUserQuestion` gate for the data
-source and what/where to build (full spec in
+Before the per-attempt protocol runs, a build-mode session runs a
+**4-item kickoff gate** (full spec in
 `skills/sigma-workbook-conventions/SKILL.md` → "Session kickoff"):
 
-- **Auth (resolved automatically — not a question).** Claude confirms
-  `SIGMA_BASE_URL` is resolvable (asking the user only if it's genuinely
-  unknown), then runs `eval "$(skills/sigma-workbook-conventions/scripts/api/browser-login.sh)"` followed by
+- **Item 1 — Auth (conditional).** Claude confirms `SIGMA_BASE_URL` is
+  resolvable (asking the user only if it's genuinely unknown), then runs
+  `eval "$(skills/sigma-workbook-conventions/scripts/api/browser-login.sh)"` followed by
   `skills/sigma-workbook-conventions/scripts/api/whoami.sh` to actively validate the token against
   `/v2/files`. No admin-provisioned credential needed, and the only path
   that unblocks `/mcp/v2` (see `reference/workflows/discover.md` → "MCP
   status"). If `SIGMA_API_TOKEN` or `SIGMA_CLIENT_ID`/`SIGMA_CLIENT_SECRET`
   are already exported at session start (a returning `browser-login.sh`
   session, `refresh-token.sh`, or Claude Code web injecting credentials
-  automatically), Claude skips straight to `skills/sigma-workbook-conventions/scripts/api/whoami.sh`. If
+  automatically), Claude skips straight to `skills/sigma-workbook-conventions/scripts/api/whoami.sh` and
+  item 1 stays silent — there's nothing to ask. It only becomes an
+  explicit question when headless two-phase sign-in is actually needed
+  (e.g. Claude Cowork), asking for the pasted-back OAuth callback URL. If
   `whoami` fails, surface the Sigma error and abort — don't continue into
   Recon with broken auth.
-- **Q1: What data source?** (data model URL/slug / warehouse path / mixed)
-- **Q2: What would you like to build, and where in Sigma?** (verbatim
-  prompt + destination folder — written to the timestamped prompt file)
+- **Item 2 — data source:** data model URL/slug / warehouse path / mixed
+  prose.
+- **Item 3 — destination:** the folder the workbook should be saved to
+  (or "no preference yet," surfaced as an Open Decision before POST).
+- **Item 4 — workbook description:** the verbatim build prompt, written
+  to the timestamped prompt file.
 
-The gate captures raw inputs; the per-attempt protocol below picks up at
+Items 2–4 are asked together in a single `AskUserQuestion` call. The
+gate captures raw inputs; the per-attempt protocol below picks up at
 Step 1 (Recon).
 
 ## Per-attempt protocol

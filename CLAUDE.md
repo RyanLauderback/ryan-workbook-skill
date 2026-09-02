@@ -5,15 +5,19 @@ This workspace builds Sigma Computing dashboards/workbooks via Claude Code using
 ## Session kickoff
 
 The skill opens on the user's first build-related message (explicit trigger:
-`start build mode`) by resolving auth automatically — `eval
+`start build mode`) with a **4-item kickoff gate**. Item 1 (auth) resolves
+automatically in the common case — `eval
 "$(skills/sigma-workbook-conventions/scripts/api/browser-login.sh)"`, or skipping straight past that if a
 token or client-credentials vars are already exported (a returning
 browser-login session, or Claude Code web's injected vars) — then
 `skills/sigma-workbook-conventions/scripts/api/whoami.sh` actively validates auth against the live API before
-recon starts. A 2-question `AskUserQuestion` gate (data source, what/where
-to build) follows, capturing the raw inputs the planner needs. Then Recon
-→ Plan → User approval → POST → GET → Visual verify. **Plan approval is the
-only authorization for state-changing API calls.**
+recon starts. Item 1 only surfaces as an explicit, answerable question
+when headless two-phase sign-in is actually needed (e.g. Claude Cowork);
+otherwise it's silent. Items 2–4 (data source, destination, workbook
+description) are then asked together in a single `AskUserQuestion` call,
+capturing the raw inputs the planner needs. Then Recon → Plan → User
+approval → POST → GET → Visual verify. **Plan approval is the only
+authorization for state-changing API calls.**
 
 **Recon is bounded to what the user named** — searching the broader
 workspace for a reference implementation (e.g., hunting for an existing
@@ -31,7 +35,7 @@ convention is a **`local-` filename prefix** on added files (e.g.
 separable from canonical content. See SKILL.md → "Optional: session-local
 enrichment via `local-` prefix."
 
-Full 3-question text and workflow details live in
+Full kickoff-gate text and workflow details live in
 `skills/sigma-workbook-conventions/SKILL.md` → "Session kickoff."
 
 ## Skills loaded here
@@ -107,6 +111,16 @@ directly as already-exported env vars before the session starts. There's no
 file to create and no interactive browser to redirect to in that execution
 context, so `_env.sh` detects the exported vars and falls through silently to
 the repo-local `skills/sigma-workbook-conventions/scripts/api/get-token.sh` `client_credentials` exchange.
+
+**Claude Cowork runs a sandboxed shell with no tty and no OS keychain**, so
+`browser-login.sh` auto-detects headless mode and splits into two calls:
+`--start` prints an authorize URL to relay into chat and exits; the user
+signs in, approves, and pastes back the failed-redirect URL; `--finish
+"<pasted-url>"` completes the exchange and persists the refresh token to a
+`0600` file (no keychain to write to in the sandbox). Cowork also runs
+outbound traffic through an org-admin-controlled domain allowlist, which
+must include the org's Sigma API host before any of this works. Full flow,
+worked example, and the host list: `skills/sigma-workbook-conventions/reference/workflows/cowork.md`.
 
 **In all cases: never echo `$SIGMA_API_TOKEN`, `$SIGMA_CLIENT_SECRET`, or any
 other secret.** Don't write secrets to files inside the workspace. Pass

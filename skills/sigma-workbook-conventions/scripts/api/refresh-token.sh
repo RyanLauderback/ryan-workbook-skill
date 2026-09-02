@@ -3,8 +3,10 @@
 #
 # Ported from Sigma's reference sigma-api skill and adapted to this repo's
 # conventions. After scripts/api/browser-login.sh has run once (storing the
-# refresh token, client_id, and token endpoint in the OS keychain), this
-# mints a valid access token with NO browser round-trip:
+# refresh token, client_id, and token endpoint via _state.sh's cred_set --
+# the OS keychain where one exists, a 0600 state file otherwise, e.g. under
+# Claude Cowork -- see reference/workflows/cowork.md), this mints a valid
+# access token with NO browser round-trip:
 #   1. If a cached access token is still valid, emit it (no network call).
 #   2. Otherwise redeem the stored refresh token, cache the new access token and
 #      its expiry, rotate the stored refresh token if the server returns a new
@@ -32,30 +34,11 @@ done
 
 log() { printf '%s\n' "$*" >&2; }
 
-# --- Keychain access (macOS `security` / Linux `secret-tool`). Names match
-# --- what browser-login.sh writes: macOS service "sigma-api:<name>",
-# --- libsecret attributes service=sigma-api key=<name>. ---
-if command -v security >/dev/null 2>&1; then
-  KC=macos
-elif command -v secret-tool >/dev/null 2>&1; then
-  KC=libsecret
-else
-  echo "Error: no OS keychain tool (security/secret-tool) found; cannot read saved credentials. Run scripts/api/browser-login.sh on a supported system." >&2
-  exit 1
-fi
-
-kc_get() { # kc_get <name>
-  case "$KC" in
-    macos)     security find-generic-password -a "$USER" -s "sigma-api:$1" -w 2>/dev/null || true ;;
-    libsecret) secret-tool lookup service sigma-api key "$1" 2>/dev/null || true ;;
-  esac
-}
-kc_set() { # kc_set <name> <value>
-  case "$KC" in
-    macos)     security add-generic-password -U -a "$USER" -s "sigma-api:$1" -w "$2" >/dev/null 2>&1 || true ;;
-    libsecret) printf '%s' "$2" | secret-tool store --label="sigma-api $1" service sigma-api key "$1" >/dev/null 2>&1 || true ;;
-  esac
-}
+# --- Credential access via the shared 3-tier accessor (macOS keychain /
+# --- libsecret / a 0600 file under $SIGMA_STATE_DIR — see _state.sh for why
+# --- the third tier exists). Resolved relative to this script's own
+# --- location so it works regardless of the caller's cwd.
+source "$(dirname "${BASH_SOURCE[0]}")/_state.sh"
 
 emit() { # validate against the RFC 6750 bearer alphabet before it is eval'd, then print
   local t="$1"
@@ -69,8 +52,8 @@ emit() { # validate against the RFC 6750 bearer alphabet before it is eval'd, th
 NOW=$(date +%s)
 
 # --- 1. Serve a still-valid cached access token without touching the network. ---
-CACHED=$(kc_get access-token)
-EXPIRY=$(kc_get access-expiry)
+CACHED=$(cred_get access-token)
+EXPIRY=$(cred_get access-expiry)
 if [ -n "$CACHED" ] && [ -n "$EXPIRY" ] && [ "$EXPIRY" -gt "$NOW" ] 2>/dev/null; then
   log "Using cached access token ($(( EXPIRY - NOW ))s remaining)."
   emit "$CACHED"
@@ -78,11 +61,11 @@ if [ -n "$CACHED" ] && [ -n "$EXPIRY" ] && [ "$EXPIRY" -gt "$NOW" ] 2>/dev/null;
 fi
 
 # --- 2. Cache miss/expired -> redeem the stored refresh token. ---
-REFRESH=$(kc_get refresh-token)
-CLIENT_ID=$(kc_get client-id)
-TOKEN_URL=$(kc_get token-url)
+REFRESH=$(cred_get refresh-token)
+CLIENT_ID=$(cred_get client-id)
+TOKEN_URL=$(cred_get token-url)
 if [ -z "$REFRESH" ] || [ -z "$CLIENT_ID" ] || [ -z "$TOKEN_URL" ]; then
-  echo "Error: no saved browser-login credentials in the keychain. Run scripts/api/browser-login.sh first." >&2
+  echo "Error: no saved browser-login credentials (checked: $(cred_tier_label)). Run scripts/api/browser-login.sh first." >&2
   exit 1
 fi
 
@@ -112,13 +95,13 @@ fi
 EXPIRES_IN=$(printf '%s' "$RESP" | jq -r '.expires_in // 3600')
 case "$EXPIRES_IN" in ''|*[!0-9]*) EXPIRES_IN=3600 ;; esac
 # 60s safety margin so a token never expires mid-request.
-kc_set access-token "$ACCESS"
-kc_set access-expiry "$(( NOW + EXPIRES_IN - 60 ))"
+cred_set access-token "$ACCESS" || true
+cred_set access-expiry "$(( NOW + EXPIRES_IN - 60 ))" || true
 
 # Refresh tokens may rotate; persist the new one so the next redeem still works.
 NEW_REFRESH=$(printf '%s' "$RESP" | jq -r '.refresh_token // empty')
 if [ -n "$NEW_REFRESH" ] && [ "$NEW_REFRESH" != "$REFRESH" ]; then
-  kc_set refresh-token "$NEW_REFRESH"
+  cred_set refresh-token "$NEW_REFRESH" || true
   log "Rotated the stored refresh token."
 fi
 

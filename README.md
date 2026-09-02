@@ -39,9 +39,19 @@ eval "$(skills/sigma-workbook-conventions/scripts/api/browser-login.sh)"
 
 On first open, Claude Code reads `.claude/settings.json` and **automatically installs the upstream `sigma-agent-skills` plugin** (which provides `sigma-api` and `sigma-data-models`) from `github.com/sigmacomputing/sigma-agent-skills`. The canonical `sigma-workbook-conventions` skill lives at `skills/sigma-workbook-conventions/` (the same content the plugin install above pulls); a thin stub at `.claude/skills/sigma-workbook-conventions/SKILL.md` loads automatically in this checkout because it lives in the standard skill directory, and points at the canonical copy. You don't need to run `/plugin marketplace add` or `/plugin install` yourself in this path — that's what the stub is for.
 
+**Claude Cowork** — Cowork runs shell commands in a sandbox on Anthropic's servers, so this path differs from the two above (no plugin marketplace install, and auth needs a two-phase browser flow). Full detail: `skills/sigma-workbook-conventions/reference/workflows/cowork.md`.
+
+```text
+# Claude Cowork
+```
+1. **Enable network egress** for your Sigma API host (Admin settings → Capabilities) — a Cowork session's shell runs behind an org-admin domain allowlist. See `cowork.md` → "Egress prerequisite" for the full host list.
+2. **Build and upload the skill ZIP** — `bash skills/sigma-workbook-conventions/scripts/package-skill.sh`, then upload the result at `claude.ai/customize/skills`. Cowork doesn't auto-discover `.claude/skills/` from a mounted folder the way Claude Code does.
+3. **Open/mount this cloned folder** as the Cowork session's working directory — the ZIP supplies the skill, but `workbooks/`, `prompts/`, and the rest of this repo's sandbox state still live in the clone.
+4. Say **`start build mode`**. Auth is a two-phase browser sign-in in this environment (no OS keychain, no tty) — Claude prints a URL to relay in chat, you sign in and paste back the failed-redirect URL, and Claude completes the exchange.
+
 ## Starting a session
 
-Once Claude Code is open, describe what you want to build. Explicit trigger: **`start build mode`** — Claude resolves auth automatically (browser sign-in, or reusing already-exported credentials), warms the OAuth token, and runs `whoami` to confirm auth before recon, then opens a 2-question gate (data source / what to build + where in Sigma). Then: Recon → Plan → Approval → Build → Verify.
+Once Claude Code is open, describe what you want to build. Explicit trigger: **`start build mode`** — Claude runs a 4-item kickoff gate: auth (browser sign-in, or reusing already-exported credentials, warming the OAuth token and running `whoami` to confirm before recon — this only becomes an explicit question when headless two-phase sign-in is actually needed, e.g. Cowork), then data source / destination folder / what to build, asked together in a single `AskUserQuestion` call. Then: Recon → Plan → Approval → Build → Verify.
 
 Opt-in session-local enrichment (Tableau migration notes, account-specific patterns) uses a **`local-`** filename prefix on skill files to stay visually separable from canonical content — see the skill's SKILL.md for the convention.
 
@@ -78,8 +88,10 @@ You shouldn't have to look up internal UUIDs, schema paths, or connection IDs by
 | `skills/sigma-workbook-conventions/scripts/api/` (rest) | Thin REST wrappers used as MCP fallbacks: `list-connections.sh`, `list-folders.sh`, `lookup-path.sh`, `list-table-columns.sh`, `probe-schema-tables.sh`. Reach for these when MCP doesn't cover the case (raw connection enumeration, folder browsing by name pattern, warehouse-schema probing). |
 | `skills/sigma-workbook-conventions/scripts/sigma-resolve.py` | Handles the messy-input case — prose mixed with URL slugs and warehouse paths (`<DB>.<SCHEMA>.<table>`). Returns structured `{sources, folder, candidates, unresolved}` JSON. Use when the simpler MCP/URL-slug paths don't fit. |
 | `skills/sigma-workbook-conventions/scripts/validate-spec.py` | Pre-POST static checks (18 total, full catalog in `reference/workflows/validate.md`): includes passthrough collapse, controlId/column collision, bare-reference resolution, control-filter columnId existence, KPI value formula referencing sibling aggregation, `summary` × `calculations` collision, `description` object-on-KPI-and-table, pivot missing rows and columns, schemaVersion, conditional-aggregate antipattern (`Sum(If(...))` vs. native `SumIf`), and 8 more. Auto-runs via `publish-workbook.sh post`. |
-| `skills/sigma-workbook-conventions/scripts/doctor.sh` | Diagnoses whether the current host can run the skill's scripts (required binaries, interpreter resolution, OS, auth-config sanity). Run first on an unfamiliar host. |
+| `skills/sigma-workbook-conventions/scripts/doctor.sh` | Diagnoses whether the current host can run the skill's scripts (required binaries, interpreter resolution, OS, auth-config sanity, sandbox egress-allowlist preflight). Run first on an unfamiliar host — including a fresh Cowork session. |
+| `skills/sigma-workbook-conventions/reference/workflows/cowork.md` | What's different running this skill under Claude Cowork (sandboxed shell, no keychain, no tty, egress allowlist), the two-phase browser sign-in, the org-admin host list, and ZIP-vs-clone delivery. |
 | `scripts/refresh-vendor.sh` | Maintainer-only, stays at repo root (not skill-bundled): clone a read-only mirror of upstream skills into `vendor/` for inspection while authoring new project skills. |
+| `skills/sigma-workbook-conventions/scripts/package-skill.sh` | Builds the uploadable skill ZIP — the primary delivery path for Claude Cowork — for `claude.ai/customize/skills`. Skill-bundled (like `sync-cortex-mirror.py`) so the packaging tool travels with the skill wherever it's installed, not just in this repo. |
 | `workbooks/_template/` | Starter folder — `cp -R` to seed a new dashboard. |
 | `workbooks/_exemplars/` | Golden specs harvested from Sigma. Read-only references. |
 | `prompts/library/` | Reusable prompt fragments (currently empty; grow as patterns recur). |

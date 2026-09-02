@@ -183,8 +183,9 @@ jobs:
             }
           exit $fail
 
-      # --- exec-bit assertion: every scripts/api/*.sh except _env.sh (which
-      # --- is meant to be sourced, not executed) must be mode 100755 ---
+      # --- exec-bit assertion: every scripts/api/*.sh except _env.sh and
+      # --- _state.sh (both meant to be sourced, not executed) must be mode
+      # --- 100755 ---
       - name: exec-bit assertion on scripts/api/*.sh
         shell: bash
         run: |
@@ -193,6 +194,7 @@ jobs:
           while read -r mode _ _ path; do
             base="${path##*/}"
             [ "$base" = "_env.sh" ] && continue
+            [ "$base" = "_state.sh" ] && continue
             if [ "$mode" != "100755" ]; then
               echo "Missing exec bit (mode $mode): $path" >&2
               fail=1
