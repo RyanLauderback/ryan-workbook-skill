@@ -89,7 +89,7 @@ and `file` not documented at all by upstream):
   required format for `key` itself.
 - **Editable data** — `{id, type, name}` where
   `type ∈ text | number | datetime | checkbox | file`. `file` observed
-  only in Bergey's Unified Insights (harvest-only; not independently
+  only in a production dashboard (harvest-only; not independently
   probed — no file-upload connection available in this session).
   **text/number/datetime/checkbox live-POST verified.**
 - **Dropdown** — an editable `type: "text"` column plus `values: [...]`

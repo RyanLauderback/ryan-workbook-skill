@@ -124,7 +124,7 @@ def issues_elements_placed(spec: dict, root: ET.Element | None) -> list[tuple[st
     # (Its child <Tab> tags carry no elementId — tabs bind positionally to
     # the element's own `tabs[]` array order, not by XML attribute.)
     # Verified 2026-08-03 against 2 harvested workbooks (Claims Command
-    # Center, Bergey's Unified Insights) — both produced exactly one false
+    # Center, and a production dashboard) — both produced exactly one false
     # FAIL per tabbed-container element before this fix.
     placed_ids = {
         el.get("elementId")
@@ -249,7 +249,7 @@ def issues_control_id_unique(spec: dict) -> list[tuple[str, str]]:
     tolerated duplication — it's how Sigma represents "the same control,
     placed on multiple pages."
 
-    Verified 2026-08-03 against Bergey's Unified Insights: one `segmented`
+    Verified 2026-08-03 against a production dashboard: one `segmented`
     control on `Parts` plus four `synced` stubs (Service/Sales/Leasing/Body
     Shop) all sharing `controlId: "Business-Line-Nav"`.
 

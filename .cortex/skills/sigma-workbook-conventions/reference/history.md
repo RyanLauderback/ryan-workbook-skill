@@ -336,7 +336,7 @@ page breaks, and action sequences were **"not supported"** and "break
 GET-spec." **All five round-tripped cleanly (HTTP 200, full fidelity)**
 against 5 real production workbooks harvested during planning (Claims
 Command Center, Insurance P4P Analytics, Workbooks Demo 2026, Marketing
-Control Center, Bergey's Unified Insights). This is the `DivideSafe`
+Control Center, and a production dashboard). This is the `DivideSafe`
 failure mode in the opposite direction — instead of a hallucinated
 capability, a hallucinated (or stale, unverified) *limitation* — and it
 had been steering every build away from working functionality.
@@ -385,7 +385,7 @@ of this check ships.
   set `elements-placed-in-layout` recognizes (5 false FAILs on 2
   independent harvested workbooks, exact tabbed-container count both
   times); exempted `controlType:"synced"` from `control-id-unique`
-  (Bergey's Unified Insights showed the exact mechanism — one primary
+  (a production dashboard showed the exact mechanism — one primary
   control + N `synced` cross-page stubs sharing a `controlId`); added
   `layoutelement-has-children` (forward case of `containers-have-children`,
   ported from the real upstream skill's manual checklist); added YAML
@@ -456,8 +456,8 @@ no-exposed-joins defaults) that this skill had never carried; `plan.md`
 covers process, not judgment. Added to the "every build always" gate row.
 
 **New exemplar: `examples/dashboard-department-scorecard.json`** — the
-"dashboard" tier of the sizing ladder, modeled on Bergey's Unified
-Insights (the real production dashboard harvested during planning).
+"dashboard" tier of the sizing ladder, modeled on a production dashboard
+(harvested during planning).
 Closes two gaps: no existing exemplar demonstrated the hidden-base-table
 default (the flagship 3-page exemplar puts its base table visibly on the
 dashboard page), and no exemplar demonstrated the exec-KPI recipe
