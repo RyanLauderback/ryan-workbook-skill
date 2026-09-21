@@ -10,7 +10,7 @@ expansion planning:
    (`data-model-sourced-sales-command-center.json`) puts its base table
    (`tbl-tx`) visibly on the dashboard page.
 2. No exemplar demonstrated the exec-KPI recipe found in a real, shipped
-   production dashboard (Bergey's Unified Insights, harvested 2026-08-03):
+   production dashboard (harvested 2026-08-03):
    `style:{borderRadius:"round", borderColor, borderWidth:1}` +
    `periodComparison` + `timeline` + a styled `name` object, repeated
    consistently across every KPI tile.
@@ -62,7 +62,7 @@ Replace before POST:
 - `style: {borderRadius: "round", borderColor: "#e8dfd3", borderWidth: 1}`
   on every KPI tile — a soft card frame, not the default flat tile.
 - `timeline: {columnId}` + `periodComparison: "month"` — verified present
-  in a real production dashboard (Bergey's Unified Insights) across ~67
+  in a real production dashboard across ~67
   KPI instances, repeated with the same recipe every time.
 - Styled `name` object (`{text, color, fontWeight, fontSize}`) rather
   than a plain string — matches every other KPI exemplar in this skill.

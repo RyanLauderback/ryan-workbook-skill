@@ -36,7 +36,7 @@ A rough sizing ladder (starting points, not rules):
   table on a hidden page (see Defaults below). This is the tier where
   polish is the point. See `examples/dashboard-department-scorecard.json`
   for a worked exemplar at this tier, modeled on a real, shipped,
-  department-scale production dashboard (Bergey's Unified Insights).
+  department-scale production dashboard.
 
 For concrete shapes at any tier, don't assemble from memory. Fetch a real
 workbook's spec (`GET /v2/workbooks/{id}/spec`) and read the relevant
@@ -112,7 +112,7 @@ isn't known and stopping to ask isn't appropriate.
   `reference/specification/schema.md`) and source dashboard elements from
   it via `elementId`. The base table stays available to the workbook
   without dropping a million-row dump on the viewer. **Verified in the
-  wild:** Bergey's Unified Insights (a real, shipped, 8-page department
+  wild:** a real, shipped, 8-page department
   dashboard) puts its input-tables and staging config on two
   `visibility:"hidden"` pages the end user never navigates to — this
   default wasn't invented in the abstract, it's how a real author
